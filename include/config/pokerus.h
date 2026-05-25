@@ -2,7 +2,7 @@
 #define GUARD_CONFIG_POKERUS_H
 
 //For Pokérus, we refer to infection as a Pokémon catching Pokérus from an enemy Pokémon (trainer or wild) and we refer to spreading as Pokémon catching Pokérus from another infected Pokémon in the party
-#define P_POKERUS_ENABLED                TRUE       // If FALSE, Pokérus will have no effect, won't be shown and won't be aquired in any way but save data won't be affected
+#define P_POKERUS_ENABLED                FALSE      // If FALSE, Pokérus will have no effect, won't be shown and won't be aquired in any way but save data won't be affected
 #define P_POKERUS_STRAIN_DISTRIBUTION    GEN_LATEST // Pokérus has 16 different strains and their probability distribution change depending on generation, GEN_3 will use the Ruby/Sapphire version and GEN_4 will use the version used in Emerald and Gen 4
 #define P_POKERUS_SPREAD_ADJACENCY       GEN_LATEST // In Gen 2, Pokérus spread to one adjacent Pokémon but it spreads to both adjacent Pokémon in gen 3+
 #define P_POKERUS_SPREAD_DAYS_LEFT       GEN_LATEST // In Gen 2, a freshly spreaded Pokémon will get its full infection duration based on strain. In gen 3+, the Pokérus duration will copy the duration from the Pokémon it was spreaded from
