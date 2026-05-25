@@ -18,51 +18,64 @@ Pic: Brendan
 Gender: Male
 Music: Male
 
-Buffie (Wobbuffet)
-Brave Nature
+Venusaur (M) @ Sitrus Berry
+Ability: Chlorophyll
+Timid Nature
 Level: 100
 IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 Atk / 252 Def / 6 SpA
-- Earthquake
+EVs: 252 SpA / 252 Spe / 4 Def
+- Sleep Powder
+- Weather Ball
+- Solar Beam
+- Sludge Bomb
+
+Charizard (M) @ Charcoal
+Ability: Solar Power
+Modest Nature
+Level: 100
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 252 SpA / 252 Spe / 4 SpD
 - Flamethrower
-- Celebrate
-- Celebrate
+- Air Slash
+- Solar Beam
+- Ancient Power
+
+Blastoise (M) @ Mystic Water
+Ability: Rain Dish
+Relaxed Nature
+Level: 100
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 252 Def / 252 SpA / 4 SpD
+- Hydro Pump
+- Flash Cannon
+- Iron Defense
+- Body Press
 
 === DEBUG_TRAINER_AI ===
 Name: Debugger
 AI: Smart Trainer
 Class: Rival
 Battle Type: Singles
-Pic: Steven
+Pic: Hiker
 Gender: Male
 Music: Male
 
-Metang
+Metang @ Leftovers
 Brave Nature
-Level: 42
+Level: 100
 IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
 EVs: 252 Atk / 252 Def / 6 SpA
-- Light Screen
-- Psychic
-- Reflect
-- Metal Claw
+- Knock Off
+- None
+- None
+- None
 
-Skarmory
+Skarmory @ Rocky Helmet
 Impish Nature
-Level: 43
+Level: 100
 IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
 EVs: 252 HP / 6 SpA / 252 SpD
-- Toxic
-- Aerial Ace
-- Protect
-- Steel Wing
-
-Aggron
-Adamant Nature
-Level: 44
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 Atk / 252 SpA / 6 SpD
-- Thunder
-- Protect
-- Solar Beam
-- Dragon Claw
+- Knock Off
+- None
+- None
+- None

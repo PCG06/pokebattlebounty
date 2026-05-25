@@ -4909,6 +4909,7 @@ static void DebugAction_Party_ClearParty(u8 taskId)
 {
     ZeroPlayerPartyMons();
     ScriptContext_Enable();
+    FlagClear(FLAG_SYS_POKEMON_GET);
     Debug_DestroyMenu_Full(taskId);
 }
 
@@ -4934,14 +4935,16 @@ static void DebugAction_Party_SetParty(u8 taskId)
     ZeroPlayerPartyMons();
     CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_0], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER);
     ScriptContext_Enable();
+    FlagSet(FLAG_SYS_POKEMON_GET);
     Debug_DestroyMenu_Full(taskId);
 }
 
 static void DebugAction_Party_BattleSingle(u8 taskId)
 {
-    ZeroPlayerPartyMons();
+    // ZeroPlayerPartyMons();
     ZeroEnemyPartyMons();
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_0], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER);
+    if (gPlayerPartyCount == 0)
+        CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_0], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER);
     CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_1], GetDebugAiTrainer(), FALSE, BATTLE_TYPE_TRAINER);
 
     gBattleTypeFlags = BATTLE_TYPE_TRAINER;
