@@ -4933,7 +4933,7 @@ const struct Trainer* GetDebugAiTrainer(void)
 static void DebugAction_Party_SetParty(u8 taskId)
 {
     ZeroPlayerPartyMons();
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_0], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], TRUE, BATTLE_TYPE_TRAINER);
+    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_0], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], FALSE, BATTLE_TYPE_TRAINER);
     ScriptContext_Enable();
     FlagSet(FLAG_SYS_POKEMON_GET);
     Debug_DestroyMenu_Full(taskId);

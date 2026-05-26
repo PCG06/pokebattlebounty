@@ -437,7 +437,7 @@ static void Task_Hof_InitMonData(u8 taskId)
         u8 nickname[POKEMON_NAME_LENGTH + 1];
         if (GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_SPECIES))
         {
-            sHofMonPtr->mon[i].species = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_SPECIES_OR_EGG);
+            sHofMonPtr->mon[i].species = GetHallOfFameFormChangeSpecies(&gParties[B_TRAINER_0][i]);
             sHofMonPtr->mon[i].tid = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_OT_ID);
             sHofMonPtr->mon[i].isShiny = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_IS_SHINY);
             sHofMonPtr->mon[i].personality = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_PERSONALITY);

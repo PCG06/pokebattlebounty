@@ -6857,3 +6857,85 @@ bool32 HasShedinjaHPHandling(enum Species species)
         return TRUE;
     return FALSE;
 }
+
+enum Species GetHallOfFameFormChangeSpecies(struct Pokemon *mon)
+{
+    enum Species species = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
+    enum Item item = GetMonData(mon, MON_DATA_HELD_ITEM);
+    enum Ability ability = GetMonAbility(mon);
+    u32 level = GetMonData(mon, MON_DATA_LEVEL);
+    enum Species targetSpecies = species;
+    enum Species prevSpecies;
+    const struct FormChange *formChanges = GetSpeciesFormChanges(species);
+
+    // Reason for nested loop: Zygarde -> Zygarde Complete -> Mega Zygarde
+    do {
+        prevSpecies = targetSpecies;
+        formChanges = GetSpeciesFormChanges(targetSpecies);
+
+        for (u32 i = 0; formChanges != NULL && formChanges[i].method != FORM_CHANGE_TERMINATOR; i++)
+        {
+            enum FormChanges method = formChanges[i].method;
+            switch (method)
+            {
+            case FORM_CHANGE_BATTLE_MEGA_EVOLUTION_ITEM: // eg. Charizard -> Mega Charizard X
+            case FORM_CHANGE_BATTLE_PRIMAL_REVERSION: // eg. Kyogre -> Primal Kyogre
+            case FORM_CHANGE_BATTLE_ULTRA_BURST: // eg. Necrozma Dawn Wings -> Ultra Necrozma
+            case FORM_CHANGE_ITEM_HOLD: // eg. Arceus -> Arceus-Fire
+            case FORM_CHANGE_BEGIN_BATTLE: // eg. Zacian -> Zacian Crowned
+                if (formChanges[i].param1 == item)
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            case FORM_CHANGE_BATTLE_MEGA_EVOLUTION_MOVE: // eg. Rayquaza -> Mega Rayquaza
+                for (u8 j = 0; j < MAX_MON_MOVES; j++)
+                {
+                    u16 move = GetMonData(mon, MON_DATA_MOVE1 + j);
+                    if (formChanges[i].param1 == move)
+                        targetSpecies = formChanges[i].targetSpecies;
+                }
+                break;
+
+            case FORM_CHANGE_BATTLE_GIGANTAMAX: // eg. Rillaboom -> GMax Rillaboom
+                if (GetMonData(mon, MON_DATA_GIGANTAMAX_FACTOR))
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            case FORM_CHANGE_BATTLE_TERASTALLIZATION: // eg. Ogerpon -> Tera Ogerpon
+                if (formChanges[i].param1 == GetMonData(mon, MON_DATA_TERA_TYPE))
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            case FORM_CHANGE_BATTLE_TURN_END: // eg. Morpeko Full Belly -> Morpeko Hangry
+                if (formChanges[i].param1 == ability && formChanges[i].targetSpecies != species)
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            case FORM_CHANGE_BATTLE_HP_PERCENT_TURN_END: // eg. Minior Meteor -> Minior Core
+            case FORM_CHANGE_BATTLE_HP_PERCENT_SEND_OUT: // eg. Wishiwashi Solo -> Wishiwashi School
+                if (formChanges[i].param1 == ability
+                 && level >= formChanges[i].param4
+                 && formChanges[i].targetSpecies != species
+                 && targetSpecies == species)
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            case FORM_CHANGE_BATTLE_SWITCH_OUT: // eg. Palafin Zero -> Palafin Hero
+                if (formChanges[i].param1 != ABILITY_NONE && formChanges[i].param1 == ability
+                 && formChanges[i].targetSpecies != species)
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            case FORM_CHANGE_BATTLE_SWITCH_IN: // eg. Terapagos Normal -> Terapagos Terastal
+                if (formChanges[i].param1 == ability || formChanges[i].param1 == ABILITY_NONE)
+                    targetSpecies = formChanges[i].targetSpecies;
+                break;
+
+            default:
+                break;
+            }
+        }
+    } while (targetSpecies != prevSpecies);
+
+    return targetSpecies;
+}

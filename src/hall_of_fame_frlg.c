@@ -387,7 +387,7 @@ static void Task_Hof_InitMonData(u8 taskId)
     {
         if (GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_SPECIES) != SPECIES_NONE)
         {
-            sHofMonPtr[0].mon[i].species = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_SPECIES_OR_EGG);
+            sHofMonPtr[0].mon[i].species = GetHallOfFameFormChangeSpecies(&gParties[B_TRAINER_0][i]);
             sHofMonPtr[0].mon[i].tid = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_OT_ID);
             sHofMonPtr[0].mon[i].personality = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_PERSONALITY);
             sHofMonPtr[0].mon[i].lvl = GetMonData(&gParties[B_TRAINER_0][i], MON_DATA_LEVEL);
