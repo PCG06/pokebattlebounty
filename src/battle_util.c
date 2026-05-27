@@ -705,7 +705,7 @@ void HandleAction_WatchesCarefully(void)
             gBattleStruct->safariRockThrowCounter--;
             if (gBattleStruct->safariRockThrowCounter == 0)
             {
-                gBattleStruct->safariCatchFactor = gSpeciesInfo[GetMonData(gParties[B_TRAINER_1], MON_DATA_SPECIES)].catchRate * 100 / 1275;
+                gBattleStruct->safariCatchFactor = gSpeciesInfo[GetMonData(gParties[B_TRAINER_OPPONENT_A], MON_DATA_SPECIES)].catchRate * 100 / 1275;
                 gBattleCommunication[MULTISTRING_CHOOSER] = B_MSG_MON_WATCHING;
             }
             else
@@ -5397,10 +5397,11 @@ static bool32 IsNonVolatileStatusBlocked(enum BattlerId battlerDef, enum Ability
             if (battleScript != BattleScript_NotAffected)
                 gBattleStruct->moveResultFlags[battlerDef] |= MOVE_RESULT_FAILED;
 
+            gBattleScripting.battler = battlerDef;
             if (abilityAffected)
             {
                 gLastUsedAbility = abilityDef;
-                gBattleScripting.battler = gBattlerAbility = battlerDef;
+                gBattlerAbility = battlerDef;
                 RecordAbilityBattle(battlerDef, abilityDef);
             }
 
@@ -8606,11 +8607,11 @@ bool32 TryRevertPartyMonFormChange(u32 partyIndex)
      bool32 changedForm = FALSE;
 
     // Appeared in battle and didn't faint
-    if (gBattleStruct->partyState[B_SIDE_PLAYER][partyIndex].sentOut && GetMonData(&gParties[B_TRAINER_0][partyIndex], MON_DATA_HP) != 0)
-        changedForm = TryFormChange(&gParties[B_TRAINER_0][partyIndex], FORM_CHANGE_END_BATTLE_ENVIRONMENT, B_TRAINER_0);
+    if (gBattleStruct->partyState[B_SIDE_PLAYER][partyIndex].sentOut && GetMonData(&gParties[B_TRAINER_PLAYER][partyIndex], MON_DATA_HP) != 0)
+        changedForm = TryFormChange(&gParties[B_TRAINER_PLAYER][partyIndex], FORM_CHANGE_END_BATTLE_ENVIRONMENT, B_TRAINER_PLAYER);
 
     if (!changedForm)
-        changedForm = TryFormChange(&gParties[B_TRAINER_0][partyIndex], FORM_CHANGE_END_BATTLE, B_TRAINER_0);
+        changedForm = TryFormChange(&gParties[B_TRAINER_PLAYER][partyIndex], FORM_CHANGE_END_BATTLE, B_TRAINER_PLAYER);
 
     // Clear original species field
     gBattleStruct->partyState[B_SIDE_PLAYER][partyIndex].changedSpecies = SPECIES_NONE;
@@ -9148,7 +9149,7 @@ void TryRestoreHeldItems(void)
 
             // Check if the lost item should be restored
             if ((lostItem != ITEM_NONE || returnNPCItems))
-                SetMonData(&gParties[B_TRAINER_0][i], MON_DATA_HELD_ITEM, &lostItem);
+                SetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_HELD_ITEM, &lostItem);
         }
     }
 }
@@ -9742,13 +9743,13 @@ bool32 AreMultiPartiesFullTeams(void)
         u8 *partySizes = gBattleTestRunnerState->data.partySizes;
         bool32 fullTeam = FALSE;
 
-        if (partySizes[B_TRAINER_0] && partySizes[B_TRAINER_2]
-         && (partySizes[B_TRAINER_0] > MULTI_PARTY_SIZE || partySizes[B_TRAINER_2] > MULTI_PARTY_SIZE))
+        if (partySizes[B_TRAINER_PLAYER] && partySizes[B_TRAINER_PARTNER]
+         && (partySizes[B_TRAINER_PLAYER] > MULTI_PARTY_SIZE || partySizes[B_TRAINER_PARTNER] > MULTI_PARTY_SIZE))
         {
             fullTeam = TRUE;
         }
-        if (partySizes[B_TRAINER_1] && partySizes[B_TRAINER_3]
-         && (partySizes[B_TRAINER_1] > MULTI_PARTY_SIZE || partySizes[B_TRAINER_3] > MULTI_PARTY_SIZE))
+        if (partySizes[B_TRAINER_OPPONENT_A] && partySizes[B_TRAINER_OPPONENT_B]
+         && (partySizes[B_TRAINER_OPPONENT_A] > MULTI_PARTY_SIZE || partySizes[B_TRAINER_OPPONENT_B] > MULTI_PARTY_SIZE))
         {
             fullTeam = TRUE;
         }
