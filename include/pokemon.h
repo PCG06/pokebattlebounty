@@ -27,12 +27,13 @@ enum MonData {
     MON_DATA_PERSONALITY,
     MON_DATA_STATUS,
     MON_DATA_OT_ID,
-    MON_DATA_LANGUAGE, // removed?
+    MON_DATA_LANGUAGE,
     MON_DATA_SANITY_IS_BAD_EGG,
     MON_DATA_SANITY_HAS_SPECIES,
     MON_DATA_SANITY_IS_EGG,
     MON_DATA_OT_NAME,
     MON_DATA_MARKINGS,
+    MON_DATA_CHECKSUM,
     MON_DATA_HP,
     MON_DATA_IS_SHINY,
     MON_DATA_HIDDEN_NATURE,
@@ -69,7 +70,7 @@ enum MonData {
     MON_DATA_POKERUS_DAYS_LEFT,
     MON_DATA_MET_LOCATION,
     MON_DATA_MET_LEVEL,
-    MON_DATA_MET_GAME, // removed?
+    MON_DATA_MET_GAME,
     MON_DATA_POKEBALL,
     MON_DATA_HP_IV,
     MON_DATA_ATK_IV,
@@ -82,11 +83,11 @@ enum MonData {
     MON_DATA_TOUGH,
     MON_DATA_SHEEN,
     MON_DATA_OT_GENDER,
-    MON_DATA_COOL_RIBBON, // removed
-    MON_DATA_BEAUTY_RIBBON, // removed
-    MON_DATA_CUTE_RIBBON, // removed
-    MON_DATA_SMART_RIBBON, // removed
-    MON_DATA_TOUGH_RIBBON, // removed
+    MON_DATA_COOL_RIBBON,
+    MON_DATA_BEAUTY_RIBBON,
+    MON_DATA_CUTE_RIBBON,
+    MON_DATA_SMART_RIBBON,
+    MON_DATA_TOUGH_RIBBON,
     MON_DATA_LEVEL,
     MON_DATA_MAX_HP,
     MON_DATA_ATK,
@@ -97,114 +98,187 @@ enum MonData {
     MON_DATA_MAIL,
     MON_DATA_SPECIES_OR_EGG,
     MON_DATA_IVS,
-    MON_DATA_CHAMPION_RIBBON, // removed
-    MON_DATA_WINNING_RIBBON, // removed
-    MON_DATA_VICTORY_RIBBON, // removed
-    MON_DATA_ARTIST_RIBBON, // removed
-    MON_DATA_EFFORT_RIBBON, // removed
-    MON_DATA_MARINE_RIBBON, // removed
-    MON_DATA_LAND_RIBBON, // removed
-    MON_DATA_SKY_RIBBON, // removed
-    MON_DATA_COUNTRY_RIBBON, // removed
-    MON_DATA_NATIONAL_RIBBON, // removed
-    MON_DATA_EARTH_RIBBON, // removed
-    MON_DATA_WORLD_RIBBON, // removed
-    MON_DATA_MODERN_FATEFUL_ENCOUNTER, // removed
+    MON_DATA_CHAMPION_RIBBON,
+    MON_DATA_WINNING_RIBBON,
+    MON_DATA_VICTORY_RIBBON,
+    MON_DATA_ARTIST_RIBBON,
+    MON_DATA_EFFORT_RIBBON,
+    MON_DATA_MARINE_RIBBON,
+    MON_DATA_LAND_RIBBON,
+    MON_DATA_SKY_RIBBON,
+    MON_DATA_COUNTRY_RIBBON,
+    MON_DATA_NATIONAL_RIBBON,
+    MON_DATA_EARTH_RIBBON,
+    MON_DATA_WORLD_RIBBON,
+    MON_DATA_MODERN_FATEFUL_ENCOUNTER,
     MON_DATA_KNOWN_MOVES,
-    MON_DATA_RIBBON_COUNT, // removed
-    MON_DATA_RIBBONS, // removed
-    MON_DATA_HYPER_TRAINED_HP, // removed
-    MON_DATA_HYPER_TRAINED_ATK, // removed
-    MON_DATA_HYPER_TRAINED_DEF, // removed
-    MON_DATA_HYPER_TRAINED_SPEED, // removed
-    MON_DATA_HYPER_TRAINED_SPATK, // removed
-    MON_DATA_HYPER_TRAINED_SPDEF, // removed
-    MON_DATA_IS_SHADOW, // removed
+    MON_DATA_RIBBON_COUNT,
+    MON_DATA_RIBBONS,
+    MON_DATA_HYPER_TRAINED_HP,
+    MON_DATA_HYPER_TRAINED_ATK,
+    MON_DATA_HYPER_TRAINED_DEF,
+    MON_DATA_HYPER_TRAINED_SPEED,
+    MON_DATA_HYPER_TRAINED_SPATK,
+    MON_DATA_HYPER_TRAINED_SPDEF,
+    MON_DATA_IS_SHADOW,
     MON_DATA_DYNAMAX_LEVEL,
     MON_DATA_GIGANTAMAX_FACTOR,
     MON_DATA_TERA_TYPE,
     MON_DATA_EVOLUTION_TRACKER,
 };
 
-struct BoxPokemon
+struct PokemonSubstruct0
 {
-    u32 personality;
-    u32 otId;
-
-    u8 nickname[min(10, POKEMON_NAME_LENGTH)]; // 10 letter nickname
-
-    u8 daysSinceFormChange:3; // 7 days.
-    u8 hiddenNatureModifier:5; // 31 natures.
-    u8 ppBonuses;
-    u8 padding0;
-    //  Word
-
-    u8 otName[PLAYER_NAME_LENGTH]; // 7 letter name.
-    u8 markings:4;
-    u8 compressedStatus:4;
-    //  Word
-    
+    u16 species:11; // 2047 species.
+    enum Type teraType:5; // 30 types.
+    u16 heldItem:10; // 1023 items.
+    u16 unused_02:6;
     u32 experience:21;
-    u32 hpIV:5;
-    u32 attackIV:5;
-    u32 hasSpecies:1;
-    //  Word
-
     u32 nickname11:8; // 11th character of nickname.
-    u32 defenseIV:5;
-    u32 speedIV:5;
-    u32 spAttackIV:5;
-    u32 spDefenseIV:5;
-    u32 dynamaxLevel:4;
-    // Word
+    u32 unused_04:3;
+    u8 ppBonuses;
+    u8 friendship;
+    u16 pokeball:6; // 63 balls.
+    u16 nickname12:8; // 12th character of nickname.
+    u16 unused_0A:2;
+};
 
-    u32 metLocation:8;
-    u32 nickname12:8; // 12th character of nickname.
-    u32 species:11; // 2047 species.
-    u32 isBadEgg:1;
-    u32 abilityNum:2;
-    u32 isEgg:1;
-    u32 gigantamaxFactor:1;
-    // Word
+struct PokemonSubstruct1
+{
+    enum Move move1:11; // 2047 moves.
+    u16 evolutionTracker1:5;
+    enum Move move2:11; // 2047 moves.
+    u16 evolutionTracker2:5;
+    enum Move move3:11; // 2047 moves.
+    u16 unused_04:5;
+    enum Move move4:11; // 2047 moves.
+    u16 unused_06:3;
+    u16 hyperTrainedHP:1;
+    u16 hyperTrainedAttack:1;
+    u8 pp1:7; // 127 PP.
+    u8 hyperTrainedDefense:1;
+    u8 pp2:7; // 127 PP.
+    u8 hyperTrainedSpeed:1;
+    u8 pp3:7; // 127 PP.
+    u8 hyperTrainedSpAttack:1;
+    u8 pp4:7; // 127 PP.
+    u8 hyperTrainedSpDefense:1;
+};
 
-    u32 friendship;
-
+struct PokemonSubstruct2
+{
     u8 hpEV;
     u8 attackEV;
     u8 defenseEV;
     u8 speedEV;
-    // Word
+    u8 spAttackEV;
+    u8 spDefenseEV;
+    u8 cool;
+    u8 beauty;
+    u8 cute;
+    u8 smart;
+    u8 tough;
+    u8 sheen;
+};
 
-    u32 hpLost:14; // 16383 HP.
-    u32 shinyModifier:1;
-    u32 otGender:1;
-    u32 spAttackEV:8;
-    u32 teraType:5;
-    u32 padding1:3;
-    // Word
-
-    u16 move1:11; // 2047 moves.
-    u16 evolutionTracker1:5;
-    u16 move2:11; // 2047 moves.
-    u16 evolutionTracker2:5;
-    // Word
-
-    u16 move3:11; // 2047 moves.
-    u16 move4:11; // 2047 moves.
-    u16 heldItem:10; // 1023 items.
-    // Word
-
-    u16 spDefenseEV:8;
-    u16 tough:8;
-    u16 pokeball:6; // 63 balls.
+struct PokemonSubstruct3
+{
+    u8 pokerus;
+    u8 metLocation;
     u16 metLevel:7;
-    u16 padding2:3;
+    u16 metGame:4;
+    u16 dynamaxLevel:4;
+    u16 otGender:1;
+    u32 hpIV:5;
+    u32 attackIV:5;
+    u32 defenseIV:5;
+    u32 speedIV:5;
+    u32 spAttackIV:5;
+    u32 spDefenseIV:5;
+    u32 isEgg:1;
+    u32 gigantamaxFactor:1;
+    u32 coolRibbon:3;     // Stores the highest contest rank achieved in the Cool category.
+    u32 beautyRibbon:3;   // Stores the highest contest rank achieved in the Beauty category.
+    u32 cuteRibbon:3;     // Stores the highest contest rank achieved in the Cute category.
+    u32 smartRibbon:3;    // Stores the highest contest rank achieved in the Smart category.
+    u32 toughRibbon:3;    // Stores the highest contest rank achieved in the Tough category.
+    u32 championRibbon:1; // Given when defeating the Champion. Because both RSE and FRLG use it, later generations don't specify from which region it comes from.
+    u32 winningRibbon:1;  // Given at the Battle Tower's Level 50 challenge by winning a set of seven battles that extends the current streak to 56 or more.
+    u32 victoryRibbon:1;  // Given at the Battle Tower's Level 100 challenge by winning a set of seven battles that extends the current streak to 56 or more.
+    u32 artistRibbon:1;   // Given at the Contest Hall by winning a Master Rank contest with at least 800 points, and agreeing to have the Pokémon's portrait placed in the museum after being offered.
+    u32 effortRibbon:1;   // Given at Slateport's market to Pokémon with maximum EVs.
+    u32 marineRibbon:1;   // Never distributed.
+    u32 landRibbon:1;     // Never distributed.
+    u32 skyRibbon:1;      // Never distributed.
+    u32 countryRibbon:1;  // Distributed during Pokémon Festa '04 and '05 to tournament winners.
+    u32 nationalRibbon:1; // Given to purified Shadow Pokémon in Colosseum/XD.
+    u32 earthRibbon:1;    // Given to teams that have beaten Mt. Battle's 100-battle challenge in Colosseum/XD.
+    u32 worldRibbon:1;    // Distributed during Pokémon Festa '04 and '05 to tournament winners.
+    u32 isShadow:1;
+    u32 unused_0B:1;
+    u32 abilityNum:2;
 
-    u32 pp1:7; // 127 PP.
-    u32 pp2:7; // 127 PP.
-    u32 pp3:7; // 127 PP.
-    u32 pp4:7; // 127 PP.
-    u32 padding3:4;
+    // The functionality of this bit changed in FRLG:
+    // In RS, this bit does nothing, is never set, & is accidentally unset when hatching Eggs.
+    // In FRLG & Emerald, this controls Mew & Deoxys obedience and whether they can be traded.
+    // If set, a Pokémon is a fateful encounter in FRLG's summary screen if hatched & for all Pokémon in Gen 4+ summary screens.
+    // Set for in-game event island legendaries, events distributed after a certain date, & Pokémon from XD: Gale of Darkness.
+    // Not to be confused with METLOC_FATEFUL_ENCOUNTER.
+    u32 modernFatefulEncounter:1;
+};
+
+// Number of bytes in the largest Pokémon substruct.
+// They are assumed to be the same size, and will be padded to
+// the largest size by the union.
+// By default they are all 12 bytes.
+#define NUM_SUBSTRUCT_BYTES (max(sizeof(struct PokemonSubstruct0),     \
+                             max(sizeof(struct PokemonSubstruct1),     \
+                             max(sizeof(struct PokemonSubstruct2),     \
+                                 sizeof(struct PokemonSubstruct3)))))
+
+enum SubstructType
+{
+    SUBSTRUCT_TYPE_0,
+    SUBSTRUCT_TYPE_1,
+    SUBSTRUCT_TYPE_2,
+    SUBSTRUCT_TYPE_3,
+};
+
+union PokemonSubstruct
+{
+    struct PokemonSubstruct0 type0;
+    struct PokemonSubstruct1 type1;
+    struct PokemonSubstruct2 type2;
+    struct PokemonSubstruct3 type3;
+    u16 raw[NUM_SUBSTRUCT_BYTES / 2]; // /2 because it's u16, not u8
+};
+
+struct BoxPokemon
+{
+    u32 personality;
+    u32 otId;
+    u8 nickname[min(10, POKEMON_NAME_LENGTH)];
+    u8 language:3;
+    u8 hiddenNatureModifier:5; // 31 natures.
+    u8 isBadEgg:1;
+    u8 hasSpecies:1;
+    u8 isEgg:1;
+    u8 blockBoxRS:1; // Unused, but Pokémon Box Ruby & Sapphire will refuse to deposit a Pokémon with this flag set.
+    u8 daysSinceFormChange:3; // 7 days.
+    u8 unused_13:1;
+    u8 otName[PLAYER_NAME_LENGTH];
+    u8 markings:4;
+    u8 compressedStatus:4;
+    u16 checksum;
+    u16 hpLost:14; // 16383 HP.
+    u16 shinyModifier:1;
+    u16 unused_1E:1;
+
+    union
+    {
+        u32 raw[(NUM_SUBSTRUCT_BYTES * 4) / 4]; // *4 because there are 4 substructs, /4 because it's u32, not u8
+        union PokemonSubstruct substructs[4];
+    } secure;
 };
 
 struct Pokemon
