@@ -5621,10 +5621,12 @@ u8 GetContestWinnerSaveIdx(u8 rank, bool8 shift)
 
 void ClearContestWinnerPicsInContestHall(void)
 {
+    /*
     s32 i;
 
     for (i = 0; i < MUSEUM_CONTEST_WINNERS_START; i++)
         gSaveBlock1Ptr->contestWinners[i] = gDefaultContestWinners[i];
+    */
 }
 
 static void SetContestLiveUpdateFlags(u8 contestant)

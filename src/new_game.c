@@ -121,8 +121,10 @@ void ClearAllContestWinnerPics(void)
     ClearContestWinnerPicsInContestHall();
 
     // Clear Museum paintings
+    /*
     for (i = MUSEUM_CONTEST_WINNERS_START; i < NUM_CONTEST_WINNERS; i++)
         gSaveBlock1Ptr->contestWinners[i] = sContestWinnerPicDummy;
+    */
 }
 
 static void ClearFrontierRecord(void)

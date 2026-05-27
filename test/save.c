@@ -4,10 +4,11 @@
 
 // If you would like to ensure save compatibility, update the values below with those for your hack. You can find these through the debug menu.
 // Please note that this simple check is not 100% foolproof, but should be able to catch most unintended shifts.
-#define T_SAVEBLOCK1_SIZE 13288
+#define T_SAVEBLOCK1_SIZE 9400
 #define T_SAVEBLOCK2_SIZE 2544
 #define T_SAVEBLOCK3_SIZE 28
-#define T_POKEMONSTORAGE_SIZE 34144
+#define T_POKEMONSTORAGE_SIZE 57640
+#define T_BOXPOKEMON_SIZE 76
 
 TEST("SaveBlock1 is backwards compatible")
 {
@@ -29,7 +30,13 @@ TEST("PokemonStorage is backwards compatible")
     EXPECT_EQ(sizeof(struct PokemonStorage), T_POKEMONSTORAGE_SIZE);
 }
 
+TEST("BoxPokemon is backwards compatible")
+{
+    EXPECT_EQ(sizeof(struct BoxPokemon), T_BOXPOKEMON_SIZE);
+}
+
 #undef T_SAVEBLOCK1_SIZE
 #undef T_SAVEBLOCK2_SIZE
 #undef T_SAVEBLOCK3_SIZE
 #undef T_POKEMONSTORAGE_SIZE
+#undef T_BOXPOKEMON_SIZE
