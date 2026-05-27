@@ -40,6 +40,7 @@
 #include "pokemon.h"
 #include "pokemon_icon.h"
 #include "pokemon_storage_system.h"
+#include "quickstart.h"
 #include "random.h"
 #include "region_map.h"
 #include "rtc.h"
@@ -4928,6 +4929,12 @@ const struct Trainer sDebugTrainers[DIFFICULTY_COUNT][DEBUG_TRAINERS_COUNT] =
 const struct Trainer* GetDebugAiTrainer(void)
 {
     return &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_AI];
+}
+
+void SetPartyForQuickstart(void)
+{
+    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_0], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], FALSE, BATTLE_TYPE_TRAINER);
+    FlagSet(FLAG_SYS_POKEMON_GET);
 }
 
 static void DebugAction_Party_SetParty(u8 taskId)
