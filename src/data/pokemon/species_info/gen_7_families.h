@@ -471,6 +471,7 @@ const struct SpeciesInfo gSpeciesInfoGen7[] =
         )
         .levelUpLearnset = sIncineroarLevelUpLearnset,
         .teachableLearnset = sIncineroarTeachableLearnset,
+        .eventLearnset = sIncineroarEventLearnset,
     },
 #endif //P_FAMILY_LITTEN
 
