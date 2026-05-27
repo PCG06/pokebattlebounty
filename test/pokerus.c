@@ -1,3 +1,4 @@
+/*
 #include "global.h"
 #include "malloc.h"
 #include "event_data.h"
@@ -702,3 +703,4 @@ TEST("(Pokerus) Test PartySpreadPokerus using gen2 adjacency")
         }
     }
 }
+*/

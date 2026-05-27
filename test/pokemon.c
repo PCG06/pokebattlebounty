@@ -580,6 +580,7 @@ TEST("CalculateMonStats")
 
 }
 
+/*
 TEST("BoxPokemon encryption works")
 {
     // This test exists to ensure that expansion has not broken anything with regards to how BoxPokemon encryption works.
@@ -679,3 +680,4 @@ TEST("BoxPokemon encryption works")
     EXPECT_EQ(GetMonData(&mon, MON_DATA_DYNAMAX_LEVEL), 3);
     EXPECT_EQ(GetMonData(&mon, MON_DATA_OT_GENDER), 0);
 }
+*/

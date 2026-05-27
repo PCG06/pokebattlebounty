@@ -1648,12 +1648,6 @@ static u32 GetBattlerMonData(enum BattlerId battler, struct Pokemon *party, u32 
         dst[3] = (data32 & 0xFF000000) >> 24;
         size = 4;
         break;
-    case REQUEST_CHECKSUM_BATTLE:
-        data16 = GetMonData(&party[monId], MON_DATA_CHECKSUM);
-        dst[0] = data16;
-        dst[1] = data16 >> 8;
-        size = 2;
-        break;
     case REQUEST_STATUS_BATTLE:
         data32 = GetMonData(&party[monId], MON_DATA_STATUS);
         dst[0] = (data32 & 0x000000FF);
@@ -1906,9 +1900,6 @@ static void SetBattlerMonData(enum BattlerId battler, struct Pokemon *party, u32
         break;
     case REQUEST_PERSONALITY_BATTLE:
         SetMonData(&party[monId], MON_DATA_PERSONALITY, &gBattleResources->bufferA[battler][3]);
-        break;
-    case REQUEST_CHECKSUM_BATTLE:
-        SetMonData(&party[monId], MON_DATA_CHECKSUM, &gBattleResources->bufferA[battler][3]);
         break;
     case REQUEST_STATUS_BATTLE:
         SetMonData(&party[monId], MON_DATA_STATUS, &gBattleResources->bufferA[battler][3]);
