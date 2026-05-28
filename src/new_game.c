@@ -51,7 +51,6 @@
 #include "constants/items.h"
 #include "difficulty.h"
 #include "follower_npc.h"
-#include "quickstart.h"
 
 extern const u8 EventScript_ResetAllMapFlags[];
 extern const u8 EventScript_ResetAllMapFlagsFrlg[];
@@ -222,8 +221,6 @@ void NewGameInitData(void)
 #if IS_FRLG
         StringCopy(gSaveBlock1Ptr->rivalName, rivalName);
 #endif
-    if (QUICKSTART)
-        SetPartyForQuickstart();
     ResetMiniGamesRecords();
     InitUnionRoomChatRegisteredTexts();
     InitLilycoveLady();

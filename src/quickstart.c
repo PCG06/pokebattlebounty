@@ -4,10 +4,12 @@
 #include "constants/rgb.h"
 #include "decompress.h"
 #include "graphics.h"
+#include "item.h"
 #include "main.h"
 #include "overworld.h"
 #include "palette.h"
 #include "config/quickstart.h"
+#include "pokedex.h"
 #include "quickstart.h"
 #include "random.h"
 #include "sound.h"
@@ -125,3 +127,15 @@ void Quickstart(void)
     }
 }
 
+void SetDexFlagsForQuickstart(void)
+{
+    for (u32 i = 0; i < NUM_DEX_FLAG_BYTES; i++)
+        gSaveBlock1Ptr->dexSeen[i] = 0xFF;
+}
+
+void AddItemsForQuickstart(void)
+{
+    AddBagItem(ITEM_MEGA_RING, 1);
+    AddBagItem(ITEM_Z_POWER_RING, 1);
+    AddBagItem(ITEM_DYNAMAX_BAND, 1);
+}

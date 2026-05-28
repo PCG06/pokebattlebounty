@@ -1517,7 +1517,6 @@ void ResetPokedex(void)
     for (i = 0; i < NUM_DEX_FLAG_BYTES; i++)
     {
         gSaveBlock1Ptr->dexCaught[i] = 0;
-        gSaveBlock1Ptr->dexSeen[i] = 0;
     }
 }
 

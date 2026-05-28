@@ -2055,11 +2055,11 @@ static void ResetPokedexView(struct PokedexView *pokedexView)
     for (i = 0; i < NATIONAL_DEX_COUNT; i++)
     {
         pokedexView->pokedexList[i].dexNum = 0xFFFF;
-        pokedexView->pokedexList[i].seen = FALSE;
+        pokedexView->pokedexList[i].seen = TRUE;
         pokedexView->pokedexList[i].owned = FALSE;
     }
     pokedexView->pokedexList[NATIONAL_DEX_COUNT].dexNum = 0;
-    pokedexView->pokedexList[NATIONAL_DEX_COUNT].seen = FALSE;
+    pokedexView->pokedexList[NATIONAL_DEX_COUNT].seen = TRUE;
     pokedexView->pokedexList[NATIONAL_DEX_COUNT].owned = FALSE;
     pokedexView->pokemonListCount = 0;
     pokedexView->selectedPokemon = 0;
@@ -2499,21 +2499,16 @@ static void CreatePokedexList(u8 dexMode, u8 order)
         }
         else
         {
-            s16 r5, r10;
-            for (i = 0, r5 = 0, r10 = 0; i < temp_dexCount; i++)
+            s16 r5;
+            for (i = 0, r5 = 0; i < temp_dexCount; i++)
             {
                 temp_dexNum = i + 1;
-                if (GetSetPokedexFlag(temp_dexNum, FLAG_GET_SEEN))
-                    r10 = 1;
-                if (r10)
-                {
-                    sPokedexView->pokedexList[r5].dexNum = temp_dexNum;
-                    sPokedexView->pokedexList[r5].seen = GetSetPokedexFlag(temp_dexNum, FLAG_GET_SEEN);
-                    sPokedexView->pokedexList[r5].owned = GetSetPokedexFlag(temp_dexNum, FLAG_GET_CAUGHT);
-                    if (sPokedexView->pokedexList[r5].seen)
-                        sPokedexView->pokemonListCount = r5 + 1;
-                    r5++;
-                }
+                sPokedexView->pokedexList[r5].dexNum = temp_dexNum;
+                sPokedexView->pokedexList[r5].seen = GetSetPokedexFlag(temp_dexNum, FLAG_GET_SEEN);
+                sPokedexView->pokedexList[r5].owned = GetSetPokedexFlag(temp_dexNum, FLAG_GET_CAUGHT);
+                if (sPokedexView->pokedexList[r5].seen)
+                    sPokedexView->pokemonListCount = r5 + 1;
+                r5++;
             }
         }
         break;
@@ -3589,7 +3584,7 @@ static void CreateStatBars(struct PokedexListItem *dexMon)
 
     sPokedexView->justScrolled = FALSE;
 
-    if (dexMon->owned) // Show filed bars
+    if (dexMon->seen) // Show filed bars
     {
         u8 i;
         u32 width, statValue;
@@ -3621,12 +3616,6 @@ static void CreateStatBars(struct PokedexListItem *dexMon)
 
         LoadSpriteSheet(&sheet);
         Free(gfx);
-    }
-    else if (dexMon->seen) // Just HP/ATK/DEF
-    {
-        static const struct SpriteSheet sheet = {sStatBarsGfx, 64 * 64, TAG_STAT_BAR};
-
-        LoadSpriteSheet(&sheet);
     }
     else // neither seen nor owned
     {
@@ -3775,8 +3764,8 @@ static void Task_LoadInfoScreen(u8 taskId)
         gMain.state++;
         break;
     case 4:
-        PrintMonInfo(sPokedexListItem->dexNum, sPokedexView->dexMode == DEX_MODE_HOENN ? FALSE : TRUE, sPokedexListItem->owned, 0);
-        if (!sPokedexListItem->owned)
+        PrintMonInfo(sPokedexListItem->dexNum, sPokedexView->dexMode == DEX_MODE_HOENN ? FALSE : TRUE, sPokedexListItem->seen, 0);
+        if (!sPokedexListItem->seen)
             LoadPalette(gPlttBufferUnfaded + 1, BG_PLTT_ID(3) + 1, PLTT_SIZEOF(16 - 1));
         CopyWindowToVram(WIN_INFO, COPYWIN_FULL);
         CopyBgTilemapBufferToVram(1);
@@ -4002,7 +3991,7 @@ static void Task_SwitchScreensFromAreaScreen(u8 taskId)
             gTasks[taskId].func = Task_LoadInfoScreen;
             break;
         case 2:
-            if (!sPokedexListItem->owned)
+            if (!sPokedexListItem->seen)
                 PlaySE(SE_FAILURE);
             else
                 gTasks[taskId].func = Task_LoadStatsScreen;
@@ -4886,7 +4875,7 @@ static void Task_LoadStatsScreen(u8 taskId)
         PrintStatsScreen_Moves_Description(taskId);
         PrintStatsScreen_Moves_BottomText(taskId);
         PrintStatsScreen_Moves_Bottom(taskId);
-        if (!sPokedexListItem->owned)
+        if (!sPokedexListItem->seen)
             LoadPalette(gPlttBufferUnfaded + 1, BG_PLTT_ID(3) + 1, 30);
         StatsPage_PrintNavigationButtons(); //sText_Stats_Buttons
         gMain.state++;
@@ -5025,7 +5014,7 @@ static void Task_HandleStatsScreenInput(u8 taskId)
     }
     if ((JOY_NEW(DPAD_RIGHT) || (JOY_NEW(R_BUTTON) && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_LR)))
     {
-        if (!sPokedexListItem->owned)
+        if (!sPokedexListItem->seen)
             PlaySE(SE_FAILURE);
         else
         {
@@ -6163,7 +6152,7 @@ static void Task_HandleEvolutionScreenInput(u8 taskId)
     }
     if ((JOY_NEW(DPAD_RIGHT) || (JOY_NEW(R_BUTTON) && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_LR)))
     {
-        if (!sPokedexListItem->owned)
+        if (!sPokedexListItem->seen)
             PlaySE(SE_FAILURE);
         else
         {
@@ -6178,10 +6167,9 @@ static void Task_HandleEvolutionScreenInput(u8 taskId)
 
 static void HandleTargetSpeciesPrintText(enum Species targetSpecies, u32 base_x, u32 base_y, u32 base_y_offset, u32 base_i)
 {
-    bool32 seen = GetSetPokedexFlag(SpeciesToNationalPokedexNum(targetSpecies), FLAG_GET_SEEN);
     u32 fontId = GetSpeciesNameFontId(GetSpeciesNameWidthInChars(GetSpeciesName(targetSpecies)));
 
-    if (seen || !HGSS_HIDE_UNSEEN_EVOLUTION_NAMES)
+    if (!HGSS_HIDE_UNSEEN_EVOLUTION_NAMES)
         StringCopy(gStringVar3, GetSpeciesName(targetSpecies)); //evolution mon name
     else
         StringCopy(gStringVar3, gText_ThreeQuestionMarks); //show questionmarks instead of name
@@ -6214,8 +6202,6 @@ static void CreateCaughtBallEvolutionScreen(enum Species targetSpecies, u8 x, u8
 
 static void HandlePreEvolutionSpeciesPrint(u8 taskId, enum Species preSpecies, enum Species species, u8 base_x, u8 base_y, u8 base_y_offset, u8 base_i)
 {
-    bool32 seen = GetSetPokedexFlag(SpeciesToNationalPokedexNum(preSpecies), FLAG_GET_SEEN);
-
     StringCopy(gStringVar1, GetSpeciesName(species)); //evolution mon name
 
     if (sPokedexView->sEvoScreenData.isMega)
@@ -6223,7 +6209,7 @@ static void HandlePreEvolutionSpeciesPrint(u8 taskId, enum Species preSpecies, e
     else
     {
 
-        if (seen || !HGSS_HIDE_UNSEEN_EVOLUTION_NAMES)
+        if (!HGSS_HIDE_UNSEEN_EVOLUTION_NAMES)
             StringCopy(gStringVar2, GetSpeciesName(preSpecies)); //evolution mon name
         else
             StringCopy(gStringVar2, gText_ThreeQuestionMarks); //show questionmarks instead of name
@@ -6506,8 +6492,7 @@ static void PrintEvolutionTargetSpeciesAndMethod(u8 taskId, enum Species species
             }
         }
 
-        bool32 caught = GetSetPokedexFlag(SpeciesToNationalPokedexNum(targetSpecies), FLAG_GET_CAUGHT);
-        if (HGSS_HIDE_UNOWNED_EVOLUTION_METHODS == TRUE && !caught)
+        if (HGSS_HIDE_UNOWNED_EVOLUTION_METHODS)
         {
             StringExpandPlaceholders(gStringVar4, COMPOUND_STRING("Unknown"));
         }
@@ -7330,7 +7315,7 @@ static void Task_HandleCryScreenInput(u8 taskId)
         if (JOY_NEW(DPAD_RIGHT)
          || (JOY_NEW(R_BUTTON) && gSaveBlock2Ptr->optionsButtonMode == OPTIONS_BUTTON_MODE_LR))
         {
-            if (!sPokedexListItem->owned)
+            if (!sPokedexListItem->seen)
             {
                 PlaySE(SE_FAILURE);
             }
@@ -7850,7 +7835,7 @@ static int DoPokedexSearch(u8 dexMode, u8 order, u8 abcGroup, enum BodyColor bod
         {
             for (i = 0, resultsCount = 0; i < sPokedexView->pokemonListCount; i++)
             {
-                if (sPokedexView->pokedexList[i].owned)
+                if (sPokedexView->pokedexList[i].seen)
                 {
                     species = NationalPokedexNumToSpecies(sPokedexView->pokedexList[i].dexNum);
 
@@ -7868,7 +7853,7 @@ static int DoPokedexSearch(u8 dexMode, u8 order, u8 abcGroup, enum BodyColor bod
         {
             for (i = 0, resultsCount = 0; i < sPokedexView->pokemonListCount; i++)
             {
-                if (sPokedexView->pokedexList[i].owned)
+                if (sPokedexView->pokedexList[i].seen)
                 {
                     species = NationalPokedexNumToSpecies(sPokedexView->pokedexList[i].dexNum);
 

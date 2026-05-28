@@ -12,5 +12,7 @@
 void CreateQuickstartHud(void);
 void Quickstart(void);
 void SetPartyForQuickstart(void);
+void SetDexFlagsForQuickstart(void);
+void AddItemsForQuickstart(void);
 
 #endif // GUARD_QUICKSTART_H

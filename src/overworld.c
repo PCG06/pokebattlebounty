@@ -49,6 +49,7 @@
 #include "oras_dowse.h"
 #include "palette.h"
 #include "play_time.h"
+#include "quickstart.h"
 #include "random.h"
 #include "roamer.h"
 #include "rotating_gate.h"
@@ -1924,6 +1925,15 @@ void CB2_NewGame(void)
     SetFieldVBlankCallback();
     SetMainCallback1(CB1_Overworld);
     SetMainCallback2(CB2_Overworld);
+    if (QUICKSTART)
+    {
+        FlagSet(FLAG_SYS_B_DASH);
+        FlagSet(FLAG_SYS_POKEDEX_GET);
+        EnableNationalPokedex();
+        SetPartyForQuickstart();
+        SetDexFlagsForQuickstart();
+        AddItemsForQuickstart();
+    }
 #if OW_USE_FAKE_RTC
     // Wall clock now track local time so we set it to 10AM to match initial wall clock time
     RtcCalcLocalTimeOffset(0, 10, 0, 0);
