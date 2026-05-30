@@ -154,7 +154,7 @@ We want to allow the player to purchase the Light Ball, but only after they have
                  "A hold item that\n"
                  "raises the Atk and\n"
                  "Sp. Atk of Pikachu."),
-         .pocket = POCKET_ITEMS,
+         .pocket = POCKET_OTHER_ITEMS,
          .sortType = ITEM_TYPE_HELD_ITEM,
          .type = ITEM_USE_BAG_MENU,
          .fieldUseFunc = ItemUseOutOfBattle_CannotUse,

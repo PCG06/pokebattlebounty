@@ -1086,9 +1086,9 @@ enum BerryId
 #define MAIL_NONE 0xFF
 #define ITEM_TO_MULCH(itemId)(((itemId) - ITEM_GROWTH_MULCH) + 1)
 
-#define MAX_BAG_ITEM_CAPACITY         999
-#define MAX_PC_ITEM_CAPACITY          999
-#define MAX_PYRAMID_BAG_ITEM_CAPACITY  99 // Values higher than 255 require free SaveBlock2 space.
+#define MAX_BAG_ITEM_CAPACITY         1
+#define MAX_PC_ITEM_CAPACITY          1
+#define MAX_PYRAMID_BAG_ITEM_CAPACITY 1 // Values higher than 255 require free SaveBlock2 space.
 
 #define MAX_ITEM_DIGITS         ((MAX_BAG_ITEM_CAPACITY > 99) ? 3 : 2)
 #define MAX_PYRAMID_ITEM_DIGITS ((MAX_PYRAMID_BAG_ITEM_CAPACITY > 99) ? 3 : 2)

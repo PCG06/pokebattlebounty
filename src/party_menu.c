@@ -6968,6 +6968,36 @@ void TryItemHoldFormChange(struct Pokemon *mon, s8 slotId, enum BattleTrainer tr
 #undef tAnimWait
 #undef tNextFunc
 
+void ItemUseCB_PokeBall(u8 taskId, TaskFunc task)
+{
+    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+    enum PokeBall currBall = GetMonData(mon, MON_DATA_POKEBALL);
+    enum PokeBall newBall = GetItemSecondaryId(gSpecialVar_ItemId);
+    enum Item newBallId = gPokeBalls[newBall].itemId;
+    static const u8 sText_MonBallWasChanged[] = _("{STR_VAR_1} was put in the {STR_VAR_2}.{PAUSE_UNTIL_PRESS}");
+
+    if (newBall == BALL_STRANGE || currBall == newBall)
+    {
+        gPartyMenuUseExitCallback = FALSE;
+        DisplayPartyMenuMessage(gText_WontHaveEffect, TRUE);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = task;
+    }
+    else
+    {
+        GetMonNickname(mon, gStringVar1);
+        CopyItemName(newBallId, gStringVar2);
+        PlaySE(SE_SELECT);
+        gPartyMenuUseExitCallback = TRUE;
+        SetMonData(mon, MON_DATA_POKEBALL, &newBall);
+        StringExpandPlaceholders(gStringVar4, sText_MonBallWasChanged);
+        DisplayPartyMenuMessage(gStringVar4, TRUE);
+        ScheduleBgCopyTilemapToVram(2);
+        gTasks[taskId].func = Task_ReturnToChooseMonAfterText;
+        RemoveBagItem(newBallId, 1);
+    }
+}
+
 enum ItemEffectType GetItemEffectType(enum Item item)
 {
     u32 statusCure;
