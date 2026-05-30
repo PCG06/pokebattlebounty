@@ -273,6 +273,7 @@ EventScript_ResetAllMapFlags::
 	setflag FLAG_HIDE_SKY_PILLAR_WALLACE
 	setflag FLAG_HIDE_SKY_PILLAR_TOP_RAYQUAZA_STILL
 	call EventScript_ResetAllBerries
+	call Debug_CheatStart
 	end
 
 EventScript_ResetAllMapFlagsFrlg::
@@ -326,4 +327,5 @@ EventScript_ResetAllMapFlagsFrlg::
 	setflag FLAG_HIDE_FAME_CHECKER_LT_SURGE_JOURNAL
 	setflag FLAG_HIDE_SAFFRON_CITY_POKECENTER_SABRINA_JOURNALS
 	setvar VAR_MASSAGE_COOLDOWN_STEP_COUNTER, 500
+	call Debug_CheatStartFrlg
 	end

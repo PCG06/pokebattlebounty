@@ -1222,17 +1222,19 @@
 #define FLAG_ITEM_SAFARI_ZONE_NORTH_EAST_NUGGET                     0x491
 #define FLAG_ITEM_SAFARI_ZONE_SOUTH_EAST_BIG_PEARL                  0x492
 
-#define FLAG_UNUSED_0x493                                           0x493 // Unused Flag
-#define FLAG_UNUSED_0x494                                           0x494 // Unused Flag
-#define FLAG_UNUSED_0x495                                           0x495 // Unused Flag
-#define FLAG_UNUSED_0x496                                           0x496 // Unused Flag
-#define FLAG_UNUSED_0x497                                           0x497 // Unused Flag
-#define FLAG_UNUSED_0x498                                           0x498 // Unused Flag
-#define FLAG_UNUSED_0x499                                           0x499 // Unused Flag
-#define FLAG_UNUSED_0x49A                                           0x49A // Unused Flag
-#define FLAG_UNUSED_0x49B                                           0x49B // Unused Flag
-#define FLAG_UNUSED_0x49C                                           0x49C // Unused Flag
-#define FLAG_UNUSED_0x49D                                           0x49D // Unused Flag
+// Config flags
+#define FLAG_INVERSE_BATTLE                                         0x493
+#define FLAG_AI_VS_AI_BATTLE                                        0x494
+#define FLAG_DYNAMAX_BATTLE                                         0x495
+#define FLAG_TERA_ORB_CHARGED                                       0x496
+#define FLAG_TERA_ORB_NO_COST                                       0x497
+#define FLAG_SLEEP_CLAUSE                                           0x498
+#define FLAG_NO_WHITEOUT                                            0x499
+#define FLAG_SKY_BATTLE                                             0x49A
+#define FLAG_HEAL_AFTER_FOLLOWER_BATTLE                             0x49B
+#define FLAG_FOLLOWERS_DISABLED                                     0x49C
+#define FLAG_FORCE_SHINY                                            0x49D
+
 #define FLAG_UNUSED_0x49E                                           0x49E // Unused Flag
 #define FLAG_UNUSED_0x49F                                           0x49F // Unused Flag
 #define FLAG_UNUSED_0x4A0                                           0x4A0 // Unused Flag

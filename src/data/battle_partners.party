@@ -13,32 +13,68 @@ Gender: Male
 Music: Male
 AI: Basic Trainer
 
-Metang
-Brave Nature
-Level: 42
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 Atk / 252 Def / 6 SpA
-- Light Screen
-- Psychic
-- Reflect
-- Metal Claw
-
-Skarmory
-Impish Nature
-Level: 43
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 HP / 6 SpA / 252 SpD
-- Toxic
-- Aerial Ace
-- Protect
-- Steel Wing
-
-Aggron
-Adamant Nature
+Carbink @ Light Clay
+Modest Nature
+Ability: Clear Body
 Level: 44
 IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 Atk / 252 SpA / 6 SpD
-- Thunder
+EVs: 4 HP / 252 Def / 252 SpD
+- Moonblast
+- Earth Power
+- Reflect
+- Light Screen
+
+Skarmory @ Leftovers
+Impish Nature
+Ability: Sturdy
+Level: 43
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 252 HP / 252 Def / 4 Spe
+- Toxic
+- Iron Defense
 - Protect
-- Solar Beam
+- Body Press
+
+Aggron @ Choice Band
+Adamant Nature
+Ability: Sturdy
+Level: 44
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 4 HP / 252 Atk / 252 Def
+- Heavy Slam
+- Stone Edge
+- Thunder Punch
 - Dragon Claw
+
+Lucario @ Expert Belt
+Adamant Nature
+Ability: Inner Focus
+Level: 44
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 252 Atk / 252 Spe / 4 Def
+- Close Combat
+- Meteor Mash
+- Swords Dance
+- Extreme Speed
+
+Metagross @ Metagrossite
+Brave Nature
+Ability: Clear Body
+Level: 42
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 252 Atk / 252 Spe / 4 Def
+- Heavy Slam
+- Bullet Punch
+- Psychic Fangs
+- Knock Off
+
+Sandslash @ Choice Scarf
+Jolly Nature
+Ability: Sand Rush
+Level: 42
+IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+EVs: 252 Atk / 252 Spe / 4 Def
+- High Horsepower
+- Rock Slide
+- Stomping Tantrum
+- Knock Off

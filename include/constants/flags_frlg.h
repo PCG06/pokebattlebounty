@@ -149,18 +149,17 @@
 #define FLAG_HIDE_SAFFRON_CITY_POKECENTER_SABRINA_JOURNALS 0x0AE
 
 // Unused?
-#define FLAG_INVERSE_BATTLE             0x0AF
-#define FLAG_AI_VS_AI_BATTLE            0x0B0
-#define FLAG_DYNAMAX_BATTLE             0x0B1
-#define FLAG_TERA_ORB_CHARGED           0x0B2
-#define FLAG_TERA_ORB_NO_COST           0x0B3
-#define FLAG_SLEEP_CLAUSE               0x0B4
-#define FLAG_NO_WHITEOUT                0x0B5
-#define FLAG_SKY_BATTLE                 0x0B6
-#define FLAG_HEAL_AFTER_FOLLOWER_BATTLE 0x0B7
-#define FLAG_FOLLOWERS_DISABLED         0x0B8
-#define FLAG_FORCE_SHINY                0x0B9
-
+#define FLAG_0x0AF               0x0AF
+#define FLAG_0x0B0               0x0B0
+#define FLAG_0x0B1               0x0B1
+#define FLAG_0x0B2               0x0B2
+#define FLAG_0x0B3               0x0B3
+#define FLAG_0x0B4               0x0B4
+#define FLAG_0x0B5               0x0B5
+#define FLAG_0x0B6               0x0B6
+#define FLAG_0x0B7               0x0B7
+#define FLAG_0x0B8               0x0B8
+#define FLAG_0x0B9               0x0B9
 #define FLAG_0x0BA               0x0BA
 #define FLAG_0x0BB               0x0BB
 #define FLAG_0x0BC               0x0BC

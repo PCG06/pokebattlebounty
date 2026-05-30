@@ -1635,8 +1635,6 @@ const u16 gTilesetPalettes_UnionRoom[][16] =
 
 const u32 gTilesetTiles_UnionRoom[] = INCGFX_U32("data/tilesets/secondary/union_room/tiles.png", ".4bpp.fastSmol");
 
-#if IS_FRLG
-
 const u32 gTilesetTiles_Building_Frlg[] = INCGFX_U32("data/tilesets/primary/building_frlg/tiles.png", ".4bpp.smol");
 
 const u16 gTilesetPalettes_Building_Frlg[][16] =
@@ -3046,5 +3044,3 @@ const u16 ALIGNED(4) gTilesetPalettes_General_Frlg[][16] =
 };
 
 const u32 gTilesetTiles_General_Frlg[] = INCGFX_U32("data/tilesets/primary/general_frlg/tiles.png", ".4bpp.smol");
-
-#endif // IS_FRLG
