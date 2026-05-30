@@ -1228,13 +1228,13 @@
 #define FLAG_DYNAMAX_BATTLE                                         0x495
 #define FLAG_TERA_ORB_CHARGED                                       0x496
 #define FLAG_TERA_ORB_NO_COST                                       0x497
-#define FLAG_SLEEP_CLAUSE                                           0x498
-#define FLAG_NO_WHITEOUT                                            0x499
-#define FLAG_SKY_BATTLE                                             0x49A
-#define FLAG_HEAL_AFTER_FOLLOWER_BATTLE                             0x49B
-#define FLAG_FOLLOWERS_DISABLED                                     0x49C
-#define FLAG_FORCE_SHINY                                            0x49D
+#define FLAG_NO_WHITEOUT                                            0x498
+#define FLAG_SKY_BATTLE                                             0x499
+#define FLAG_HEAL_AFTER_FOLLOWER_BATTLE                             0x49A
+#define FLAG_FOLLOWERS_DISABLED                                     0x49B
+#define FLAG_FORCE_SHINY                                            0x49C
 
+#define FLAG_UNUSED_0x49D                                           0x49D
 #define FLAG_UNUSED_0x49E                                           0x49E // Unused Flag
 #define FLAG_UNUSED_0x49F                                           0x49F // Unused Flag
 #define FLAG_UNUSED_0x4A0                                           0x4A0 // Unused Flag
