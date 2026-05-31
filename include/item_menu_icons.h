@@ -3,7 +3,8 @@
 
 extern const struct CompressedSpriteSheet gBagMaleSpriteSheet;
 extern const struct CompressedSpriteSheet gBagFemaleSpriteSheet;
-extern const struct SpritePalette gBagPaletteTable;
+extern const struct SpritePalette gBagMalePaletteTable;
+extern const struct SpritePalette gBagFemalePaletteTable;
 extern const struct CompressedSpriteSheet gBerryCheckCircleSpriteSheet;
 extern const struct SpritePalette gBerryCheckCirclePaletteTable;
 

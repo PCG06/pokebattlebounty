@@ -1728,8 +1728,9 @@ const u32 gSummaryPage_ContestMoves_Tilemap[] = INCGFX_U32("graphics/summary_scr
 const u32 gSummaryPage_InfoEgg_Tilemap[]      = INCGFX_U32("graphics/summary_screen/page_info_egg.bin", ".smolTM");
 
 const u32 gBagMaleTiles[] = INCGFX_U32("graphics/bag/bag_male.png", ".4bpp.smol");
+const u16 gBagMalePalette[] = INCGFX_U16("graphics/bag/bag_male.pal", ".gbapal");
 const u32 gBagFemaleTiles[] = INCGFX_U32("graphics/bag/bag_female.png", ".4bpp.smol");
-const u16 gBagPalette[] = INCGFX_U16("graphics/bag/bag.pal", ".gbapal");
+const u16 gBagFemalePalette[] = INCGFX_U16("graphics/bag/bag_female.pal", ".gbapal");
 
 const u16 gBagScreenMale_Pal[] = INCGFX_U16("graphics/bag/menu_male.pal", ".gbapal");
 const u16 gBagScreenFemale_Pal[] = INCGFX_U16("graphics/bag/menu_female.pal", ".gbapal");
