@@ -11,6 +11,7 @@
 #include "battle_setup.h"
 #include "battle_tower.h"
 #include "battle_z_move.h"
+#include "swsh_summary_screen.h"
 #include "caps.h"
 #include "data.h"
 #include "daycare.h"
@@ -5506,12 +5507,19 @@ static void Task_AnimateAfterDelay(u8 taskId)
     }
 }
 
+#define tIsShadow data[4]
+
+static EWRAM_DATA u8 sShadowAnimDelayTaskId = 0;
+
 static void Task_PokemonSummaryAnimateAfterDelay(u8 taskId)
 {
     if (--gTasks[taskId].sAnimDelay == 0)
     {
         StartMonSummaryAnimation(READ_PTR_FROM_TASK(taskId, 0), gTasks[taskId].sAnimId);
-        SummaryScreen_SetAnimDelayTaskId(TASK_NONE);
+        if (gTasks[taskId].tIsShadow)
+            sShadowAnimDelayTaskId = TASK_NONE;
+        else
+            SummaryScreen_SetAnimDelayTaskId(TASK_NONE);
         DestroyTask(taskId);
     }
 }
@@ -5571,7 +5579,7 @@ void DoMonFrontSpriteAnimation(struct Sprite *sprite, enum Species species, bool
     }
 }
 
-void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, bool8 oneFrame)
+void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, bool8 oneFrame, bool32 isShadow)
 {
     if (!oneFrame && HasTwoFramesAnimation(species))
         StartSpriteAnim(sprite, 1);
@@ -5582,7 +5590,13 @@ void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, b
         STORE_PTR_IN_TASK(sprite, taskId, 0);
         gTasks[taskId].sAnimId = gSpeciesInfo[species].frontAnimId;
         gTasks[taskId].sAnimDelay = gSpeciesInfo[species].frontAnimDelay;
-        SummaryScreen_SetAnimDelayTaskId(taskId);
+        gTasks[taskId].tIsShadow = isShadow;
+
+        if (isShadow)
+            sShadowAnimDelayTaskId = taskId;
+        else
+            SummaryScreen_SetAnimDelayTaskId(taskId);
+
         SetSpriteCB_MonAnimDummy(sprite);
     }
     else
@@ -5594,9 +5608,18 @@ void PokemonSummaryDoMonAnimation(struct Sprite *sprite, enum Species species, b
 
 void StopPokemonAnimationDelayTask(void)
 {
-    u8 delayTaskId = FindTaskIdByFunc(Task_PokemonSummaryAnimateAfterDelay);
-    if (delayTaskId != TASK_NONE)
+    u8 delayTaskId;
+    while ((delayTaskId = FindTaskIdByFunc(Task_PokemonSummaryAnimateAfterDelay)) != TASK_NONE)
         DestroyTask(delayTaskId);
+}
+
+void StopShadowAnimDelayTask(void)
+{
+    if (sShadowAnimDelayTaskId != TASK_NONE)
+    {
+        DestroyTask(sShadowAnimDelayTaskId);
+        sShadowAnimDelayTaskId = TASK_NONE;
+    }
 }
 
 void BattleAnimateBackSprite(struct Sprite *sprite, enum Species species)
