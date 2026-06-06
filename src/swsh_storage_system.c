@@ -1095,10 +1095,16 @@ static void CreateMainMenu(u8 whichMenu, s16 *windowIdPtr)
     *windowIdPtr = windowId;
 }
 
-static void CB2_ExitPokeStorage(void)
-{
+ static void CB2_ExitPokeStorage(void)
+ {
     sPreviousBoxOption = GetCurrentBoxOption();
     gFieldCallback = FieldTask_ReturnToPcMenu;
+#if SWSH_PARTY_MENU_PC_ACCESS
+    if (PokemonPC_HasReturnToPartyCallback())
+        gFieldCallback = CB2_ReopenPartyMenuFromPC;
+    else
+#endif
+        gFieldCallback = FieldTask_ReturnToPcMenu;
     SetMainCallback2(CB2_ReturnToField);
 }
 
@@ -1331,7 +1337,7 @@ static void ChooseBoxMenu_MoveCursor(s8 dcol, s8 drow)
 {
     u8 row = sChooseBoxMenu->curBox / 5;
     u8 col = sChooseBoxMenu->curBox % 5;
-    u8 numRows = (TOTAL_BOXES_COUNT + 4) / 5;
+    u8 numRows = TOTAL_BOXES_COUNT / 5;
     u8 targetRow;
     u8 targetLength;
 

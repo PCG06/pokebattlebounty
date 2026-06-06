@@ -3,7 +3,7 @@
 
 #include "main.h"
 
-#define TOTAL_BOXES_COUNT       25
+#define TOTAL_BOXES_COUNT       20
 #define IN_BOX_ROWS             5 // Number of rows, 6 Pokémon per row
 #define IN_BOX_COLUMNS          6 // Number of columns, 5 Pokémon per column
 #define IN_BOX_COUNT            (IN_BOX_ROWS * IN_BOX_COLUMNS)
@@ -41,6 +41,7 @@ void ShowPokemonStorageSystemPC(void);
 void ShowPokemonPCFromParty(void);
 void CB2_ShowPokemonPCFromParty(void);
 void PokemonPC_SetReturnToPartyCallback(MainCallback cb);
+bool8 PokemonPC_HasReturnToPartyCallback(void);
 void ResetPokemonStorageSystem(void);
 s16 CompactPartySlots(void);
 u8 StorageGetCurrentBox(void);
