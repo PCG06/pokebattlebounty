@@ -989,8 +989,8 @@ static void Debug_ShowMenu(DebugFunc HandleInput, const struct DebugMenuOption *
     inputTaskId = CreateTask(HandleInput, 3);
     gTasks[inputTaskId].tMenuTaskId = menuTaskId;
     gTasks[inputTaskId].tWindowId = windowId;
-    gTasks[inputTaskId].tSubWindowId = 0xFF;
-    gTasks[inputTaskId].tSpriteId = 0xFF;
+    gTasks[inputTaskId].tSubWindowId = WINDOW_NONE;
+    gTasks[inputTaskId].tSpriteId = SPRITE_NONE;
 
     // draw everything
     CopyWindowToVram(windowId, COPYWIN_FULL);
@@ -1012,7 +1012,7 @@ static void Debug_CreateInputDisplayWindow(u8 taskId)
 
 static void Debug_ResetInputDisplayMonIcon(u8 taskId, enum Species species)
 {
-    if (gTasks[taskId].tSpriteId != 0xFF)
+    if (gTasks[taskId].tSpriteId != SPRITE_NONE)
     {
         FreeAndDestroyMonIconSprite(&gSprites[gTasks[taskId].tSpriteId]);
         FreeMonIconPalettes();
@@ -1024,7 +1024,7 @@ static void Debug_ResetInputDisplayMonIcon(u8 taskId, enum Species species)
 
 static void Debug_DestroyMenu(u8 taskId)
 {
-    if (gTasks[taskId].tSubWindowId != 0xFF)
+    if (gTasks[taskId].tSubWindowId != WINDOW_NONE)
     {
         ClearStdWindowAndFrame(gTasks[taskId].tSubWindowId, TRUE);
         RemoveWindow(gTasks[taskId].tSubWindowId);
@@ -1037,7 +1037,7 @@ static void Debug_DestroyMenu(u8 taskId)
 
 static void Debug_DestroyMenu_Full(u8 taskId)
 {
-    if (gTasks[taskId].tSubWindowId != 0)
+    if (gTasks[taskId].tSubWindowId != WINDOW_NONE)
     {
         ClearStdWindowAndFrame(gTasks[taskId].tSubWindowId, FALSE);
         DebugAction_DestroyExtraWindow(taskId);
@@ -3376,7 +3376,7 @@ static void DebugAction_Give_PokemonSimple(u8 taskId)
     CopyWindowToVram(windowId, COPYWIN_FULL);
 
     // Display initial Pokémon
-    u32 species;
+    enum Species species;
     if (!IsSpeciesEnabled(sDebugMonData->species))
         species = SPECIES_NONE;
     else
@@ -3418,7 +3418,7 @@ static void DebugAction_Give_PokemonComplex(u8 taskId)
     CopyWindowToVram(windowId, COPYWIN_FULL);
 
     // Display initial Pokémon
-    u32 species;
+    enum Species species;
     if (!IsSpeciesEnabled(sDebugMonData->species))
         species = SPECIES_NONE;
     else
@@ -3460,7 +3460,7 @@ static void DebugAction_Give_NewEgg(u8 taskId)
     CopyWindowToVram(windowId, COPYWIN_FULL);
 
     // Display initial Pokémon
-    u32 species;
+    enum Species species;
     if (!IsSpeciesEnabled(gTasks[taskId].tInput))
         species = SPECIES_NONE;
     else

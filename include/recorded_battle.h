@@ -5,7 +5,7 @@
 #include "link.h"
 #include "random.h"
 
-#define BATTLER_RECORD_SIZE 388
+#define BATTLER_RECORD_SIZE 54
 
 struct RecordedBattleSave
 {
