@@ -3,6 +3,7 @@
 #include "constants/global.h"
 #include "constants/rgb.h"
 #include "decompress.h"
+#include "event_data.h"
 #include "graphics.h"
 #include "item.h"
 #include "main.h"
@@ -10,8 +11,10 @@
 #include "palette.h"
 #include "config/quickstart.h"
 #include "pokedex.h"
+#include "pokemon.h"
 #include "quickstart.h"
 #include "random.h"
+#include "script_pokemon_util.h"
 #include "sound.h"
 #include "sprite.h"
 #include "string_util.h"
@@ -125,6 +128,15 @@ void Quickstart(void)
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         SetMainCallback2(CB2_SkipToNewGame);
     }
+}
+
+void SetPartyForQuickstart(void)
+{
+    ScriptGiveMon(SPECIES_CHARIZARD, MAX_LEVEL, ITEM_CHARIZARDITE_Y);
+    ScriptGiveMon(SPECIES_INCINEROAR, MAX_LEVEL, ITEM_SITRUS_BERRY);
+    ScriptGiveMon(SPECIES_CINDERACE, MAX_LEVEL, ITEM_CHOICE_BAND);
+
+    FlagSet(FLAG_SYS_POKEMON_GET);
 }
 
 void SetDexFlagsForQuickstart(void)

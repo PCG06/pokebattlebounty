@@ -5521,12 +5521,6 @@ const struct Trainer* GetDebugAiTrainer(void)
     return &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_AI];
 }
 
-void SetPartyForQuickstart(void)
-{
-    CreateNPCTrainerPartyFromTrainer(gParties[B_TRAINER_PLAYER], &sDebugTrainers[DIFFICULTY_NORMAL][DEBUG_TRAINER_PLAYER], FALSE, BATTLE_TYPE_TRAINER);
-    FlagSet(FLAG_SYS_POKEMON_GET);
-}
-
 static void DebugAction_Party_SetParty(u8 taskId)
 {
     ZeroPlayerPartyMons();
