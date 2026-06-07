@@ -404,22 +404,32 @@ s32 ListMenu_ProcessInput(u8 listTaskId)
     {
         return LIST_CANCEL;
     }
-    else if (JOY_REPEAT(DPAD_UP))
+    else if (JOY_NEW(DPAD_UP))
     {
         if (currentPosition == 0)
-            ListMenuChangeSelection(list,TRUE,lastPositon,TRUE);
+            ListMenuChangeSelection(list, TRUE, lastPositon,TRUE);
         else
             ListMenuChangeSelection(list, TRUE, 1, FALSE);
 
         return LIST_NOTHING_CHOSEN;
     }
-    else if (JOY_REPEAT(DPAD_DOWN))
+    else if (JOY_NEW(DPAD_DOWN))
     {
         if (currentPosition == lastPositon)
-            ListMenuChangeSelection(list,TRUE,lastPositon, FALSE);
+            ListMenuChangeSelection(list, TRUE, lastPositon, FALSE);
         else
             ListMenuChangeSelection(list, TRUE, 1, TRUE);
 
+        return LIST_NOTHING_CHOSEN;
+    }
+    else if (JOY_REPEAT(DPAD_UP))
+    {
+        ListMenuChangeSelection(list, TRUE, 1, FALSE);
+        return LIST_NOTHING_CHOSEN;
+    }
+    else if (JOY_REPEAT(DPAD_DOWN))
+    {
+        ListMenuChangeSelection(list, TRUE, 1, TRUE);
         return LIST_NOTHING_CHOSEN;
     }
     else // try to move by one window scroll
