@@ -574,6 +574,8 @@ const u16 gObjectEventPic_GBAKid[] = INCGFX_U16("graphics/object_events/pics/peo
 const u16 gObjectEventPic_MomFrlg[] = INCGFX_U16("graphics/object_events/pics/people/mom_frlg.png", ".4bpp", "-mwidth 2 -mheight 4");
 const u16 gObjectEventPic_Policeman[] = INCGFX_U16("graphics/object_events/pics/people/policeman.png", ".4bpp", "-mwidth 2 -mheight 4");
 
+const u16 gObjectEventPal_Giovanni[] = INCGFX_U16("graphics/object_events/palettes/giovanni.pal", ".gbapal");
+
 const u16 gObjectEventPic_Janine[] = INCGFX_U16("graphics/object_events/pics/people/tourney_trainers/kanto/janine.png", ".4bpp", "-mwidth 2 -mheight 4");
 const u16 gObjectEventPal_Janine[] = INCGFX_U16("graphics/object_events/palettes/janine.pal", ".gbapal");
 
