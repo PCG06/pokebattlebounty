@@ -195,8 +195,8 @@ static void Task_QuestMenuTurnOff1(u8 taskId);
 static void Task_QuestMenuTurnOff2(u8 taskId);
 
 // Tiles, palettes and tilemaps for the Quest Menu
-static const u32 sQuestMenuTiles[] = INCGFX_U32("graphics/quest_menu/menu.png", ".4bpp.smol");
-static const u16 sQuestMenuBgPals[] = INCGFX_U16("graphics/quest_menu/menu.pal", ".gbapal");
+static const u32 sQuestMenuTiles[] = INCGFX_U32("graphics/quest_menu/tiles.png", ".4bpp.smol");
+static const u16 sQuestMenuBgPals[] = INCGFX_U16("graphics/quest_menu/palette.pal", ".gbapal");
 static const u32 sQuestMenuTilemap[] = INCGFX_U32("graphics/quest_menu/menu.bin", ".smolTM");
 
 // Strings used for the Quest Menu
@@ -215,7 +215,7 @@ static const u8 sText_ShowLocation[] =  _("Location: {STR_VAR_2}");
 static const u8 sText_StartForMore[] =  _("Start for more details.");
 static const u8 sText_ReturnRecieveReward[] = _("Return to {STR_VAR_2}\nto recieve your reward!");
 static const u8 sText_SubQuestButton[] = _(" {A_BUTTON}");
-static const u8 sText_Type[] = _("{R_BUTTON}Type");
+static const u8 sText_Type[] = _("{R_BUTTON} Type");
 static const u8 sText_Read[] = _("Read");
 static const u8 sText_Back[] = _("Back");
 static const u8 sText_DotSpace[] = _(". ");
@@ -1735,17 +1735,17 @@ static void GenerateMenuContext(void)
 static void PrintNumQuests(void)
 {
     StringExpandPlaceholders(gStringVar4, sText_QuestNumberDisplay);
-    QuestMenu_AddTextPrinterParameterized(2, 0, gStringVar4, 167, 1, 0, 1, 0, 0);
+    QuestMenu_AddTextPrinterParameterized(2, 0, gStringVar4, 167, 2, 0, 1, 0, 0);
 }
 
 static void PrintMenuContext(void)
 {
-    QuestMenu_AddTextPrinterParameterized(2, 0, sQuestNameArray[QUEST_ARRAY_COUNT], 10, 1, 0, 1, 0, 0);
+    QuestMenu_AddTextPrinterParameterized(2, 0, sQuestNameArray[QUEST_ARRAY_COUNT], 10, 2, 0, 1, 0, 0);
 }
 
 static void PrintTypeFilterButton(void)
 {
-    QuestMenu_AddTextPrinterParameterized(2, 0, sText_Type, 198, 1, 0, 1, 0, 0);
+    QuestMenu_AddTextPrinterParameterized(2, 0, sText_Type, 196, 2, 0, 1, 0, 0);
 
 }
 
