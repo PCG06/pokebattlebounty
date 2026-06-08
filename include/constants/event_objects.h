@@ -637,23 +637,24 @@ enum
 #endif //OW_FOLLOWERS_POKEBALLS
 
 #define OBJ_EVENT_PAL_TAG_JANINE                  0x116B
-#define OBJ_EVENT_PAL_TAG_FALKNER                 0x116C
-#define OBJ_EVENT_PAL_TAG_BUGSY                   0x116D
-#define OBJ_EVENT_PAL_TAG_WHITNEY                 0x116E
-#define OBJ_EVENT_PAL_TAG_MORTY                   0x116F
-#define OBJ_EVENT_PAL_TAG_CHUCK                   0x1170
-#define OBJ_EVENT_PAL_TAG_JASMINE                 0x1171
-#define OBJ_EVENT_PAL_TAG_PRYCE                   0x1172
-#define OBJ_EVENT_PAL_TAG_CLAIR                   0x1173
-#define OBJ_EVENT_PAL_TAG_ROARK                   0x1174
-#define OBJ_EVENT_PAL_TAG_GARDENIA                0x1175
-#define OBJ_EVENT_PAL_TAG_MAYLENE                 0x1176
-#define OBJ_EVENT_PAL_TAG_CRASHER_WAKE            0x1177
-#define OBJ_EVENT_PAL_TAG_FANTINA                 0x1178
-#define OBJ_EVENT_PAL_TAG_BYRON                   0x1179
-#define OBJ_EVENT_PAL_TAG_CANDICE                 0x117A
-#define OBJ_EVENT_PAL_TAG_VOLKNER                 0x117B
-#define OBJ_EVENT_PAL_TAG_CYNTHIA                 0x117C
+#define OBJ_EVENT_PAL_TAG_GIOVANNI                0x116C
+#define OBJ_EVENT_PAL_TAG_FALKNER                 0x116D
+#define OBJ_EVENT_PAL_TAG_BUGSY                   0x116E
+#define OBJ_EVENT_PAL_TAG_WHITNEY                 0x116F
+#define OBJ_EVENT_PAL_TAG_MORTY                   0x1170
+#define OBJ_EVENT_PAL_TAG_CHUCK                   0x1171
+#define OBJ_EVENT_PAL_TAG_JASMINE                 0x1172
+#define OBJ_EVENT_PAL_TAG_PRYCE                   0x1173
+#define OBJ_EVENT_PAL_TAG_CLAIR                   0x1174
+#define OBJ_EVENT_PAL_TAG_ROARK                   0x1175
+#define OBJ_EVENT_PAL_TAG_GARDENIA                0x1176
+#define OBJ_EVENT_PAL_TAG_MAYLENE                 0x1177
+#define OBJ_EVENT_PAL_TAG_CRASHER_WAKE            0x1178
+#define OBJ_EVENT_PAL_TAG_FANTINA                 0x1179
+#define OBJ_EVENT_PAL_TAG_BYRON                   0x117A
+#define OBJ_EVENT_PAL_TAG_CANDICE                 0x117B
+#define OBJ_EVENT_PAL_TAG_VOLKNER                 0x117C
+#define OBJ_EVENT_PAL_TAG_CYNTHIA                 0x117D
 
 // Used as a placeholder follower graphic
 #define OBJ_EVENT_PAL_TAG_SUBSTITUTE              0x7611
