@@ -2822,6 +2822,17 @@ bool32 TryFieldEffects(enum FieldEffectCases caseId)
             if (TryWeatherStartingStatus(BATTLE_WEATHER_FOG, isPermanent))
                 return TRUE;
         }
+        else if (gStartingStatuses.electroBoost || gStartingStatuses.electroBoostTemporary)
+        {
+            effect = SetStartingFieldStatus(
+                        STATUS_FIELD_ELECTRO_BOOST,
+                        B_MSG_SET_ELECTRO_BOOST,
+                        B_ANIM_ELECTRO_BOOST,
+                        &gFieldTimers.electroBoostTimer, gStartingStatuses.electroBoost ? 0 : 5);
+            gStartingStatuses.electroBoostTemporary = gStartingStatuses.electroBoost = FALSE;
+            if (effect)
+                return TRUE;
+        }
         break;
     case FIELD_EFFECT_OVERWORLD_TERRAIN:   // terrain starting from overworld weather
         if (B_THUNDERSTORM_TERRAIN == TRUE
