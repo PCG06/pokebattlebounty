@@ -4779,7 +4779,8 @@ static void BufferStat(u8 *dst, u32 stat, u32 strId, u32 align)
 
 static void PrintStats(u8 mode)
 {
-    u16 hp, hp2, atk, def, spA, spD, spe;
+    u16 hp, atk, def, spA, spD, spe;
+    u16 hp2 = 0;
     u8 windowId;
 
     FillWindowPixelBuffer(sMonSummaryScreen->windowIds[PSS_DATA_WINDOW_SKILLS_STATS], 0);

@@ -4336,10 +4336,12 @@ static bool8 PrintDisplayMonInfo(void)
         switch (sStorage->displayMonInfoLoadState)
         {
         case 0:
+        {
             u8 fontId = GetFontIdToFit(sStorage->displayMon.nickname, font, 0, 56);
             UpdateGenderIconSprite(fontId);
             sStorage->displayMonInfoLoadState++;
             break;
+        }
         case 1:
             UpdateTypeIconsSprite();
             UpdateStatLabelsSprites();
