@@ -3028,103 +3028,109 @@ static void ShowButtonPrompt(u8 type)
         || sPartyMenuInternal == NULL
         || sPartyMenuInternal->promptWindowId == WINDOW_NONE)
         return;
+
     u8 promptWindowId = sPartyMenuInternal->promptWindowId;
 
-    if (type == BUTTON_PROMPT_VIEW_PARTNER || type == BUTTON_PROMPT_VIEW_PLAYER)
+    switch (type)
     {
-        const u8 *text;
-        if (type == BUTTON_PROMPT_VIEW_PARTNER)
+    case BUTTON_PROMPT_VIEW_PARTNER:
+    case BUTTON_PROMPT_VIEW_PLAYER:
         {
-            StringCopy(gStringVar1, GetTrainerPartnerName());
-            StringExpandPlaceholders(gStringVar4, sMenuText_ViewPartnerParty);
-            text = gStringVar4;
-        }
-        else
-        {
-            text = sMenuText_ViewPlayerParty;
-        }
-        int stringXPos = GetStringRightAlignXOffset(FONT_SMALL, text, 104);
-        int iconXPos = stringXPos - 15;
-        if (iconXPos < 0)
-            iconXPos = 0;
-        PrintButtonIcon(promptWindowId, BUTTON_R, iconXPos, 4);
-        PrintTextOnWindowWithFont(promptWindowId, text, stringXPos, 0, 0, 5, FONT_SMALL);
-        CopyWindowToVram(promptWindowId, COPYWIN_GFX);
-        return;
-    }
-
-    // Determine availability of SWITCH and BOXES prompts
-    struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
-    bool8 canShowSwitch = FALSE;
-    bool8 canShowBoxes = FALSE;
-    u8 actionsType = GetPartyMenuActionsType(mon);
-    if (actionsType == ACTIONS_SWITCH)
-    {
-        canShowSwitch = TRUE;
-    }
-    else if (actionsType == ACTIONS_NONE
-             && !InBattlePike()
-             && GetMonData(&gParties[B_TRAINER_PLAYER][1], MON_DATA_SPECIES) != SPECIES_NONE)
-    {
-        canShowSwitch = TRUE;
-    }
-
-    if (SWSH_PARTY_MENU_PC_ACCESS
-        && gPartyMenu.action == PARTY_ACTION_CHOOSE_MON
-        && gPartyMenu.layout == PARTY_LAYOUT_SINGLE
-        && (gPartyMenu.menuType == PARTY_MENU_TYPE_FIELD
-            || gPartyMenu.menuType == PARTY_MENU_TYPE_DAYCARE))
-    {
-        canShowBoxes = TRUE;
-    }
-
-    // Build ordered draw list (Switch first when present)
-    u8 drawList[2];
-    u8 drawCount = 0;
-    if (canShowSwitch)
-        drawList[drawCount++] = BUTTON_PROMPT_SWITCH;
-    if (canShowBoxes)
-        drawList[drawCount++] = BUTTON_PROMPT_BOXES;
-
-    if (drawCount > 0)
-    {
-        // Draw the prompts in order using totalWidth and a 4px gap
-        int i;
-        int gap = (drawCount > 1) ? 6 : 0;
-        int combinedWidth = 0;
-        for (i = 0; i < drawCount; ++i)
-            combinedWidth += sPromptButtonInfo[drawList[i]].totalWidth;
-        combinedWidth += gap * (drawCount - 1);
-
-        int curLeft = 104 - combinedWidth;
-        for (i = 0; i < drawCount; ++i)
-        {
-            u8 idx = drawList[i];
-            const u8 *text = sPromptButtonInfo[idx].text;
-            int stringXPos = GetStringRightAlignXOffset(FONT_SMALL, text, sPromptButtonInfo[idx].totalWidth) + curLeft;
-            int iconXPos = stringXPos - sPromptButtonInfo[idx].iconOffset;
+            const u8 *text;
+            if (type == BUTTON_PROMPT_VIEW_PARTNER)
+            {
+                StringCopy(gStringVar1, GetTrainerPartnerName());
+                StringExpandPlaceholders(gStringVar4, sMenuText_ViewPartnerParty);
+                text = gStringVar4;
+            }
+            else
+            {
+                text = sMenuText_ViewPlayerParty;
+            }
+            int stringXPos = GetStringRightAlignXOffset(FONT_SMALL, text, 104);
+            int iconXPos = stringXPos - 15;
             if (iconXPos < 0)
                 iconXPos = 0;
-            PrintButtonIcon(promptWindowId, sPromptButtonInfo[idx].iconType, iconXPos, 4);
+            PrintButtonIcon(promptWindowId, BUTTON_R, iconXPos, 4);
             PrintTextOnWindowWithFont(promptWindowId, text, stringXPos, 0, 0, 5, FONT_SMALL);
-            curLeft += sPromptButtonInfo[idx].totalWidth + gap;
+            CopyWindowToVram(promptWindowId, COPYWIN_GFX);
         }
-        CopyWindowToVram(promptWindowId, COPYWIN_GFX);
-        return;
+        break;
+
+    case BUTTON_PROMPT_CONFIRM:
+        {
+            const u8 *text = sPromptButtonInfo[BUTTON_PROMPT_CONFIRM].text;
+            int stringXPos = GetStringRightAlignXOffset(FONT_SMALL, text, 104);
+            int iconXPos = stringXPos - sPromptButtonInfo[BUTTON_PROMPT_CONFIRM].iconOffset;
+            if (iconXPos < 0)
+                iconXPos = 0;
+            PrintButtonIcon(promptWindowId, sPromptButtonInfo[BUTTON_PROMPT_CONFIRM].iconType, iconXPos, 4);
+            PrintTextOnWindowWithFont(promptWindowId, text, stringXPos, 0, 0, 5, FONT_SMALL);
+            CopyWindowToVram(promptWindowId, COPYWIN_GFX);
+        }
+        break;
+
+    case BUTTON_PROMPT_SWITCH:
+    case BUTTON_PROMPT_BOXES:
+        {
+            struct Pokemon *mon = &gParties[B_TRAINER_PLAYER][gPartyMenu.slotId];
+            bool8 canShowSwitch = FALSE;
+            bool8 canShowBoxes = FALSE;
+            u8 actionsType = GetPartyMenuActionsType(mon);
+            if (actionsType == ACTIONS_SWITCH)
+            {
+                canShowSwitch = TRUE;
+            }
+            else if (actionsType == ACTIONS_NONE
+                     && !InBattlePike()
+                     && GetMonData(&gParties[B_TRAINER_PLAYER][1], MON_DATA_SPECIES) != SPECIES_NONE)
+            {
+                canShowSwitch = TRUE;
+            }
+
+            if (SWSH_PARTY_MENU_PC_ACCESS
+                && gPartyMenu.action == PARTY_ACTION_CHOOSE_MON
+                && gPartyMenu.layout == PARTY_LAYOUT_SINGLE
+                && (gPartyMenu.menuType == PARTY_MENU_TYPE_FIELD
+                    || gPartyMenu.menuType == PARTY_MENU_TYPE_DAYCARE))
+            {
+                canShowBoxes = TRUE;
+            }
+
+            u8 drawList[2];
+            u8 drawCount = 0;
+            if (canShowSwitch)
+                drawList[drawCount++] = BUTTON_PROMPT_SWITCH;
+            if (canShowBoxes)
+                drawList[drawCount++] = BUTTON_PROMPT_BOXES;
+
+            if (drawCount == 0)
+                break;
+
+            int i;
+            int gap = (drawCount > 1) ? 6 : 0;
+            int combinedWidth = 0;
+            for (i = 0; i < drawCount; ++i)
+                combinedWidth += sPromptButtonInfo[drawList[i]].totalWidth;
+            combinedWidth += gap * (drawCount - 1);
+
+            int curLeft = 104 - combinedWidth;
+            for (i = 0; i < drawCount; ++i)
+            {
+                u8 idx = drawList[i];
+                const u8 *text = sPromptButtonInfo[idx].text;
+                int stringXPos = GetStringRightAlignXOffset(FONT_SMALL, text, sPromptButtonInfo[idx].totalWidth) + curLeft;
+                int iconXPos = stringXPos - sPromptButtonInfo[idx].iconOffset;
+                if (iconXPos < 0)
+                    iconXPos = 0;
+                PrintButtonIcon(promptWindowId, sPromptButtonInfo[idx].iconType, iconXPos, 4);
+                PrintTextOnWindowWithFont(promptWindowId, text, stringXPos, 0, 0, 5, FONT_SMALL);
+                curLeft += sPromptButtonInfo[idx].totalWidth + gap;
+            }
+            CopyWindowToVram(promptWindowId, COPYWIN_GFX);
+        }
+        break;
     }
-
-    const u8 *text = sPromptButtonInfo[type].text;
-    if (text == NULL)
-        return;
-
-    int stringXPos = GetStringRightAlignXOffset(FONT_SMALL, text, 104);
-    const u8 iconType = sPromptButtonInfo[type].iconType;
-    int iconXPos = stringXPos - sPromptButtonInfo[type].iconOffset;
-    if (iconXPos < 0)
-        iconXPos = 0;
-    PrintButtonIcon(promptWindowId, iconType, iconXPos, 4);
-    PrintTextOnWindowWithFont(promptWindowId, text, stringXPos, 0, 0, 5, FONT_SMALL);
-    CopyWindowToVram(promptWindowId, COPYWIN_GFX);
 }
 
 static u16 *GetPartyMenuPalBufferPtr(u8 paletteId)
@@ -10783,4 +10789,16 @@ static void Task_FirstBattleEnterParty_WaitFadeNormal(u8 taskId)
         gTasks[taskId].func = Task_HandleChooseMonInput;
     }
 }
+
+#if TESTING
+// I'm just here so I won't get fined. 
+s8 Test_UpdatePartySelectionSingleLayout(s8 slotId, s8 movementDir, bool8 chooseHalf, u8 lastSelectedSlot)
+{
+    (void)chooseHalf;
+    (void)lastSelectedSlot;
+    UpdatePartySelectionSingleLayout(&slotId, movementDir);
+    return slotId;
+}
+#endif // TESTING
+
 #endif // SWSH_PARTY_MENU
