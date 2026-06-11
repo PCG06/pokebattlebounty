@@ -6339,14 +6339,14 @@ BattleScript_WildBattleVictoryRet:
 	handlefailedvictorycatch
 	return
 
-BattleScript_ElectroBoostContinues::
-	printstring STRINGID_ELECTROBOOSTCONTINUES
+BattleScript_ElectroBoostChargeUp::
+	printstring STRINGID_ELECTROBOOSTCHARGEUP
 	waitmessage B_WAIT_TIME_LONG
 	playanimation_var BS_ATTACKER, sB_ANIM_ARG1
 	trystatchanges BS_ATTACKER, STAT_CHANGE_NO_FLAGS
 	return
 
 BattleScript_ElectroBoostEnds::
-	printstring STRINGID_CHARGEDUPENDS
+	printstring STRINGID_ELECTROBOOSTENDS
 	waitmessage B_WAIT_TIME_LONG
 	return

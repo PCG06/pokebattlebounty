@@ -378,6 +378,20 @@ static bool32 HandleEndTurnFirstEventBlock(enum BattlerId battler)
         }
         gBattleStruct->eventState.endTurnBlock++;
         break;
+    case FIRST_EVENT_BLOCK_ELECTRO_BOOST_CHARGE:
+        if (gFieldStatuses & STATUS_FIELD_ELECTRO_BOOST
+         && IS_BATTLER_OF_TYPE(battler, TYPE_ELECTRIC)
+         && gBattleMons[battler].volatiles.chargeTimer == 0)
+        {
+            gBattlerAttacker = battler;
+            gBattleMons[battler].volatiles.chargeTimer++;
+            gBattleScripting.animArg1 = B_ANIM_CHARGED_UP;
+            SetStatChange(battler, STAT_SPDEF, 1);
+            BattleScriptCall(BattleScript_ElectroBoostChargeUp);
+            effect = TRUE;
+        }
+        gBattleStruct->eventState.endTurnBlock++;
+        break;
     case FIRST_EVENT_BLOCK_GRASSY_TERRAIN_HEAL:
         if (gFieldStatuses & STATUS_FIELD_GRASSY_TERRAIN
          && !IsBattlerAtMaxHp(battler)
@@ -1117,28 +1131,13 @@ static bool32 HandleEndTurnElectroBoost(enum BattlerId battler)
 {
     bool32 effect = FALSE;
 
-    gBattleStruct->eventState.endTurnBattler++;
+    gBattleStruct->eventState.endTurn++;
 
     if (gFieldTimers.electroBoostTimer > 0 && --gFieldTimers.electroBoostTimer == 0)
     {
         gFieldStatuses &= ~STATUS_FIELD_ELECTRO_BOOST;
         BattleScriptCall(BattleScript_ElectroBoostEnds);
         effect = TRUE;
-    }
-    else
-    {
-        if (!IsBattlerPresent(battler) || !IS_BATTLER_OF_TYPE(battler, TYPE_ELECTRIC))
-            return effect;
-            
-        if (gBattleMons[battler].volatiles.chargeTimer == 0)
-        {
-            gBattlerAttacker = battler;
-            gBattleMons[battler].volatiles.chargeTimer++;
-            gBattleScripting.animArg1 = B_ANIM_CHARGED_UP;
-            SetStatChange(battler, STAT_SPDEF, 1);
-            BattleScriptCall(BattleScript_ElectroBoostContinues);
-            effect = TRUE;
-        }
     }
 
     return effect;

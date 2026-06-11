@@ -729,7 +729,7 @@ extern const u8 BattleScript_Memento[];
 extern const u8 BattleScript_TakeHeart[];
 
 // New Custom Status Field
-extern const u8 BattleScript_ElectroBoostContinues[];
+extern const u8 BattleScript_ElectroBoostChargeUp[];
 extern const u8 BattleScript_ElectroBoostEnds[];
 
 #endif // GUARD_BATTLE_SCRIPTS_H
