@@ -1705,7 +1705,7 @@ static enum CancelerResult HandleSkyDropResult(struct BattleCalcValues *cv)
         gBattlescriptCurrInstr = BattleScript_ButItFailed;
         return CANCELER_RESULT_FAILURE;
     }
-    else if (GetBattlerWeight(gBattlerTarget) >= 2000)
+    else if (GetBattlerWeight(cv->battlerDef, cv->abilities[cv->battlerDef], cv->holdEffects[cv->battlerDef]) >= 2000)
     {
         gBattlescriptCurrInstr = BattleScript_SkyDropTargetTooHeavy;
         return CANCELER_RESULT_FAILURE;
@@ -3771,8 +3771,7 @@ static bool32 TryEjectButton(enum BattlerId battlerAtk, u32 ejectButtonBattler)
 {
     if (!IsBattlerTurnDamaged(ejectButtonBattler, EXCLUDING_SUBSTITUTES)
      || HasAnyBattlerQueuedSwitch()
-     || gBattleMons[ejectButtonBattler].volatiles.semiInvulnerable == STATE_SKY_DROP_ATTACKER
-     || gBattleMons[ejectButtonBattler].volatiles.semiInvulnerable == STATE_SKY_DROP_TARGET
+     || IsBattlerInvolvedInSkyDrop(ejectButtonBattler)
      || !CanBattlerSwitch(ejectButtonBattler))
         return FALSE;
 
@@ -4081,8 +4080,7 @@ static inline bool32 TryEjectPack(enum BattlerId battlerAtk, enum BattlerId ejec
 {
     if (!gBattleMons[ejectPackBattler].volatiles.tryEjectPack
      || HasAnyBattlerQueuedSwitch()
-     || gBattleMons[ejectPackBattler].volatiles.semiInvulnerable == STATE_SKY_DROP_ATTACKER
-     || gBattleMons[ejectPackBattler].volatiles.semiInvulnerable == STATE_SKY_DROP_TARGET
+     || IsBattlerInvolvedInSkyDrop(ejectPackBattler)
      || !CanBattlerSwitch(ejectPackBattler)
      || (GetMoveEffect(gCurrentMove) == EFFECT_PARTING_SHOT && CanBattlerSwitch(battlerAtk)))
         return FALSE;
