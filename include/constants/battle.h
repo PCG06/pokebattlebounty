@@ -843,6 +843,7 @@ enum FaintedActions
     F(STARTING_STATUS_WEATHER_SNOW_TEMPORARY,         weatherSnowTemporary,       (u32, 1)) /* Temporary Snow */                           \
     F(STARTING_STATUS_WEATHER_FOG,                    weatherFog,                 (u32, 1)) /* Permanent Fog */                            \
     F(STARTING_STATUS_WEATHER_FOG_TEMPORARY,          weatherFogTemporary,        (u32, 1)) /* Temporary Fog */                            \
+    /* Custom Statuses */                                                                                                                  \
     F(STARTING_STATUS_ELECTRO_BOOST,                  electroBoost,               (u32, 1)) /* Electro Boost (Permanent) */                \
     F(STARTING_STATUS_ELECTRO_BOOST_TEMPORARY,        electroBoostTemporary,      (u32, 1)) /* Electro Boost Temporary (5 turns) */        \
 

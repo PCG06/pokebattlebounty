@@ -8,6 +8,7 @@ SINGLE_BATTLE_TEST("Electro Boost grants a Charge boost and +1 Sp. Def to Electr
     SetStartingStatus(STARTING_STATUS_ELECTRO_BOOST);
 
     GIVEN {
+        ASSUME(GetMoveType(MOVE_SPARK) == TYPE_ELECTRIC);
         PLAYER(SPECIES_PIKACHU);
         OPPONENT(SPECIES_WOBBUFFET);
     } WHEN {
@@ -91,8 +92,7 @@ SINGLE_BATTLE_TEST("Electro Boost (temporary) expires after 5 turns")
         TURN {}
         TURN {}
     } SCENE {
-        // Messages aren't printing right now on upcoming. Fix it soon
-        // MESSAGE("A strong electric charge surrounds the field!");
+        MESSAGE("A strong electric charge surrounds the field!");
         MESSAGE("The electric charge around the field disappeared.");
     } THEN {
         ResetStartingStatuses();

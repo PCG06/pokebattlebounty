@@ -219,3 +219,50 @@ SINGLE_BATTLE_TEST("SetStartingStatus messages work as intended")
         ResetStartingStatuses();
     }
 }
+
+SINGLE_BATTLE_TEST("StartingStatus messages work as intended (custom)")
+{
+    u16 status = 0;
+
+    PARAMETRIZE { status = STARTING_STATUS_ELECTRIC_TERRAIN_TEMPORARY; }
+
+    SetStartingStatus(status);
+
+    GIVEN {
+        ASSUME(GetMoveType(MOVE_SPARK) == TYPE_ELECTRIC);
+        PLAYER(SPECIES_WOBBUFFET);
+        OPPONENT(SPECIES_PIKACHU);
+    } WHEN {
+        TURN { MOVE(opponent, (status  == STARTING_STATUS_ELECTRIC_TERRAIN_TEMPORARY) ? MOVE_SPARK : MOVE_CELEBRATE); }
+        TURN {}
+        TURN {}
+        TURN {}
+        TURN {}
+    } SCENE {
+        // Before first turn
+        switch (status)
+        {
+        case STARTING_STATUS_ELECTRO_BOOST_TEMPORARY:
+            MESSAGE("A strong electric charge surrounds the field!");
+            break;
+        }
+
+        // End turn messages
+        switch (status)
+        {
+        case STARTING_STATUS_ELECTRO_BOOST_TEMPORARY:
+            MESSAGE("The opposing Pikachu was charged up!");
+            break;
+        }
+
+        // Turn 5 end
+        switch (status)
+        {
+        case STARTING_STATUS_ELECTRO_BOOST_TEMPORARY:
+            MESSAGE("The electric charge around the field disappeared.");
+            break;
+        }
+    } THEN {
+        ResetStartingStatuses();
+    }
+}

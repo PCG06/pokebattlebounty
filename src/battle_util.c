@@ -2806,8 +2806,7 @@ bool32 TryFieldEffects(enum FieldEffectCases caseId)
                         B_ANIM_ELECTRO_BOOST,
                         &gFieldTimers.electroBoostTimer, gStartingStatuses.electroBoost ? 0 : 5);
             gStartingStatuses.electroBoostTemporary = gStartingStatuses.electroBoost = FALSE;
-            if (effect)
-                return TRUE;
+            return effect;
         }
         break;
     case FIELD_EFFECT_OVERWORLD_TERRAIN:   // terrain starting from overworld weather
