@@ -36,6 +36,8 @@
 #include "constants/rgb.h"
 #include "constants/songs.h"
 
+#if P_STAT_EDITOR_ENABLE
+
 /*
  * 
  */
@@ -47,7 +49,7 @@ struct StatEditorResources
     u8 gfxLoadState;
     u8 mode;
     u8 monIconSpriteId;
-    u16 speciesID;
+    enum Species speciesID;
     u16 selectedStat;
     u16 selectorSpriteId;
     u16 selector_x;
@@ -60,8 +62,41 @@ struct StatEditorResources
     u16 inputMode;
 };
 
-#define INPUT_SELECT_STAT 0
-#define INPUT_EDIT_STAT 1
+#define EDIT_INPUT_INCREASE_STATE     0
+#define EDIT_INPUT_MAX_INCREASE_STATE 1
+#define EDIT_INPUT_DECREASE_STATE     2
+#define EDIT_INPUT_MAX_DECREASE_STATE 3
+
+#define MIN_STAT                      0
+                
+#define EDITING_EVS                   0
+#define EDITING_IVS                   1
+
+#define INPUT_SELECT_STAT             0
+#define INPUT_EDIT_STAT               1
+
+#define INCREASE_DECREASE_AMOUNT      1
+
+#define CHECK_IF_STAT_CANT_INCREASE (((sStatEditorDataPtr->editingStat == ((sStatEditorDataPtr->selector_x == EDITING_EVS) ? (MAX_PER_STAT_EVS) : (MAX_PER_STAT_IVS))) \
+                                     || ((sStatEditorDataPtr->selector_x == EDITING_EVS) && (sStatEditorDataPtr->evTotal == MAX_TOTAL_EVS))))
+/*
+Breakdown of CHECK_IF_STAT_CANT_INCREASE
+TLDR: Stat can't increase if you're either: at the maximum amount a stat can have (for both EVs and IVs), or for EVs, if you already hit the max total of EVs
+
+ | (sStatEditorDataPtr->editingStat == ((sStatEditorDataPtr->selector_x == EDITING_EVS) ? (MAX_PER_STAT_EVS) : (MAX_PER_STAT_IVS))
+  \> This part checks if the current stat being raised is already at max, whether it's an EV or IV
+
+ | (sStatEditorDataPtr->selector_x == EDITING_EVS)
+  \> This part checks if you're currently editing an EV
+
+ | (sStatEditorDataPtr->evTotal == MAX_TOTAL_EVS)
+  \> This part checks if the Pokémon already has the max amount of evs
+
+ | ((sStatEditorDataPtr->selector_x == EDITING_EVS) && (sStatEditorDataPtr->evTotal == MAX_TOTAL_EVS))
+  \> Together, these two check if you're editing an EV and already at the maximum amount of EVs
+*/
+
+#define TAG_SELECTOR 30004
 
 enum WindowIds
 {
@@ -89,7 +124,7 @@ static void Task_MenuEditingStat(u8 taskId);
 static void CreateMonSprite(u16 dexNum);
 static void PrintMonStats(void);
 static void SelectorCallback(struct Sprite *sprite);
-static struct Pokemon *ReturnPartyMon(void);
+static struct Pokemon *GetSelectedPartyMon(void);
 static u8 CreateSelector(void);
 static void DestroySelector(void);
 
@@ -151,9 +186,15 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
     DUMMY_WIN_TEMPLATE
 };
 
-static const u32 sStatEditorBgTiles[] = INCBIN_U32("graphics/ui_menu/background_tileset.4bpp.smol");
-static const u32 sStatEditorBgTilemap[] = INCBIN_U32("graphics/ui_menu/background_tileset.bin.smolTM");
-static const u16 sStatEditorBgPalette[] = INCBIN_U16("graphics/ui_menu/background_pal.gbapal");
+static const u32 sStatEditorBgTiles[]   = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
+static const u32 sStatEditorBgTilemap[] = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
+static const u16 sStatEditorBgPalette[] = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
+static const u16 sSelector_Pal[]        = INCGFX_U16("graphics/stat_editor/selector.png", ".gbapal");
+static const u32 sSelector_Gfx[]        = INCGFX_U32("graphics/stat_editor/selector.png", ".4bpp.smol");
+static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
+static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
+static const u8 sR_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/r_button.png", ".4bpp");
+static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
 
 enum Colors
 {
@@ -162,6 +203,7 @@ enum Colors
     FONT_RED,
     FONT_BLUE,
 };
+
 static const u8 sMenuWindowFontColors[][3] = 
 {
     [FONT_BLACK]  = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_DARK_GRAY, TEXT_COLOR_LIGHT_GRAY},
@@ -169,15 +211,6 @@ static const u8 sMenuWindowFontColors[][3] =
     [FONT_RED]    = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_RED,       TEXT_COLOR_LIGHT_GRAY},
     [FONT_BLUE]   = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_BLUE,      TEXT_COLOR_LIGHT_GRAY},
 };
-
-#define TAG_SELECTOR 30004
-
-static const u16 sSelector_Pal[]  = INCBIN_U16("graphics/ui_menu/selector.gbapal");
-static const u32 sSelector_Gfx[]  = INCBIN_U32("graphics/ui_menu/selector.4bpp.smol");
-static const u8 sA_ButtonGfx[]    = INCBIN_U8("graphics/ui_menu/a_button.4bpp");
-static const u8 sB_ButtonGfx[]    = INCBIN_U8("graphics/ui_menu/b_button.4bpp");
-static const u8 sR_ButtonGfx[]    = INCBIN_U8("graphics/ui_menu/r_button.4bpp");
-static const u8 sDPad_ButtonGfx[] = INCBIN_U8("graphics/ui_menu/dpad_button.4bpp");
 
 static const struct OamData sOamData_Selector =
 {
@@ -337,7 +370,7 @@ static bool8 StatEditor_DoGfxSetup(void)
             gMain.state++;
         break;
     case 4:
-        sStatEditorDataPtr->speciesID = GetMonData(ReturnPartyMon(), MON_DATA_SPECIES);
+        sStatEditorDataPtr->speciesID = GetMonData(GetSelectedPartyMon(), MON_DATA_SPECIES);
         FreeMonIconPalettes();
         LoadMonIconPalettes();
         LoadCompressedSpriteSheet(&sSpriteSheet_Selector);
@@ -486,7 +519,7 @@ static void Task_StatEditorTurnOff(u8 taskId)
 //       Stat Editor Code
 //  End of UI setup code, beginning of stat editor specific code
 //
-static struct Pokemon *ReturnPartyMon(void)
+static struct Pokemon *GetSelectedPartyMon(void)
 {
     return &gParties[B_TRAINER_PLAYER][sStatEditorDataPtr->partyid];
 }
@@ -496,7 +529,7 @@ static struct Pokemon *ReturnPartyMon(void)
 static void CreateMonSprite(u16 dexNum)
 {
     u16 speciesId = dexNum;
-    u32 personality = GetMonData(ReturnPartyMon(), MON_DATA_PERSONALITY);
+    u32 personality = GetMonData(GetSelectedPartyMon(), MON_DATA_PERSONALITY);
     sStatEditorDataPtr->monIconSpriteId = CreateMonPicSprite_Affine(speciesId, 0, personality, TRUE, MON_ICON_X, MON_ICON_Y, 0, TAG_NONE);
 
     gSprites[sStatEditorDataPtr->monIconSpriteId].oam.priority = 0;
@@ -509,7 +542,6 @@ static u8 CreateSelector(void)
 
     gSprites[sStatEditorDataPtr->selectorSpriteId].invisible = FALSE;
     StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 0);
-    DebugPrintf("Sprite ID: %d", sStatEditorDataPtr->selectorSpriteId);
     return sStatEditorDataPtr->selectorSpriteId;
 }
 
@@ -631,13 +663,14 @@ static void PrintTitleToWindowEditState()
 
 static void PrintMonStats()
 {
-    u8 i;
     u16 currentStat;
     u8 text[2];
-    u16 nature = GetNature(ReturnPartyMon());
-    enum Ability ability = GetMonAbility(ReturnPartyMon());
-    u16 level = GetMonData(ReturnPartyMon(), MON_DATA_LEVEL);
-    u32 personality = GetMonData(ReturnPartyMon(), MON_DATA_PERSONALITY);
+
+    struct Pokemon *mon = GetSelectedPartyMon();
+    u16 nature = GetNature(mon);
+    enum Ability ability = GetMonAbility(mon);
+    u16 level = GetMonData(mon, MON_DATA_LEVEL);
+    u32 personality = GetMonData(mon, MON_DATA_PERSONALITY);
     u16 gender = GetGenderFromSpeciesAndPersonality(sStatEditorDataPtr->speciesID, personality);
 
     FillWindowPixelBuffer(WINDOW_2, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
@@ -661,29 +694,26 @@ static void PrintMonStats()
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 16, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 6), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuTotal);
 
     // Print Mon Stats
-    for(i = 0; i < NUM_STATS; i++)
+    for(u32 i = 0; i < NUM_STATS; i++)
     {
-        currentStat = GetMonData(ReturnPartyMon(), statsToPrintActual[i]);
+        currentStat = GetMonData(mon, statsToPrintActual[i]);
         sStatEditorDataPtr->normalTotal += currentStat;
-        DebugPrintf("Stat: %d", currentStat);
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
         AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, StatPrintData[statsToPrintActual[i]].x, StatPrintData[statsToPrintActual[i]].y, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
     }
 
-    for(i = 0; i < NUM_STATS; i++)
+    for(u32 i = 0; i < NUM_STATS; i++)
     {
-        currentStat = GetMonData(ReturnPartyMon(), statsToPrintEVs[i]);
+        currentStat = GetMonData(mon, statsToPrintEVs[i]);
         sStatEditorDataPtr->evTotal += currentStat;
-        DebugPrintf("Stat: %d", currentStat);
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
         AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, StatPrintData[statsToPrintEVs[i]].x, StatPrintData[statsToPrintEVs[i]].y, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
     }
 
-    for(i = 0; i < NUM_STATS; i++)
+    for(u32 i = 0; i < NUM_STATS; i++)
     {
-        currentStat = GetMonData(ReturnPartyMon(), statsToPrintIVs[i]);
+        currentStat = GetMonData(mon, statsToPrintIVs[i]);
         sStatEditorDataPtr->ivTotal += currentStat;
-        DebugPrintf("Stat: %d", currentStat);
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
         AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, StatPrintData[statsToPrintIVs[i]].x, StatPrintData[statsToPrintIVs[i]].y, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
     }
@@ -699,7 +729,7 @@ static void PrintMonStats()
     AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, STARTING_X + THIRD_COLUMN, STARTING_Y + (DISTANCE_BETWEEN_STATS_Y * 6), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
 
     // Print ability / nature / name / level / gender
-    GetMonNickname(ReturnPartyMon(), gStringVar2);
+    GetMonNickname(GetSelectedPartyMon(), gStringVar2);
     AddTextPrinterParameterized4(WINDOW_3, FONT_NARROW, 2, 2, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
 
     ConvertIntToDecimalStringN(gStringVar1, level, STR_CONV_MODE_RIGHT_ALIGN, 3);
@@ -745,13 +775,13 @@ static void SelectorCallback(struct Sprite *sprite)
         {{188, 110 + 20}, {220, 110 + 20}}, // Thanks Jaizu
     };
 
-    if(sStatEditorDataPtr->inputMode == INPUT_EDIT_STAT)
+    if (sStatEditorDataPtr->inputMode == INPUT_EDIT_STAT)
     {
-        if(sprite->data[0] == 32)
+        if (sprite->data[0] == 32)
         {
             sprite->invisible = TRUE;
         }
-        if(sprite->data[0] >= 48)
+        if (sprite->data[0] >= 48)
         {
             sprite->invisible = FALSE;
             sprite->data[0] = 0;
@@ -768,14 +798,7 @@ static void SelectorCallback(struct Sprite *sprite)
 
     sprite->x = spriteCords[sStatEditorDataPtr->selector_y][sStatEditorDataPtr->selector_x].x;
     sprite->y = spriteCords[sStatEditorDataPtr->selector_y][sStatEditorDataPtr->selector_x].y;
-
-    DebugPrintf("%d", sStatEditorDataPtr->selectedStat);
 }
-
-static const u16 selectedStatToStatEnum[] = {
-        MON_DATA_HP_EV, MON_DATA_HP_IV, MON_DATA_ATK_EV, MON_DATA_ATK_IV, MON_DATA_DEF_EV, MON_DATA_DEF_IV,
-        MON_DATA_SPATK_EV, MON_DATA_SPATK_IV, MON_DATA_SPDEF_EV, MON_DATA_SPDEF_IV, MON_DATA_SPEED_EV, MON_DATA_SPEED_IV,
-};
 
 static void Task_DelayedSpriteLoad(u8 taskId) // wait 4 frames after changing the mon you're editing so there are no palette problems
 {   
@@ -796,27 +819,38 @@ static void ReloadNewPokemon(u8 taskId)
 {
     gSprites[sStatEditorDataPtr->monIconSpriteId].invisible = TRUE;
     FreeResourcesAndDestroySprite(&gSprites[sStatEditorDataPtr->monIconSpriteId], sStatEditorDataPtr->monIconSpriteId);
-    sStatEditorDataPtr->speciesID = GetMonData(ReturnPartyMon(), MON_DATA_SPECIES);
+    sStatEditorDataPtr->speciesID = GetMonData(GetSelectedPartyMon(), MON_DATA_SPECIES);
     gTasks[taskId].func = Task_DelayedSpriteLoad;
     gTasks[taskId].data[11] = 0;
 }
+
+static const u16 sSelectedStatToStatEnum[] = {
+    MON_DATA_HP_EV,    MON_DATA_HP_IV,
+    MON_DATA_ATK_EV,   MON_DATA_ATK_IV,
+    MON_DATA_DEF_EV,   MON_DATA_DEF_IV,
+    MON_DATA_SPATK_EV, MON_DATA_SPATK_IV,
+    MON_DATA_SPDEF_EV, MON_DATA_SPDEF_IV,
+    MON_DATA_SPEED_EV, MON_DATA_SPEED_IV,
+};
 
 static void Task_StatEditorMain(u8 taskId) // input control when first loaded into menu
 {
     if (JOY_NEW(A_BUTTON))
     {
-        sStatEditorDataPtr->editingStat = GetMonData(ReturnPartyMon(), selectedStatToStatEnum[sStatEditorDataPtr->selectedStat]);
+        sStatEditorDataPtr->editingStat = GetMonData(GetSelectedPartyMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->selectedStat]);
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
         PlaySE(SE_SELECT);
         PrintTitleToWindowEditState();
         sStatEditorDataPtr->inputMode = INPUT_EDIT_STAT;
         gTasks[taskId].func = Task_MenuEditingStat;
-        if(sStatEditorDataPtr->editingStat == 0)
+
+        if (sStatEditorDataPtr->editingStat == MIN_STAT)
             StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1);
-        if((sStatEditorDataPtr->editingStat == 255 || (sStatEditorDataPtr->evTotal == 510)) && (sStatEditorDataPtr->selector_x == 0))
+        if ((sStatEditorDataPtr->editingStat == MAX_PER_STAT_EVS || (sStatEditorDataPtr->evTotal == MAX_TOTAL_EVS)) && (sStatEditorDataPtr->selector_x == MIN_STAT))
             StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
-        if((sStatEditorDataPtr->editingStat == 31) && (sStatEditorDataPtr->selector_x == 1))
+        if ((sStatEditorDataPtr->editingStat == MAX_PER_STAT_IVS) && (sStatEditorDataPtr->selector_x == 1))
             StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
+
         return;
     }
     if (JOY_NEW(L_BUTTON))
@@ -850,7 +884,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
     }
     if (JOY_NEW(DPAD_LEFT) || JOY_NEW(DPAD_RIGHT))
     {
-        if(sStatEditorDataPtr->selector_x == 0)
+        if (sStatEditorDataPtr->selector_x == 0)
             sStatEditorDataPtr->selector_x = 1;
         else
             sStatEditorDataPtr->selector_x = 0; 
@@ -872,130 +906,97 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
 
 }
 
-static void ChangeAndUpdateStat()
+static void ChangeAndUpdateStat(void)
 {
-    u16 currentStatEnum = selectedStatToStatEnum[sStatEditorDataPtr->selectedStat];
+    struct Pokemon *mon = GetSelectedPartyMon();
+
+    u32 currentStatEnum = sSelectedStatToStatEnum[sStatEditorDataPtr->selectedStat];
+    s32 amountHPLost = 0;
     u32 currentHP = 0;
-    u32 oldMaxHP = 0;
-    u32 amountHPLost = 0;
-    s32 tempDifference = 0;
-    u32 newDifference = 0;
 
     if (currentStatEnum == MON_DATA_HP_EV || currentStatEnum == MON_DATA_HP_IV)
     {
-        currentHP = GetMonData(ReturnPartyMon(), MON_DATA_HP);
-        oldMaxHP = GetMonData(ReturnPartyMon(), MON_DATA_MAX_HP);
+        u32 oldMaxHP = GetMonData(mon, MON_DATA_MAX_HP);
+        currentHP = GetMonData(mon, MON_DATA_HP);
         amountHPLost = oldMaxHP - currentHP;
     }
 
-    SetMonData(ReturnPartyMon(), currentStatEnum, &(sStatEditorDataPtr->editingStat));
-    CalculateMonStats(ReturnPartyMon());
+    SetMonData(mon, currentStatEnum, &(sStatEditorDataPtr->editingStat));
+    CalculateMonStats(mon);
 
     if ((amountHPLost > 0) && (currentHP != 0))
     {
-        tempDifference = GetMonData(ReturnPartyMon(), MON_DATA_MAX_HP) - amountHPLost;
-        if (tempDifference < 0)
-            tempDifference = 0;
-        newDifference = (u32) tempDifference;
-        SetMonData(ReturnPartyMon(), MON_DATA_HP, &newDifference);
+        s32 diff = GetMonData(mon, MON_DATA_MAX_HP) - amountHPLost;
+
+        if (diff < 0)
+            diff = 0;
+
+        SetMonData(mon, MON_DATA_HP, &diff);
     }
 
     PrintMonStats();
 }
 
-#define EDIT_INPUT_INCREASE_STATE           0
-#define EDIT_INPUT_MAX_INCREASE_STATE       1
-#define EDIT_INPUT_DECREASE_STATE           2
-#define EDIT_INPUT_MAX_DECREASE_STATE       3
-
-#define STAT_MINIMUM          0  
-#define IV_MAX_SINGLE_STAT    MAX_PER_STAT_IVS
-#define EV_MAX_SINGLE_STAT    MAX_PER_STAT_EVS
-#define EV_MAX_TOTAL          MAX_TOTAL_EVS
-                
-#define EDITING_EVS     0
-#define EDITING_IVS     1
-
-#define CHECK_IF_STAT_CANT_INCREASE (((sStatEditorDataPtr->editingStat == ((sStatEditorDataPtr->selector_x == EDITING_EVS) ? (EV_MAX_SINGLE_STAT) : (IV_MAX_SINGLE_STAT))) \
-                                     || ((sStatEditorDataPtr->selector_x == EDITING_EVS) && (sStatEditorDataPtr->evTotal == EV_MAX_TOTAL))))
-/*
-Breakdown of CHECK_IF_STAT_CANT_INCREASE
-TLDR: Stat can't increase if you're either: at the maximum amount a stat can have (for both EVs and IVs), or for EVs, if you already hit the max total of EVs
-
- | (sStatEditorDataPtr->editingStat == ((sStatEditorDataPtr->selector_x == EDITING_EVS) ? (EV_MAX_SINGLE_STAT) : (IV_MAX_SINGLE_STAT))
-  \> This part checks if the current stat being raised is already at max, whether it's an EV or IV
-
- | (sStatEditorDataPtr->selector_x == EDITING_EVS)
-  \> This part checks if you're currently editing an EV
-
- | (sStatEditorDataPtr->evTotal == EV_MAX_TOTAL)
-  \> This part checks if the Pokémon already has the max amount of evs
-
- | ((sStatEditorDataPtr->selector_x == EDITING_EVS) && (sStatEditorDataPtr->evTotal == EV_MAX_TOTAL))
-  \> Together, these two check if you're editing an EV and already at the maximum amount of EVs
-*/
-
 static void HandleEditingStatInput(u32 input)
 {
-    u16 iterator = 0;
-    if((input <= EDIT_INPUT_MAX_INCREASE_STATE) && CHECK_IF_STAT_CANT_INCREASE)
+    if ((input <= EDIT_INPUT_MAX_INCREASE_STATE) && CHECK_IF_STAT_CANT_INCREASE)
     {
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
         return;
     }
 
-    if((input >= EDIT_INPUT_DECREASE_STATE) && (sStatEditorDataPtr->editingStat == STAT_MINIMUM))
+    if ((input >= EDIT_INPUT_DECREASE_STATE) && (sStatEditorDataPtr->editingStat == MIN_STAT))
     {
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1);
         return;
     }
 
-    #define INCREASE_DECREASE_AMOUNT 1
-
-    switch(input)
+    switch (input)
     {
-        case EDIT_INPUT_DECREASE_STATE:
-            for (iterator = 0; iterator < INCREASE_DECREASE_AMOUNT; iterator++)
-            {
-                if(!(sStatEditorDataPtr->editingStat == STAT_MINIMUM))
-                    sStatEditorDataPtr->editingStat--;
-                else
-                    break;
-            }
-            break;
-       case EDIT_INPUT_MAX_DECREASE_STATE:
-            sStatEditorDataPtr->editingStat = STAT_MINIMUM;
-            break;
-        case EDIT_INPUT_INCREASE_STATE:
-            for (iterator = 0; iterator < INCREASE_DECREASE_AMOUNT; iterator++)
-            {
-                if(!CHECK_IF_STAT_CANT_INCREASE)
-                    sStatEditorDataPtr->editingStat++;
-                else
-                    break;
-            }
-            break;
-        case EDIT_INPUT_MAX_INCREASE_STATE:
-            if((sStatEditorDataPtr->selector_x == EDITING_EVS))
-            {
-                if (EV_MAX_TOTAL - sStatEditorDataPtr->evTotal < EV_MAX_SINGLE_STAT)
-                    sStatEditorDataPtr->editingStat += EV_MAX_TOTAL - sStatEditorDataPtr->evTotal;
-                else
-                    sStatEditorDataPtr->editingStat = EV_MAX_SINGLE_STAT;
-                if(sStatEditorDataPtr->editingStat > EV_MAX_SINGLE_STAT)
-                    sStatEditorDataPtr->editingStat = EV_MAX_SINGLE_STAT;
-            }
+    case EDIT_INPUT_INCREASE_STATE:
+        for (u32 i = 0; i < INCREASE_DECREASE_AMOUNT; i++)
+        {
+            if (!CHECK_IF_STAT_CANT_INCREASE)
+                sStatEditorDataPtr->editingStat++;
             else
-            {
-                sStatEditorDataPtr->editingStat = IV_MAX_SINGLE_STAT;
-            }
+                break;
+        }
+        break;
+    case EDIT_INPUT_MAX_INCREASE_STATE:
+        if ((sStatEditorDataPtr->selector_x == EDITING_EVS))
+        {
+            if (MAX_TOTAL_EVS - sStatEditorDataPtr->evTotal < MAX_PER_STAT_EVS)
+                sStatEditorDataPtr->editingStat += MAX_TOTAL_EVS - sStatEditorDataPtr->evTotal;
+            else
+                sStatEditorDataPtr->editingStat = MAX_PER_STAT_EVS;
+
+            if (sStatEditorDataPtr->editingStat > MAX_PER_STAT_EVS)
+                sStatEditorDataPtr->editingStat = MAX_PER_STAT_EVS;
+        }
+        else
+        {
+            sStatEditorDataPtr->editingStat = MAX_PER_STAT_IVS;
+        }
+        break;
+    case EDIT_INPUT_DECREASE_STATE:
+        for (u32 i = 0; i < INCREASE_DECREASE_AMOUNT; i++)
+        {
+            if (!(sStatEditorDataPtr->editingStat == MIN_STAT))
+                sStatEditorDataPtr->editingStat--;
+            else
+                break;
+        }
+        break;
+    case EDIT_INPUT_MAX_DECREASE_STATE:
+        sStatEditorDataPtr->editingStat = MIN_STAT;
+        break;
     }
 
     ChangeAndUpdateStat();
 
-    if(CHECK_IF_STAT_CANT_INCREASE)
+    if (CHECK_IF_STAT_CANT_INCREASE)
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
-    else if(sStatEditorDataPtr->editingStat == STAT_MINIMUM)
+    else if (sStatEditorDataPtr->editingStat == MIN_STAT)
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1); 
     else
         StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);       
@@ -1012,6 +1013,7 @@ static void Task_MenuEditingStat(u8 taskId) // This function should be refactore
         PrintTitleToWindowMainState();
         return;
     }
+
     if (JOY_NEW(DPAD_LEFT))
         HandleEditingStatInput(EDIT_INPUT_DECREASE_STATE);
     else if (JOY_NEW(DPAD_RIGHT))
@@ -1020,5 +1022,6 @@ static void Task_MenuEditingStat(u8 taskId) // This function should be refactore
         HandleEditingStatInput(EDIT_INPUT_MAX_INCREASE_STATE);
     else if (JOY_NEW(DPAD_DOWN) || JOY_NEW(L_BUTTON))
         HandleEditingStatInput(EDIT_INPUT_MAX_DECREASE_STATE);
-
 }
+
+#endif // P_STAT_EDITOR_ENABLE
