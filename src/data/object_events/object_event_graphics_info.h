@@ -5932,7 +5932,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Agatha = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Brock = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_GREEN,
+    .paletteTag = OBJ_EVENT_PAL_TAG_BROCK,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
@@ -5951,7 +5951,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Brock = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Misty = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_BLUE,
+    .paletteTag = OBJ_EVENT_PAL_TAG_MISTY,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
@@ -5970,7 +5970,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Misty = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_LtSurge = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_GREEN,
+    .paletteTag = OBJ_EVENT_PAL_TAG_LT_SURGE,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
@@ -5989,7 +5989,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_LtSurge = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Erika = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_BLUE,
+    .paletteTag = OBJ_EVENT_PAL_TAG_ERIKA,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
@@ -6008,7 +6008,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Erika = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Koga = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_WHITE,
+    .paletteTag = OBJ_EVENT_PAL_TAG_KOGA,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
@@ -6046,7 +6046,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Giovanni = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Blaine = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_PINK,
+    .paletteTag = OBJ_EVENT_PAL_TAG_BLAINE,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
@@ -6065,7 +6065,7 @@ const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Blaine = {
 
 const struct ObjectEventGraphicsInfo gObjectEventGraphicsInfo_Sabrina = {
     .tileTag = TAG_NONE,
-    .paletteTag = OBJ_EVENT_PAL_TAG_NPC_BLUE,
+    .paletteTag = OBJ_EVENT_PAL_TAG_SABRINA,
     .reflectionPaletteTag = OBJ_EVENT_PAL_TAG_NONE,
     .size = 256,
     .width = 16,
