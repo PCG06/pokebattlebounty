@@ -64,6 +64,7 @@
 #include "sound.h"
 #include "sprite.h"
 #include "start_menu.h"
+#include "stat_editor.h"
 #include "string_util.h"
 #include "strings.h"
 #include "task.h"
@@ -91,6 +92,7 @@
 
 enum {
     MENU_SUMMARY,
+    MENU_STAT_EDIT,
     MENU_SWITCH,
     MENU_CANCEL1,
     MENU_ITEM,
@@ -3726,6 +3728,7 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 
     sPartyMenuInternal->numActions = 0;
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_SUMMARY);
+    AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_STAT_EDIT);
 
     // Add field moves to action list
     for (i = 0; i < MAX_MON_MOVES; i++)
@@ -10788,6 +10791,24 @@ static void Task_FirstBattleEnterParty_WaitFadeNormal(u8 taskId)
             DisplayPartyMenuStdMessage(PARTY_MSG_CHOOSE_MON);
         gTasks[taskId].func = Task_HandleChooseMonInput;
     }
+}
+
+static void ChangePokemonStatsPartyScreen_CB(void)
+{
+    CB2_ReturnToPartyMenuFromSummaryScreen();
+}
+
+static void ChangePokemonStatsPartyScreen(void)
+{
+    StatEditor_Init(ChangePokemonStatsPartyScreen_CB);
+}
+
+static void CursorCb_StatEditor(u8 taskId)
+{
+    PlaySE(SE_SELECT);
+    gSpecialVar_0x8004 = gPartyMenu.slotId;
+    sPartyMenuInternal->exitCallback = ChangePokemonStatsPartyScreen;
+    Task_ClosePartyMenu(taskId);
 }
 
 #if TESTING
