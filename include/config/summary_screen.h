@@ -31,7 +31,7 @@ Info taken from https://bulbapedia.bulbagarden.net/wiki/Stats_judge.
 
 // Move Relearner settings
 #define P_ENABLE_MOVE_RELEARNERS         TRUE    // If TRUE, it enables move relearners for egg, TM and tutor. (see below for specific configs /flags)
-#define P_SORT_MOVES                     TRUE   // If TRUE, sorts all moves alphabetically in the relearner's list.
+#define P_SORT_MOVES                     TRUE    // If TRUE, sorts all moves alphabetically in the relearner's list.
 
 // Level up Relearner
 #define P_PRE_EVO_MOVES                  TRUE    // If TRUE, it enables the Pokémon to learn moves from it's pre evolution.
