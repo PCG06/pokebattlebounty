@@ -25,6 +25,7 @@
 #include "script.h"
 #include "sound.h"
 #include "sprite.h"
+#include "stat_editor.h"
 #include "string_util.h"
 #include "strings.h"
 #include "task.h"
@@ -386,7 +387,7 @@ static void CB2_InitLearnMove_Basic(void)
             AddScrollArrows();
             gTasks[sMoveRelearnerStruct->mainTask].func = Task_MoveRelearner_HandleInput;
         }
-        if (gRelearnMode == RELEARN_MODE_SCRIPT)
+        if (gRelearnMode == RELEARN_MODE_SCRIPT || gRelearnMode == RELEARN_MODE_STAT_EDITOR)
             gTasks[sMoveRelearnerStruct->mainTask].tRecoverPp = TRUE;
         else
             gTasks[sMoveRelearnerStruct->mainTask].tRecoverPp = P_SUMMARY_MOVE_RELEARNER_FULL_PP;
@@ -556,7 +557,15 @@ static void Task_MoveRelearner_Quit(u8 taskId)
     }
     else
     {
-        SetMainCallback2(CB2_ReturnToField);
+        if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        {
+            gSpecialVar_0x8004 = gTasks[taskId].tPartyIndex;
+            StatEditor_Init(CB2_InitLearnMove);
+        }
+        else
+        {
+            SetMainCallback2(CB2_ReturnToField);
+        }
     }
 
     FreeMoveRelearnerResources();

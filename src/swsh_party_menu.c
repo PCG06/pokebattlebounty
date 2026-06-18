@@ -3665,6 +3665,9 @@ static u8 DisplaySelectionWindow(u8 windowType)
         }
         else
         {
+            if (sPartyMenuInternal->actions[i] == MENU_STAT_EDITOR)
+                fontColorsId = 6;
+
             text = sCursorOptions[sPartyMenuInternal->actions[i]].text;
         }
 
@@ -3725,7 +3728,7 @@ static void SetPartyMonSelectionActions(struct Pokemon *mons, u8 slotId, u8 acti
 
 static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 {
-    u8 i, j;
+    // u8 i, j;
 
     sPartyMenuInternal->numActions = 0;
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_SUMMARY);
@@ -3734,6 +3737,7 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
         AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_STAT_EDITOR);
 
     // Add field moves to action list
+    /*
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
         for (j = 0; j != FIELD_MOVES_COUNT; j++)
@@ -3745,6 +3749,7 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
             }
         }
     }
+    */
 
     if (!InBattlePike())
     {

@@ -17,6 +17,7 @@
 #include "malloc.h"
 #include "menu.h"
 #include "menu_helpers.h"
+#include "move_relearner.h"
 #include "overworld.h"
 #include "palette.h"
 #include "party_menu.h"
@@ -882,6 +883,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
         BeginNormalPaletteFade(0xFFFFFFFF, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
     }
+
     if (JOY_NEW(DPAD_LEFT) || JOY_NEW(DPAD_RIGHT))
     {
         if (sStatEditorDataPtr->selector_x == 0)
@@ -889,6 +891,7 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
         else
             sStatEditorDataPtr->selector_x = 0; 
     }
+
     if (JOY_NEW(DPAD_UP))
     {
         if (sStatEditorDataPtr->selector_y == 0)
@@ -902,6 +905,15 @@ static void Task_StatEditorMain(u8 taskId) // input control when first loaded in
             sStatEditorDataPtr->selector_y = 0;
         else
             sStatEditorDataPtr->selector_y++;
+    }
+
+    if (JOY_NEW(START_BUTTON))
+    {
+        PlaySE(SE_SELECT);
+        sStatEditorDataPtr->savedCallback = CB2_InitLearnMove;
+        gRelearnMode = RELEARN_MODE_STAT_EDITOR;
+        gSpecialVar_0x8004 = sStatEditorDataPtr->partyid;
+        Task_StatEditorTurnOff(taskId);
     }
 
 }
