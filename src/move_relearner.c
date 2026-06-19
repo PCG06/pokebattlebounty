@@ -576,7 +576,7 @@ static void Task_MoveRelearner_Quit(u8 taskId)
         if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
         {
             gSpecialVar_0x8004 = gTasks[taskId].tPartyIndex;
-            StatEditor_Init(CB2_InitLearnMove);
+            StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
         }
         else
         {

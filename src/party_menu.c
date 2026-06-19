@@ -8647,14 +8647,9 @@ static u8 IndividualToCombinedPartyId(u8 index, enum BattlerId battler)
     return index;
 }
 
-static void ChangePokemonStatsPartyScreen_CB(void)
-{
-    CB2_ReturnToPartyMenuFromSummaryScreen();
-}
-
 static void ChangePokemonStatsPartyScreen(void)
 {
-    StatEditor_Init(ChangePokemonStatsPartyScreen_CB);
+    StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
 }
 
 static void CursorCb_StatEditor(u8 taskId)
