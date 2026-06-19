@@ -8647,7 +8647,7 @@ static u8 IndividualToCombinedPartyId(u8 index, enum BattlerId battler)
     return index;
 }
 
-static void ChangePokemonStatsPartyScreen(void)
+static void CB2_StatEditorReturnToPartyMenu(void)
 {
     StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
 }
@@ -8656,7 +8656,7 @@ static void CursorCb_StatEditor(u8 taskId)
 {
     PlaySE(SE_SELECT);
     gSpecialVar_0x8004 = gPartyMenu.slotId;
-    sPartyMenuInternal->exitCallback = ChangePokemonStatsPartyScreen;
+    sPartyMenuInternal->exitCallback = CB2_StatEditorReturnToPartyMenu;
     Task_ClosePartyMenu(taskId);
 }
 

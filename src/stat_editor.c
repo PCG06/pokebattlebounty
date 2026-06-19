@@ -1231,15 +1231,14 @@ static void Task_StatEditorMain(u8 taskId)
             {
                 PlaySE(SE_FAILURE);
                 sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+                return;
             }
-            else
-            {
-                PlaySE(SE_SELECT);
-                sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-                StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
-                PrintTitleToWindowEditState();
-                gTasks[taskId].func = Task_LeftPanelEditMode;
-            }
+
+            PlaySE(SE_SELECT);
+            sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
+            StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
+            PrintTitleToWindowEditState();
+            gTasks[taskId].func = Task_LeftPanelEditMode;
             return;
         }
     }
