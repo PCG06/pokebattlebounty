@@ -759,7 +759,7 @@ static const struct WindowTemplate sPageInfoTemplate[] =
         .width = 18,
         .height = 7,
         .paletteNum = 2,
-        .baseBlock = 151,
+        .baseBlock = 171,
     },
     [PSS_DATA_WINDOW_INFO_SPECIES] = {
         .bg = 0,
@@ -768,7 +768,7 @@ static const struct WindowTemplate sPageInfoTemplate[] =
         .width = 12,
         .height = 9,
         .paletteNum = 2,
-        .baseBlock = 277,
+        .baseBlock = 297,
     },
 };
 static const struct WindowTemplate sPageSkillsTemplate[] =
@@ -780,7 +780,7 @@ static const struct WindowTemplate sPageSkillsTemplate[] =
         .width = 18,
         .height = 7,
         .paletteNum = 2,
-        .baseBlock = 151,
+        .baseBlock = 171,
     },
     [PSS_DATA_WINDOW_SKILLS_ABILITY] = {
         .bg = 0,
@@ -789,7 +789,7 @@ static const struct WindowTemplate sPageSkillsTemplate[] =
         .width = 18,
         .height = 7, // Increased height to cover the shift
         .paletteNum = 2,
-        .baseBlock = 277,
+        .baseBlock = 297,
     },
 };
 static const struct WindowTemplate sPageMovesTemplate[] = // This is used for both battle moves
@@ -801,7 +801,7 @@ static const struct WindowTemplate sPageMovesTemplate[] = // This is used for bo
         .width = 20,
         .height = 12,
         .paletteNum = 3,
-        .baseBlock = 151,
+        .baseBlock = 171,
     },
     [PSS_DATA_WINDOW_MOVE_DESCRIPTION] = {
         .bg = 0,
@@ -810,7 +810,7 @@ static const struct WindowTemplate sPageMovesTemplate[] = // This is used for bo
         .width = 18,
         .height = 5,
         .paletteNum = 2,
-        .baseBlock = 391,
+        .baseBlock = 401,
     },
 };
 static const struct WindowTemplate sPageMemoTemplate[] =
@@ -822,7 +822,7 @@ static const struct WindowTemplate sPageMemoTemplate[] =
         .width = 18,
         .height = 10,
         .paletteNum = 2,
-        .baseBlock = 151,
+        .baseBlock = 171,
     },
     [PSS_DATA_WINDOW_MEMO_EXP] = {
         .bg = 0,
@@ -831,7 +831,7 @@ static const struct WindowTemplate sPageMemoTemplate[] =
         .width = 14,
         .height = 4,
         .paletteNum = 2,
-        .baseBlock = 331,
+        .baseBlock = 351,
     },
 };
 static const u8 sTextColors[][3] =
