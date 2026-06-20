@@ -3665,9 +3665,6 @@ static u8 DisplaySelectionWindow(u8 windowType)
         }
         else
         {
-            if (sPartyMenuInternal->actions[i] == MENU_STAT_EDITOR)
-                fontColorsId = 6;
-
             text = sCursorOptions[sPartyMenuInternal->actions[i]].text;
         }
 

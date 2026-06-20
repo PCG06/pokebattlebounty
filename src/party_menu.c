@@ -2900,9 +2900,6 @@ static u8 DisplaySelectionWindow(u8 windowType)
         if (sPartyMenuInternal->actions[i] >= MENU_FIELD_MOVES)
             fontColorsId = 4;
 
-        if (sPartyMenuInternal->actions[i] == MENU_STAT_EDITOR)
-            fontColorsId = 6;
-
         if (sPartyMenuInternal->actions[i] >= MENU_FIELD_MOVES)
             text = GetMoveName(FieldMove_GetMoveId(sPartyMenuInternal->actions[i] - MENU_FIELD_MOVES));
         else
