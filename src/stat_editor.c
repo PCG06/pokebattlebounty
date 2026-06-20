@@ -52,7 +52,8 @@ struct StatEditorResources
     u16 rightPanelColumn;
     u16 rightPanelRow;
     u16 rightPanelSelectedStat;
-    u16 selectorSpriteId;
+    u16 leftSelectorSpriteId;
+    u16 rightSelectorSpriteId;
     u16 statEditingValue;
     u16 normalTotal;
     u16 evTotal;
@@ -129,8 +130,8 @@ static void CreateMonSprite(u32 dexNum);
 static void PrintMonStats(void);
 static void SelectorCallback(struct Sprite *sprite);
 static struct Pokemon *GetCurrentPartyMon(void);
-static u8 CreateSelector(void);
-static void DestroySelector(void);
+static u8 CreateSelectors(void);
+static void DestroySelectors(void);
 
 //==========CONST=DATA==========//
 static const struct BgTemplate sStatEditorBgTemplates[] =
@@ -218,15 +219,15 @@ static const u8 sMenuWindowFontColors[][3] =
 
 static const struct OamData sOamData_Selector =
 {
-    .size = SPRITE_SIZE(32x32),
-    .shape = SPRITE_SHAPE(32x32),
+    .size = SPRITE_SIZE(8x16),
+    .shape = SPRITE_SHAPE(8x16),
     .priority = 0,
 };
 
 static const struct CompressedSpriteSheet sSpriteSheet_Selector =
 {
     .data = sSelector_Gfx,
-    .size = 32*32*4/2,
+    .size = 8*16*4/2,
     .tag = TAG_SELECTOR,
 };
 
@@ -238,38 +239,13 @@ static const struct SpritePalette sSpritePal_Selector =
 
 static const union AnimCmd sSpriteAnim_Selector0[] =
 {
-    ANIMCMD_FRAME(0, 32),
-    ANIMCMD_FRAME(0, 32),
-    ANIMCMD_JUMP(0),
-};
-
-static const union AnimCmd sSpriteAnim_Selector1[] =
-{
-    ANIMCMD_FRAME(32, 32),
-    ANIMCMD_FRAME(32, 32),
-    ANIMCMD_JUMP(0),
-};
-
-static const union AnimCmd sSpriteAnim_Selector2[] =
-{
-    ANIMCMD_FRAME(16, 32),
-    ANIMCMD_FRAME(16, 32),
-    ANIMCMD_JUMP(0),
-};
-
-static const union AnimCmd sSpriteAnim_Selector3[] =
-{
-    ANIMCMD_FRAME(0, 32),
-    ANIMCMD_FRAME(0, 32),
-    ANIMCMD_JUMP(0),
+    ANIMCMD_FRAME(0, 16),
+    ANIMCMD_END,
 };
 
 static const union AnimCmd *const sSpriteAnimTable_Selector[] =
 {
     sSpriteAnim_Selector0,
-    sSpriteAnim_Selector1,
-    sSpriteAnim_Selector2,
-    sSpriteAnim_Selector3,
 };
 
 static const struct SpriteTemplate sSpriteTemplate_Selector =
@@ -289,21 +265,24 @@ static const struct SpriteTemplate sSpriteTemplate_Selector =
 #define STARTING_X       60
 #define STARTING_Y       26
 
+#define LEFT_PANEL_SELECTOR_WIDTH  68
+#define RIGHT_PANEL_SELECTOR_WIDTH 28
+
 #define LEFT_NICKNAME_Y  2
 #define LEFT_ABILITY_Y   34
 #define LEFT_NATURE_Y    50
 
 #define WINDOW3_SCREEN_X 8
-#define WINDOW3_SCREEN_Y 88
+#define WINDOW3_SCREEN_Y 92
 
-#define SELECTOR_LEFT_PANEL_X    (WINDOW3_SCREEN_X + 12)
-#define SELECTOR_LEFT_NICKNAME_Y (WINDOW3_SCREEN_Y + LEFT_NICKNAME_Y + 8)
-#define SELECTOR_LEFT_ABILITY_Y  (WINDOW3_SCREEN_Y + LEFT_ABILITY_Y + 8)
-#define SELECTOR_LEFT_NATURE_Y   (WINDOW3_SCREEN_Y + LEFT_NATURE_Y + 8)
+#define SELECTOR_LEFT_EDGE_X     (WINDOW3_SCREEN_X - 2)
+#define SELECTOR_LEFT_NICKNAME_Y (WINDOW3_SCREEN_Y + LEFT_NICKNAME_Y + 4)
+#define SELECTOR_LEFT_ABILITY_Y  (WINDOW3_SCREEN_Y + LEFT_ABILITY_Y + 4)
+#define SELECTOR_LEFT_NATURE_Y   (WINDOW3_SCREEN_Y + LEFT_NATURE_Y + 4)
 
-#define SELECTOR_RIGHT_EV_X   188
-#define SELECTOR_RIGHT_IV_X   220
-#define SELECTOR_RIGHT_BASE_Y  50
+#define SELECTOR_RIGHT_EV_LEFT_EDGE_X  (STARTING_X + SECOND_COLUMN + 82)
+#define SELECTOR_RIGHT_IV_LEFT_EDGE_X  (STARTING_X + THIRD_COLUMN + 82)
+#define SELECTOR_RIGHT_BASE_Y          (STARTING_Y + 24)
 
 #define MON_ICON_X (32 + 8)
 #define MON_ICON_Y (32 + 24)
@@ -401,14 +380,15 @@ void StatEditor_Init(MainCallback callback)
         return;
     }
 
-    sStatEditorDataPtr->gfxLoadState     = 0;
-    sStatEditorDataPtr->savedCallback    = callback;
-    sStatEditorDataPtr->selectorSpriteId = 0xFF;
-    sStatEditorDataPtr->partyId          = gSpecialVar_0x8004;
-    sStatEditorDataPtr->panel            = PANEL_LEFT;
-    sStatEditorDataPtr->leftRow          = LEFT_ROW_NICKNAME;
-    sStatEditorDataPtr->rightPanelColumn = RIGHT_PANEL_EVS;
-    sStatEditorDataPtr->rightPanelRow    = 0;
+    sStatEditorDataPtr->gfxLoadState          = 0;
+    sStatEditorDataPtr->savedCallback         = callback;
+    sStatEditorDataPtr->leftSelectorSpriteId  = 0xFF;
+    sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
+    sStatEditorDataPtr->partyId               = gSpecialVar_0x8004;
+    sStatEditorDataPtr->panel                 = PANEL_LEFT;
+    sStatEditorDataPtr->leftRow               = LEFT_ROW_NICKNAME;
+    sStatEditorDataPtr->rightPanelColumn      = RIGHT_PANEL_EVS;
+    sStatEditorDataPtr->rightPanelRow         = 0;
 
     SetMainCallback2(StatEditor_RunSetup);
 }
@@ -487,7 +467,7 @@ static bool8 StatEditor_DoGfxSetup(void)
         PrintTitleToWindowMainState();
         sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
         PrintMonStats();
-        CreateSelector();
+        CreateSelectors();
         gMain.state++;
         break;
     case 6:
@@ -515,7 +495,7 @@ static bool8 StatEditor_DoGfxSetup(void)
 
 static void StatEditor_FreeResources(void)
 {
-    DestroySelector();
+    DestroySelectors();
     FreeResourcesAndDestroySprite(&gSprites[sStatEditorDataPtr->monIconSpriteId], sStatEditorDataPtr->monIconSpriteId);
     try_free(sStatEditorDataPtr);
     try_free(sBg1TilemapBuffer);
@@ -631,21 +611,33 @@ static void CreateMonSprite(u32 dexNum)
     gSprites[sStatEditorDataPtr->monIconSpriteId].oam.priority = 0;
 }
 
-static u8 CreateSelector(void)
+static u8 CreateSelectors(void)
 {
-    if (sStatEditorDataPtr->selectorSpriteId == 0xFF)
-        sStatEditorDataPtr->selectorSpriteId = CreateSprite(&sSpriteTemplate_Selector, 188, 30, 0);
+    if (sStatEditorDataPtr->leftSelectorSpriteId == 0xFF)
+        sStatEditorDataPtr->leftSelectorSpriteId = CreateSprite(&sSpriteTemplate_Selector, SELECTOR_LEFT_EDGE_X, SELECTOR_LEFT_NICKNAME_Y, 0);
 
-    gSprites[sStatEditorDataPtr->selectorSpriteId].invisible = FALSE;
-    StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 0);
-    return sStatEditorDataPtr->selectorSpriteId;
+    if (sStatEditorDataPtr->rightSelectorSpriteId == 0xFF)
+        sStatEditorDataPtr->rightSelectorSpriteId = CreateSprite(&sSpriteTemplate_Selector, SELECTOR_LEFT_EDGE_X + LEFT_PANEL_SELECTOR_WIDTH, SELECTOR_LEFT_NICKNAME_Y, 0);
+
+    gSprites[sStatEditorDataPtr->leftSelectorSpriteId].invisible = FALSE;
+    gSprites[sStatEditorDataPtr->rightSelectorSpriteId].invisible = FALSE;
+
+    // Flip sprite for right side cursor
+    gSprites[sStatEditorDataPtr->rightSelectorSpriteId].hFlip = TRUE;
+
+    StartSpriteAnim(&gSprites[sStatEditorDataPtr->leftSelectorSpriteId], 0);
+    StartSpriteAnim(&gSprites[sStatEditorDataPtr->rightSelectorSpriteId], 0);
+    return sStatEditorDataPtr->leftSelectorSpriteId;
 }
 
-static void DestroySelector(void)
+static void DestroySelectors(void)
 {
-    if (sStatEditorDataPtr->selectorSpriteId != 0xFF)
-        DestroySprite(&gSprites[sStatEditorDataPtr->selectorSpriteId]);
-    sStatEditorDataPtr->selectorSpriteId = 0xFF;
+    if (sStatEditorDataPtr->leftSelectorSpriteId != 0xFF)
+        DestroySprite(&gSprites[sStatEditorDataPtr->leftSelectorSpriteId]);
+    if (sStatEditorDataPtr->rightSelectorSpriteId != 0xFF)
+        DestroySprite(&gSprites[sStatEditorDataPtr->rightSelectorSpriteId]);
+    sStatEditorDataPtr->leftSelectorSpriteId = 0xFF;
+    sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
 }
 
 static void PrintTitleToWindowMainState(void)
@@ -802,12 +794,12 @@ struct SpriteCoords
 static void SelectorCallback(struct Sprite *sprite)
 {
     static const struct SpriteCoords sRightPanelCoords[6][2] = {
-        {{SELECTOR_RIGHT_EV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 0)}, {SELECTOR_RIGHT_IV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 0)}},
-        {{SELECTOR_RIGHT_EV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 1)}, {SELECTOR_RIGHT_IV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 1)}},
-        {{SELECTOR_RIGHT_EV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 2)}, {SELECTOR_RIGHT_IV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 2)}},
-        {{SELECTOR_RIGHT_EV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}, {SELECTOR_RIGHT_IV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}},
-        {{SELECTOR_RIGHT_EV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}, {SELECTOR_RIGHT_IV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}},
-        {{SELECTOR_RIGHT_EV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}, {SELECTOR_RIGHT_IV_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}},
+        {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 0)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 0)}},
+        {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 1)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 1)}},
+        {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 2)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 2)}},
+        {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}},
+        {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}},
+        {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}},
     };
 
     static const u8 sLeftPanelY[LEFT_ROW_COUNT] = {
@@ -816,13 +808,43 @@ static void SelectorCallback(struct Sprite *sprite)
         [LEFT_ROW_NATURE]   = SELECTOR_LEFT_NATURE_Y,
     };
 
+    bool32 isLeft = (sprite == &gSprites[sStatEditorDataPtr->leftSelectorSpriteId]);
+    u32 leftEdgeX;
+    u32 y;
+    bool32 shouldInvis = FALSE;
+
+    if (sStatEditorDataPtr->panel == PANEL_LEFT)
+    {
+        leftEdgeX = SELECTOR_LEFT_EDGE_X;
+        y = sLeftPanelY[sStatEditorDataPtr->leftRow];
+        sprite->x = isLeft ? leftEdgeX : (leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH);
+        sprite->y = y;
+    }
+    else
+    {
+        sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
+        leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
+        y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
+        sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH);
+        sprite->y = y;
+
+        // Don't show cursor on left when stat is empty, on right when stat is maxed
+        if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
+        {
+            if (isLeft && sStatEditorDataPtr->statEditingValue == MIN_STAT)
+                shouldInvis = TRUE;
+            else if (!isLeft && CHECK_IF_STAT_CANT_INCREASE)
+                shouldInvis = TRUE;
+        }
+    }
+
     if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
     {
         if (sprite->data[0] == 32)
             sprite->invisible = TRUE;
         if (sprite->data[0] >= 48)
         {
-            sprite->invisible = FALSE;
+            sprite->invisible = shouldInvis;
             sprite->data[0] = 0;
         }
         sprite->data[0]++;
@@ -831,18 +853,6 @@ static void SelectorCallback(struct Sprite *sprite)
     {
         sprite->invisible = FALSE;
         sprite->data[0] = 0;
-    }
-
-    if (sStatEditorDataPtr->panel == PANEL_LEFT)
-    {
-        sprite->x = SELECTOR_LEFT_PANEL_X;
-        sprite->y = sLeftPanelY[sStatEditorDataPtr->leftRow];
-    }
-    else
-    {
-        sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
-        sprite->x = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
-        sprite->y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
     }
 }
 
@@ -1011,7 +1021,6 @@ static void Task_LeftPanelEditMode(u8 taskId)
     if (JOY_NEW(B_BUTTON) || JOY_NEW(A_BUTTON))
     {
         gTasks[taskId].func = Task_StatEditorMain;
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 0);
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
         PrintTitleToWindowMainState();
@@ -1083,16 +1092,10 @@ static void ApplyRightPanelStatChange(void)
 static void HandleRightPanelEditInput(u32 input)
 {
     if ((input <= EDIT_INPUT_MAX_INCREASE) && CHECK_IF_STAT_CANT_INCREASE)
-    {
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
         return;
-    }
 
     if ((input >= EDIT_INPUT_DECREASE) && (sStatEditorDataPtr->statEditingValue == MIN_STAT))
-    {
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1);
         return;
-    }
 
     switch (input)
     {
@@ -1123,13 +1126,6 @@ static void HandleRightPanelEditInput(u32 input)
     }
 
     ApplyRightPanelStatChange();
-
-    if (CHECK_IF_STAT_CANT_INCREASE)
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 2);
-    else if (sStatEditorDataPtr->statEditingValue == MIN_STAT)
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 1);
-    else
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
 }
 
 static void Task_RightPanelEditMode(u8 taskId)
@@ -1137,7 +1133,6 @@ static void Task_RightPanelEditMode(u8 taskId)
     if (JOY_NEW(B_BUTTON) || JOY_NEW(A_BUTTON))
     {
         gTasks[taskId].func = Task_StatEditorMain;
-        StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 0);
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
         PrintTitleToWindowMainState();
@@ -1244,7 +1239,8 @@ static void Task_StatEditorMain(u8 taskId)
 
             PlaySE(SE_SELECT);
             sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-            StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
+            gSprites[sStatEditorDataPtr->leftSelectorSpriteId].data[0] = 32;
+            gSprites[sStatEditorDataPtr->rightSelectorSpriteId].data[0] = 32;
             PrintTitleToWindowEditState();
             gTasks[taskId].func = Task_LeftPanelEditMode;
             return;
@@ -1256,9 +1252,20 @@ static void Task_StatEditorMain(u8 taskId)
         {
             sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
             sStatEditorDataPtr->statEditingValue = GetMonData(GetCurrentPartyMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat]);
+
+            if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS
+             && sStatEditorDataPtr->statEditingValue == MIN_STAT
+             && sStatEditorDataPtr->evTotal == MAX_TOTAL_EVS)
+            {
+                PlaySE(SE_FAILURE);
+                sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+                return;
+            }
+
             PlaySE(SE_SELECT);
             sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-            StartSpriteAnim(&gSprites[sStatEditorDataPtr->selectorSpriteId], 3);
+            gSprites[sStatEditorDataPtr->leftSelectorSpriteId].data[0] = 32;
+            gSprites[sStatEditorDataPtr->rightSelectorSpriteId].data[0] = 32;
             PrintTitleToWindowEditState();
             gTasks[taskId].func = Task_RightPanelEditMode;
             return;
