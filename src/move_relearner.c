@@ -559,6 +559,11 @@ static const struct MoveLearnUI sMoveLearnUI =
     .endTask = UIEndTask
 };
 
+static void CB2_ReturnToSummaryScreenFromMoveRelearner(void)
+{
+    ShowPokemonSummaryScreen(SUMMARY_MODE_STAT_EDITOR, gParties[B_TRAINER_PLAYER], gSpecialVar_0x8004, gPartiesCount[B_TRAINER_PLAYER] - 1, gInitialSummaryScreenCallback);
+}
+
 static void Task_MoveRelearner_Quit(u8 taskId)
 {
     if (gPaletteFade.active)
@@ -566,9 +571,7 @@ static void Task_MoveRelearner_Quit(u8 taskId)
 
     if (gInitialSummaryScreenCallback != NULL)
     {
-        if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
-            ShowPokemonSummaryScreen(SUMMARY_MODE_STAT_EDITOR, gParties[B_TRAINER_PLAYER], gTasks[taskId].tPartyIndex, gPartiesCount[B_TRAINER_PLAYER] - 1, gInitialSummaryScreenCallback);
-        else if (gRelearnMode == RELEARN_MODE_PSS_PAGE_CONTEST_MOVES)
+        if (gRelearnMode == RELEARN_MODE_PSS_PAGE_CONTEST_MOVES)
             ShowPokemonSummaryScreen(SUMMARY_MODE_RELEARNER_CONTEST, gParties[B_TRAINER_PLAYER], gTasks[taskId].tPartyIndex, gPartiesCount[B_TRAINER_PLAYER] - 1, gInitialSummaryScreenCallback);
         else
             ShowPokemonSummaryScreen(SUMMARY_MODE_RELEARNER_BATTLE, gParties[B_TRAINER_PLAYER], gTasks[taskId].tPartyIndex, gPartiesCount[B_TRAINER_PLAYER] - 1, gInitialSummaryScreenCallback);
@@ -578,7 +581,10 @@ static void Task_MoveRelearner_Quit(u8 taskId)
         if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
         {
             gSpecialVar_0x8004 = gTasks[taskId].tPartyIndex;
-            StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
+            if (P_PARTY_MENU_STAT_EDITOR)
+                StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
+            else if (P_SUMMARY_SCREEN_STAT_EDITOR)
+                StatEditor_Init(CB2_ReturnToSummaryScreenFromMoveRelearner);
         }
         else
         {
