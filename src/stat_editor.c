@@ -895,10 +895,18 @@ static bool32 HasOnlyOneAbility(enum Species species)
     return GetValidAbilitySlots(species, outSlots) == 1;
 }
 
-void CB2_ReturnToStatEditorFromNamingScreen(void)
+static void CB2_ReturnToSummaryScreenFromNamingScreen(void)
+{
+    ShowPokemonSummaryScreen(SUMMARY_MODE_STAT_EDITOR, gParties[B_TRAINER_PLAYER], gSpecialVar_0x8004, gPartiesCount[B_TRAINER_PLAYER] - 1, gInitialSummaryScreenCallback);
+}
+
+static void CB2_ReturnToStatEditorFromNamingScreen(void)
 {
     SetMonData(&gParties[B_TRAINER_PLAYER][gSpecialVar_0x8004], MON_DATA_NICKNAME, gStringVar2); // partyId gets overwritten to 0.
-    StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
+    if (P_PARTY_MENU_STAT_EDITOR)
+        StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
+    else if (P_SUMMARY_SCREEN_STAT_EDITOR)
+        StatEditor_Init(CB2_ReturnToSummaryScreenFromNamingScreen);
 }
 
 static void CB2_StatEditorChangePokemonNickname(void)
