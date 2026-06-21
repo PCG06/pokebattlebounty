@@ -206,9 +206,10 @@ static const u16 sSelector_Pal[]        = INCGFX_U16("graphics/stat_editor/selec
 static const u32 sSelector_Gfx[]        = INCGFX_U32("graphics/stat_editor/selector.png", ".4bpp.smol");
 static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
 static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
-static const u8 sR_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/r_button.png", ".4bpp");
+static const u8 sLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
+static const u8 sStart_ButtonGfx[]      = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
 static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
-static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/shadow.pal", ".gbapal");
+static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
 
 static const struct SpritePalette sSpritePal_MonShadow =
 {
@@ -367,12 +368,13 @@ static const u8 sText_MenuReal[]              = _("Real");
 static const u8 sText_MenuEV[]                = _("EVs");
 static const u8 sText_MenuIV[]                = _("IVs");
 static const u8 sText_MonLevel[]              = _("Lv.{CLEAR 1}{STR_VAR_1}");
-static const u8 sText_MenuLRButtonText[]      = _("Cycle Party");
-static const u8 sText_MenuBButtonText[]       = _("Back");
+static const u8 sText_MenuLRButtonParty[]     = _("Party");
+static const u8 sText_MenuStartButtonMoves[]  = _("Moves");
+static const u8 sText_MenuBButtonBack[]       = _("Back");
 static const u8 sText_MenuDPadChangeStat[]    = _("Change Stat");
 static const u8 sText_MenuDPadChangeAbility[] = _("Change Ability");
 static const u8 sText_MenuDPadChangeNature[]  = _("Change Nature");
-static const u8 sText_MenuAButtonText[]       = _("Save");
+static const u8 sText_MenuABButtonSave[]      = _("Save");
 
 // Begin Generic UI Initialization Code
 
@@ -603,9 +605,9 @@ static void StatEditor_InitWindows(void)
     InitWindows(sMenuWindowTemplates);
     DeactivateAllTextPrinters();
     ScheduleBgCopyTilemapToVram(0);
-    FillWindowPixelBuffer(WINDOW_1, 0);
+    FillWindowPixelBuffer(WINDOW_1, PIXEL_FILL(0));
     PutWindowTilemap(WINDOW_1);
-    CopyWindowToVram(WINDOW_1, 3);
+    CopyWindowToVram(WINDOW_1, COPYWIN_FULL);
     ScheduleBgCopyTilemapToVram(2);
 }
 
@@ -837,12 +839,14 @@ static void PrintTitleToWindowMainState(void)
 {
     FillWindowPixelBuffer(WINDOW_1, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     AddTextPrinterParameterized4(WINDOW_1, FONT_NORMAL, 1, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuTitle);
-    BlitBitmapToWindow(WINDOW_1, sR_ButtonGfx, 75, BUTTON_Y, 24, 8);
-    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 102, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuLRButtonText);
+    BlitBitmapToWindow(WINDOW_1, sLR_ButtonGfx, 75, BUTTON_Y, 16, 8);
+    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 94, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuLRButtonParty);
+    BlitBitmapToWindow(WINDOW_1, sStart_ButtonGfx, 131, BUTTON_Y, 24, 8);
+    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 158, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuStartButtonMoves);
     BlitBitmapToWindow(WINDOW_1, sB_ButtonGfx, 196, BUTTON_Y, 8, 8);
-    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 208, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuBButtonText);
+    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 208, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuBButtonBack);
     PutWindowTilemap(WINDOW_1);
-    CopyWindowToVram(WINDOW_1, 3);
+    CopyWindowToVram(WINDOW_1, COPYWIN_FULL);
 }
 
 void GetDPadText(void)
@@ -874,9 +878,9 @@ static void PrintTitleToWindowEditState(void)
     GetDPadText();
     BlitBitmapToWindow(WINDOW_1, sA_ButtonGfx, 186, BUTTON_Y, 8, 8);
     BlitBitmapToWindow(WINDOW_1, sB_ButtonGfx, 196, BUTTON_Y, 8, 8);
-    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 208, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuAButtonText);
+    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 208, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuABButtonSave);
     PutWindowTilemap(WINDOW_1);
-    CopyWindowToVram(WINDOW_1, 3);
+    CopyWindowToVram(WINDOW_1, COPYWIN_FULL);
 }
 
 static void PrintMonStats(void)
@@ -973,9 +977,9 @@ static void PrintMonStats(void)
     AddTextPrinterParameterized4(WINDOW_3, FONT_SMALL_NARROW, 2, LEFT_NATURE_Y, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
 
     PutWindowTilemap(WINDOW_3);
-    CopyWindowToVram(WINDOW_3, 3);
+    CopyWindowToVram(WINDOW_3, COPYWIN_FULL);
     PutWindowTilemap(WINDOW_2);
-    CopyWindowToVram(WINDOW_2, 3);
+    CopyWindowToVram(WINDOW_2, COPYWIN_FULL);
 }
 
 struct SpriteCoords
