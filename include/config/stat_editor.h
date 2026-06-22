@@ -13,8 +13,10 @@
 #define P_SUMMARY_SCREEN_STAT_EDITOR        TRUE  // If TRUE, the stat editor will be accessible through the summary screen on the stat menu by clicking Start. (opens on selected Pokémon)
 
 // General Configs
-#define P_STAT_EDITOR_MON_IDLE_ANIMS        TRUE  // If TRUE, loops the Pokémon animations regularly as an "idle" anim
+#define P_STAT_EDITOR_NATURE_COLORS         TRUE  // If TRUE, colors stats increased or decreased by nature, red = increased, blue = decreased.
+#define P_STAT_EDITOR_MOVE_RELEARNER        TRUE  // If TRUE, the move relearner will be accessible through the stat editor by pressing Start.
+#define P_STAT_EDITOR_MON_IDLE_ANIMS        TRUE  // If TRUE, loops the Pokémon animations regularly as an "idle" anim.
 #define P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES 300   // Number of frames between each idle anim if P_STAT_EDITOR_MON_IDLE_ANIMS is TRUE.
-#define P_STAT_EDITOR_MON_SHADOWS           TRUE  // If TRUE, displays a shadow for the Pokémon sprite
+#define P_STAT_EDITOR_MON_SHADOWS           TRUE  // If TRUE, displays a shadow for the Pokémon sprite.
 
 #endif // GUARD_INCLUDE_CONSTANTS_STAT_EDITOR_H

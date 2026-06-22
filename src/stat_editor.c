@@ -228,8 +228,8 @@ static const u8 sMenuWindowFontColors[][3] =
 {
     [FONT_BLACK] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_DARK_GRAY,  TEXT_COLOR_LIGHT_GRAY},
     [FONT_WHITE] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_WHITE,      TEXT_COLOR_DARK_GRAY},
-    [FONT_RED]   = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_RED,        TEXT_COLOR_LIGHT_GRAY},
-    [FONT_BLUE]  = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_BLUE,       TEXT_COLOR_LIGHT_GRAY},
+    [FONT_RED]   = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_DARK_GRAY},
+    [FONT_BLUE]  = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_BLUE, TEXT_COLOR_DARK_GRAY},
 };
 
 static const struct OamData sOamData_Selector =
@@ -841,8 +841,13 @@ static void PrintTitleToWindowMainState(void)
     AddTextPrinterParameterized4(WINDOW_1, FONT_NORMAL, 1, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuTitle);
     BlitBitmapToWindow(WINDOW_1, sLR_ButtonGfx, 75, BUTTON_Y, 16, 8);
     AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 94, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuLRButtonParty);
-    BlitBitmapToWindow(WINDOW_1, sStart_ButtonGfx, 131, BUTTON_Y, 24, 8);
-    AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 158, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuStartButtonMoves);
+
+    if (P_STAT_EDITOR_MOVE_RELEARNER)
+    {
+        BlitBitmapToWindow(WINDOW_1, sStart_ButtonGfx, 131, BUTTON_Y, 24, 8);
+        AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 158, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuStartButtonMoves);
+    }
+
     BlitBitmapToWindow(WINDOW_1, sB_ButtonGfx, 196, BUTTON_Y, 8, 8);
     AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 208, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuBButtonBack);
     PutWindowTilemap(WINDOW_1);
@@ -895,6 +900,8 @@ static void PrintMonStats(void)
     u32 level = GetMonData(mon, MON_DATA_LEVEL);
     u32 personality = GetMonData(mon, MON_DATA_PERSONALITY);
     u32 gender = GetGenderFromSpeciesAndPersonality(sStatEditorDataPtr->speciesID, personality);
+    u32 natureUpStat = gNaturesInfo[nature].statUp;
+    u32 natureDownStat = gNaturesInfo[nature].statDown;
 
     FillWindowPixelBuffer(WINDOW_2, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     FillWindowPixelBuffer(WINDOW_3, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
@@ -908,13 +915,43 @@ static void PrintMonStats(void)
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, STARTING_X + SECOND_COLUMN + 4, 7, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuEV);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, STARTING_X + THIRD_COLUMN + 5, 7, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuIV);
 
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 24, STARTING_Y + (STAT_ROW_HEIGHT * 0), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuHP);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12, STARTING_Y + (STAT_ROW_HEIGHT * 1), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuAttack);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12, STARTING_Y + (STAT_ROW_HEIGHT * 2), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuDefense);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 10, STARTING_Y + (STAT_ROW_HEIGHT * 3), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpAttack);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 12, STARTING_Y + (STAT_ROW_HEIGHT * 4), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpDefense);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 16, STARTING_Y + (STAT_ROW_HEIGHT * 5), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuSpeed);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 16, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuTotal);
+    struct StatLabelInfo 
+    {
+        u8 statIndex;
+        const u8 *text;
+        u8 x;
+        u8 y;
+    };
+
+    static const struct StatLabelInfo sStatLabels[] = {
+        {STAT_HP,     sText_MenuHP,        24,  STARTING_Y + (STAT_ROW_HEIGHT * 0)},
+        {STAT_ATK,    sText_MenuAttack,    12,  STARTING_Y + (STAT_ROW_HEIGHT * 1)},
+        {STAT_DEF,    sText_MenuDefense,   10,  STARTING_Y + (STAT_ROW_HEIGHT * 2)},
+        {STAT_SPATK,  sText_MenuSpAttack,  12,  STARTING_Y + (STAT_ROW_HEIGHT * 3)},
+        {STAT_SPDEF,  sText_MenuSpDefense, 12,  STARTING_Y + (STAT_ROW_HEIGHT * 4)},
+        {STAT_SPEED,  sText_MenuSpeed,     14,  STARTING_Y + (STAT_ROW_HEIGHT * 5)},
+        {NUM_STATS,   sText_MenuTotal,     14,  STARTING_Y + (STAT_ROW_HEIGHT * 6)},
+    };
+
+    // Print stat labels and nature colors
+    for (u32 i = 0; i <= NUM_STATS; i++)
+    {
+        u32 color = FONT_WHITE;
+
+        if (P_STAT_EDITOR_NATURE_COLORS)
+        {
+            if (natureUpStat == natureDownStat)
+                color = FONT_WHITE;
+            else if (sStatLabels[i].statIndex == natureUpStat)
+                color = FONT_RED;
+            else if (sStatLabels[i].statIndex == natureDownStat)
+                color = FONT_BLUE;
+            else
+                color = FONT_WHITE;
+        }
+
+        AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, sStatLabels[i].x, sStatLabels[i].y, 0, 0, sMenuWindowFontColors[color], 0xFF, sStatLabels[i].text);
+    }
 
     // Print Mon Stats
     for (u32 i = 0; i < NUM_STATS; i++)
@@ -1382,7 +1419,7 @@ static void Task_StatEditorMain(u8 taskId)
         return;
     }
 
-    if (JOY_NEW(START_BUTTON))
+    if (JOY_NEW(START_BUTTON) && P_STAT_EDITOR_MOVE_RELEARNER)
     {
         PlaySE(SE_SELECT);
         gRelearnMode = RELEARN_MODE_STAT_EDITOR;
