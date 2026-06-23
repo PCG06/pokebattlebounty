@@ -46,23 +46,24 @@ struct StatEditorResources
     MainCallback savedCallback;     // determines callback to run when we exit. e.g. where do we want to go after closing the menu
     u8 gfxLoadState;
     u8 mode;
+    u8 panel;
+    u8 panelInputMode;
+    u8 leftRow;
+    u8 partyId;
+    u8 hpTypeSpriteId;
     u8 monSpriteId;
     u8 monShadowSpriteId;
+    u8 leftSelectorSpriteId;
+    u8 rightSelectorSpriteId;
+    u8 rightPanelColumn;
+    u8 rightPanelRow;
+    u8 rightPanelSelectedStat;
     bool8 monAnimPlayed; // tracks if the mon's cry has been played at least once
+    enum Type hpType;
     enum Species speciesID;
-    u8 panel;
-    u8 leftRow;
-    u16 rightPanelColumn;
-    u16 rightPanelRow;
-    u16 rightPanelSelectedStat;
-    u16 leftSelectorSpriteId;
-    u16 rightSelectorSpriteId;
     u16 statEditingValue;
     u16 normalTotal;
     u16 evTotal;
-    u16 ivTotal;
-    u16 partyId;
-    u16 panelInputMode;
 };
 
 #define PANEL_LEFT  0
@@ -72,6 +73,9 @@ struct StatEditorResources
 #define LEFT_ROW_ABILITY  1
 #define LEFT_ROW_NATURE   2
 #define LEFT_ROW_COUNT    3
+
+#define RIGHT_PANEL_ROW_HP_TYPE 6
+#define RIGHT_PANEL_ROW_COUNT   7
 
 #define PANEL_INPUT_SELECT 0
 #define PANEL_INPUT_EDIT   1
@@ -105,8 +109,9 @@ TLDR: Stat can't increase if you're either: at the maximum amount a stat can hav
   \> Together, these two check if you're editing an EV and already at the maximum amount of EVs
 */
 
-#define TAG_SELECTOR   30004
-#define TAG_MON_SHADOW 30005
+#define TAG_SELECTOR    30004
+#define TAG_MON_SHADOW  30005
+#define TAG_MOVE_TYPES  30006
 
 enum WindowIds
 {
@@ -216,6 +221,148 @@ static const struct SpritePalette sSpritePal_MonShadow =
     sMonShadowPalette, TAG_MON_SHADOW
 };
 
+static const struct OamData sOamData_HiddenPowerType =
+{
+    .y = 0,
+    .affineMode = ST_OAM_AFFINE_OFF,
+    .objMode = ST_OAM_OBJ_NORMAL,
+    .mosaic = FALSE,
+    .bpp = ST_OAM_4BPP,
+    .shape = SPRITE_SHAPE(32x16),
+    .x = 0,
+    .matrixNum = 0,
+    .size = SPRITE_SIZE(32x16),
+    .tileNum = 0,
+    .priority = 1,
+    .paletteNum = 0,
+    .affineParam = 0,
+};
+
+static const union AnimCmd sSpriteAnim_TypeNone[] = {
+    ANIMCMD_FRAME(TYPE_NONE * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TypeNormal[] = {
+    ANIMCMD_FRAME(TYPE_NORMAL * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeFighting[] = {
+    ANIMCMD_FRAME(TYPE_FIGHTING * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeFlying[] = {
+    ANIMCMD_FRAME(TYPE_FLYING * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypePoison[] = {
+    ANIMCMD_FRAME(TYPE_POISON * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeGround[] = {
+    ANIMCMD_FRAME(TYPE_GROUND * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeRock[] = {
+    ANIMCMD_FRAME(TYPE_ROCK * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeBug[] = {
+    ANIMCMD_FRAME(TYPE_BUG * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeGhost[] = {
+    ANIMCMD_FRAME(TYPE_GHOST * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeSteel[] = {
+    ANIMCMD_FRAME(TYPE_STEEL * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeMystery[] = {
+    ANIMCMD_FRAME(TYPE_MYSTERY * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeFire[] = {
+    ANIMCMD_FRAME(TYPE_FIRE * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeWater[] = {
+    ANIMCMD_FRAME(TYPE_WATER * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeGrass[] = {
+    ANIMCMD_FRAME(TYPE_GRASS * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeElectric[] = {
+    ANIMCMD_FRAME(TYPE_ELECTRIC * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypePsychic[] = {
+    ANIMCMD_FRAME(TYPE_PSYCHIC * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeIce[] = {
+    ANIMCMD_FRAME(TYPE_ICE * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeDragon[] = {
+    ANIMCMD_FRAME(TYPE_DRAGON * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_HPTypeDark[] = {
+    ANIMCMD_FRAME(TYPE_DARK * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TypeFairy[] = {
+    ANIMCMD_FRAME(TYPE_FAIRY * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TypeStellar[] = {
+    ANIMCMD_FRAME(TYPE_STELLAR * 8, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+
+static const union AnimCmd *const sSpriteAnimTable_HiddenPowerType[NUMBER_OF_MON_TYPES] = {
+    [TYPE_FIGHTING] = sSpriteAnim_HPTypeFighting,
+    [TYPE_FLYING] = sSpriteAnim_HPTypeFlying,
+    [TYPE_POISON] = sSpriteAnim_HPTypePoison,
+    [TYPE_GROUND] = sSpriteAnim_HPTypeGround,
+    [TYPE_ROCK] = sSpriteAnim_HPTypeRock,
+    [TYPE_BUG] = sSpriteAnim_HPTypeBug,
+    [TYPE_GHOST] = sSpriteAnim_HPTypeGhost,
+    [TYPE_STEEL] = sSpriteAnim_HPTypeSteel,
+    [TYPE_MYSTERY] = sSpriteAnim_HPTypeMystery,
+    [TYPE_FIRE] = sSpriteAnim_HPTypeFire,
+    [TYPE_WATER] = sSpriteAnim_HPTypeWater,
+    [TYPE_GRASS] = sSpriteAnim_HPTypeGrass,
+    [TYPE_ELECTRIC] = sSpriteAnim_HPTypeElectric,
+    [TYPE_PSYCHIC] = sSpriteAnim_HPTypePsychic,
+    [TYPE_ICE] = sSpriteAnim_HPTypeIce,
+    [TYPE_DRAGON] = sSpriteAnim_HPTypeDragon,
+    [TYPE_DARK] = sSpriteAnim_HPTypeDark,
+    // Not HP Types (kept because yes)
+    [TYPE_NONE] = sSpriteAnim_TypeNone,
+    [TYPE_NORMAL] = sSpriteAnim_TypeNormal,
+    [TYPE_FAIRY] = sSpriteAnim_TypeFairy,
+    [TYPE_STELLAR] = sSpriteAnim_TypeStellar,
+};
+
+static const struct CompressedSpriteSheet sSpriteSheet_HiddenPowerType =
+{
+    .data = gMoveTypes_Gfx,
+    .size = NUMBER_OF_MON_TYPES * 0x100,
+    .tag = TAG_MOVE_TYPES
+};
+
+static const struct SpriteTemplate sSpriteTemplate_HiddenPowerType =
+{
+    .tileTag = TAG_MOVE_TYPES,
+    .paletteTag = TAG_MOVE_TYPES,
+    .oam = &sOamData_HiddenPowerType,
+    .anims = sSpriteAnimTable_HiddenPowerType,
+};
+
 enum FontColors
 {
     FONT_BLACK,
@@ -280,12 +427,16 @@ static const struct SpriteTemplate sSpriteTemplate_Selector =
 #define STARTING_X       60
 #define STARTING_Y       26
 
-#define LEFT_PANEL_SELECTOR_WIDTH  68
-#define RIGHT_PANEL_SELECTOR_WIDTH 28
+#define LEFT_PANEL_SELECTOR_WIDTH          68
+#define RIGHT_PANEL_SELECTOR_WIDTH         28
+#define RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH 32
 
 #define LEFT_NICKNAME_Y  2
 #define LEFT_ABILITY_Y   34
 #define LEFT_NATURE_Y    50
+
+#define TYPE_ICON_X 220
+#define TYPE_ICON_Y 146
 
 #define WINDOW3_SCREEN_X 8
 #define WINDOW3_SCREEN_Y 92
@@ -298,6 +449,9 @@ static const struct SpriteTemplate sSpriteTemplate_Selector =
 #define SELECTOR_RIGHT_EV_LEFT_EDGE_X  (STARTING_X + SECOND_COLUMN + 82)
 #define SELECTOR_RIGHT_IV_LEFT_EDGE_X  (STARTING_X + THIRD_COLUMN + 82)
 #define SELECTOR_RIGHT_BASE_Y          (STARTING_Y + 24)
+
+#define SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X (TYPE_ICON_X - 16)
+#define SELECTOR_RIGHT_HP_TYPE_Y            TYPE_ICON_Y
 
 #define MON_ICON_X (32 + 6)
 #define MON_ICON_Y (32 + 22)
@@ -374,6 +528,7 @@ static const u8 sText_MenuBButtonBack[]       = _("Back");
 static const u8 sText_MenuDPadChangeStat[]    = _("Change Stat");
 static const u8 sText_MenuDPadChangeAbility[] = _("Change Ability");
 static const u8 sText_MenuDPadChangeNature[]  = _("Change Nature");
+static const u8 sText_MenuDPadChangeHPType[]  = _("Change Hidden Type");
 static const u8 sText_MenuABButtonSave[]      = _("Save");
 
 // Begin Generic UI Initialization Code
@@ -478,6 +633,8 @@ static bool8 StatEditor_DoGfxSetup(void)
         LoadCompressedSpriteSheet(&sSpriteSheet_Selector);
         LoadSpritePalette(&sSpritePal_Selector);
         CreateMonSprite(sStatEditorDataPtr->speciesID);
+        LoadCompressedSpriteSheet(&sSpriteSheet_HiddenPowerType);
+        sStatEditorDataPtr->hpTypeSpriteId = CreateSprite(&sSpriteTemplate_HiddenPowerType, 0, 0, 1);
         gMain.state++;
         break;
     case 5:
@@ -516,6 +673,8 @@ static void StatEditor_FreeResources(void)
     DestroySelectors();
     DestroyMonSprite();
     DestroyMonSpritesGfxManager(MON_SPR_GFX_MANAGER_A);
+    DestroySprite(&gSprites[sStatEditorDataPtr->hpTypeSpriteId]);
+    FreeSpriteTilesByTag(TAG_MOVE_TYPES);
     StopCryAndClearCrySongs();
     if (P_STAT_EDITOR_MON_SHADOWS)
     {
@@ -591,6 +750,10 @@ static bool8 StatEditor_LoadGraphics(void)
         break;
     case 2:
         LoadPalette(sStatEditorBgPalette, 0, 32);
+        sStatEditorDataPtr->gfxLoadState++;
+        break;
+    case 3:
+        LoadPalette(gMoveTypes_Pal, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
         sStatEditorDataPtr->gfxLoadState++;
         break;
     default:
@@ -707,6 +870,100 @@ static void PlayMonCry(struct Pokemon *mon)
         else
             PlayCry_ByMode(species, 0, CRY_MODE_WEAK);
     }
+}
+
+#define HP_TYPE_FROM_BITS(typeBits) \
+    ((((NUMBER_OF_MON_TYPES   - 6) * (typeBits)) / 0x3F + 2 >= TYPE_MYSTERY) \
+     ? (((NUMBER_OF_MON_TYPES - 6) * (typeBits)) / 0x3F + 3) \
+     : (((NUMBER_OF_MON_TYPES - 6) * (typeBits)) / 0x3F + 2))
+
+#define HP_TYPE_BITS(mon) \
+    (((GetMonData(mon, MON_DATA_HP_IV)    & 1) << 0) \
+   | ((GetMonData(mon, MON_DATA_ATK_IV)   & 1) << 1) \
+   | ((GetMonData(mon, MON_DATA_DEF_IV)   & 1) << 2) \
+   | ((GetMonData(mon, MON_DATA_SPEED_IV) & 1) << 3) \
+   | ((GetMonData(mon, MON_DATA_SPATK_IV) & 1) << 4) \
+   | ((GetMonData(mon, MON_DATA_SPDEF_IV) & 1) << 5))
+
+static enum Type GetHiddenPowerType(void)
+{
+    struct Pokemon *mon = GetCurrentPartyMon();
+    return (HP_TYPE_FROM_BITS(HP_TYPE_BITS(mon)) | F_DYNAMIC_TYPE_IGNORE_PHYSICALITY) & 0x3F;
+}
+
+static void SetHiddenPowerType(bool32 forward)
+{
+    struct Pokemon *mon = GetCurrentPartyMon();
+    u32 curBits    = HP_TYPE_BITS(mon);
+    enum Type targetType = HP_TYPE_FROM_BITS(curBits);
+    u32 bestBits   = curBits;
+    u32 bestCost   = 7;
+
+    do
+    {
+        targetType = forward ? (targetType + 1) : (targetType - 1);
+
+        if (targetType > TYPE_DARK)
+            targetType = TYPE_FIGHTING;
+        if (targetType < TYPE_FIGHTING)
+            targetType = TYPE_DARK;
+
+    } while (targetType == TYPE_MYSTERY);
+
+    // That's 63. I don't like using hexa here but did for consistency
+    for (u32 bits = 0; bits <= 0x3F; bits++)
+    {
+        if (HP_TYPE_FROM_BITS(bits) == targetType)
+        {
+            u32 diff = curBits ^ bits;
+            u32 cost = 0;
+
+            while (diff)
+            {
+                cost += diff & 1;
+                diff >>= 1;
+            }
+
+            if (cost < bestCost)
+            {
+                bestCost = cost;
+                bestBits = bits;
+            }
+        }
+    }
+
+    for (u32 i = 0; i < NUM_STATS; i++)
+    {
+        if ((curBits ^ bestBits) & (1u << i))
+        {
+            u32 iv = GetMonData(mon, sStatsToPrintIVs[i]);
+
+            if (iv == 0)
+                iv = 1;
+            else if (iv == MAX_PER_STAT_IVS)
+                iv = MAX_PER_STAT_IVS - 1;
+            else if (iv & 1)
+                iv--;
+            else
+                iv++;
+
+            SetMonData(mon, sStatsToPrintIVs[i], &iv);
+        }
+    }
+}
+
+static void UpdateHiddenPowerTypeIcon(void)
+{
+    u8 spriteId = sStatEditorDataPtr->hpTypeSpriteId;
+    struct Sprite *sprite = &gSprites[spriteId];
+    enum Type type = GetHiddenPowerType();
+
+    StartSpriteAnim(sprite, type);
+    sprite->oam.paletteNum = gTypesInfo[type].palette;
+    sprite->x = TYPE_ICON_X;
+    sprite->y = TYPE_ICON_Y;
+    sprite->invisible = FALSE;
+    sprite->subpriority = 1;
 }
 
 static void CreateMonSprite(u32 dexNum)
@@ -860,19 +1117,22 @@ void GetDPadText(void)
     {
         if (sStatEditorDataPtr->leftRow == LEFT_ROW_ABILITY)
         {
-            BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 75, BUTTON_Y, 24, 8);
-            AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 102, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeAbility);
+            BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 70, BUTTON_Y, 24, 8);
+            AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 97, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeAbility);
         }
         else if (sStatEditorDataPtr->leftRow == LEFT_ROW_NATURE)
         {
-            BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 75, BUTTON_Y, 24, 8);
-            AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 102, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeNature);
+            BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 70, BUTTON_Y, 24, 8);
+            AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 97, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeNature);
         }
     }
     else if (sStatEditorDataPtr->panel == PANEL_RIGHT)
     {
-        BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 75, BUTTON_Y, 24, 8);
-        AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 102, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeStat);
+        BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 70, BUTTON_Y, 24, 8);
+        if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 97, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeHPType);
+        else
+            AddTextPrinterParameterized4(WINDOW_1, FONT_NARROW, 97, 0, 0, 0, sMenuWindowFontColors[FONT_WHITE], TEXT_SKIP_DRAW, sText_MenuDPadChangeStat);
     }
 }
 
@@ -908,7 +1168,6 @@ static void PrintMonStats(void)
 
     sStatEditorDataPtr->normalTotal = 0;
     sStatEditorDataPtr->evTotal = 0;
-    sStatEditorDataPtr->ivTotal = 0;
 
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, 18, 7, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuStat);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NARROW, STARTING_X, 7, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, sText_MenuReal);
@@ -975,7 +1234,6 @@ static void PrintMonStats(void)
     for (u32 i = 0; i < NUM_STATS; i++)
     {
         currentStat = GetMonData(mon, sStatsToPrintIVs[i]);
-        sStatEditorDataPtr->ivTotal += currentStat;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
         AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, sStatPrintData[sStatsToPrintIVs[i]].x, sStatPrintData[sStatsToPrintIVs[i]].y, 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
     }
@@ -987,8 +1245,7 @@ static void PrintMonStats(void)
     ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, 3);
     AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
 
-    ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->ivTotal, STR_CONV_MODE_RIGHT_ALIGN, 3);
-    AddTextPrinterParameterized4(WINDOW_2, FONT_NORMAL, STARTING_X + THIRD_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, 0, sMenuWindowFontColors[FONT_WHITE], 0xFF, gStringVar2);
+    UpdateHiddenPowerTypeIcon();
 
     // Print ability / nature / name / level / gender
     GetMonNickname(mon, gStringVar2);
@@ -1027,13 +1284,14 @@ struct SpriteCoords
 
 static void SelectorCallback(struct Sprite *sprite)
 {
-    static const struct SpriteCoords sRightPanelCoords[6][2] = {
+    static const struct SpriteCoords sRightPanelCoords[RIGHT_PANEL_ROW_COUNT][2] = {
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 0)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 0)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 1)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 1)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 2)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 2)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}},
+        {{SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X, SELECTOR_RIGHT_HP_TYPE_Y},                 {SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X, SELECTOR_RIGHT_HP_TYPE_Y}},
     };
 
     static const u8 sLeftPanelY[LEFT_ROW_COUNT] = {
@@ -1056,14 +1314,20 @@ static void SelectorCallback(struct Sprite *sprite)
     }
     else
     {
-        sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
+        if (sStatEditorDataPtr->rightPanelRow != RIGHT_PANEL_ROW_HP_TYPE)
+            sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
+
         leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
         y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
-        sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH);
+        if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH);
+        else
+            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH);
         sprite->y = y;
 
         // Don't show cursor on left when stat is empty, on right when stat is maxed
-        if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
+        if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT
+         && sStatEditorDataPtr->rightPanelRow != RIGHT_PANEL_ROW_HP_TYPE) // exclude hidden power type from this
         {
             if (isLeft && sStatEditorDataPtr->statEditingValue == MIN_STAT)
                 shouldInvis = TRUE;
@@ -1293,6 +1557,48 @@ static void Task_LeftPanelEditMode(u8 taskId)
     }
 }
 
+static void Task_HPTypeEditMode(u8 taskId)
+{
+    if (JOY_NEW(B_BUTTON) || JOY_NEW(A_BUTTON))
+    {
+        gTasks[taskId].func = Task_StatEditorMain;
+        PlaySE(SE_SELECT);
+        sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+        PrintTitleToWindowMainState();
+        return;
+    }
+
+    bool32 forward;
+
+    if (JOY_NEW(DPAD_RIGHT))
+        forward = TRUE;
+    else if (JOY_NEW(DPAD_LEFT))
+        forward = FALSE;
+    else
+        return;
+
+    struct Pokemon *mon = GetCurrentPartyMon();
+    u32 oldMaxHP  = GetMonData(mon, MON_DATA_MAX_HP);
+    u32 currentHP = GetMonData(mon, MON_DATA_HP);
+    s32 hpLost    = oldMaxHP - currentHP;
+
+    PlaySE(SE_SELECT);
+    SetHiddenPowerType(forward);
+    CalculateMonStats(mon);
+
+    if (hpLost > 0 && currentHP != 0)
+    {
+        s32 diff = GetMonData(mon, MON_DATA_MAX_HP) - hpLost;
+
+        if (diff < 0)
+            diff = 0;
+
+        SetMonData(mon, MON_DATA_HP, &diff);
+    }
+
+    PrintMonStats();
+}
+
 static const u16 sSelectedStatToStatEnum[] = {
     MON_DATA_HP_EV,    MON_DATA_HP_IV,
     MON_DATA_ATK_EV,   MON_DATA_ATK_IV,
@@ -1322,8 +1628,10 @@ static void ApplyRightPanelStatChange(void)
     if ((amountHPLost > 0) && (currentHP != 0))
     {
         s32 diff = GetMonData(mon, MON_DATA_MAX_HP) - amountHPLost;
+
         if (diff < 0)
             diff = 0;
+
         SetMonData(mon, MON_DATA_HP, &diff);
     }
 
@@ -1492,6 +1800,17 @@ static void Task_StatEditorMain(u8 taskId)
     {
         if (JOY_NEW(A_BUTTON))
         {
+            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            {
+                PlaySE(SE_SELECT);
+                sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
+                gSprites[sStatEditorDataPtr->leftSelectorSpriteId].data[0] = 32;
+                gSprites[sStatEditorDataPtr->rightSelectorSpriteId].data[0] = 32;
+                PrintTitleToWindowEditState();
+                gTasks[taskId].func = Task_HPTypeEditMode;
+                return;
+            }
+
             sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
             sStatEditorDataPtr->statEditingValue = GetMonData(GetCurrentPartyMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat]);
 
@@ -1516,22 +1835,29 @@ static void Task_StatEditorMain(u8 taskId)
         if (JOY_NEW(DPAD_UP))
         {
             PlaySE(SE_SELECT);
-            sStatEditorDataPtr->rightPanelRow = (sStatEditorDataPtr->rightPanelRow == 0) ? 5 : (sStatEditorDataPtr->rightPanelRow - 1);
+            sStatEditorDataPtr->rightPanelRow = (sStatEditorDataPtr->rightPanelRow == 0) ? (RIGHT_PANEL_ROW_COUNT - 1) : (sStatEditorDataPtr->rightPanelRow - 1);
             return;
         }
 
         if (JOY_NEW(DPAD_DOWN))
         {
             PlaySE(SE_SELECT);
-            sStatEditorDataPtr->rightPanelRow = (sStatEditorDataPtr->rightPanelRow == 5) ? 0 : (sStatEditorDataPtr->rightPanelRow + 1);
+            sStatEditorDataPtr->rightPanelRow = (sStatEditorDataPtr->rightPanelRow == (RIGHT_PANEL_ROW_COUNT - 1)) ? 0 : (sStatEditorDataPtr->rightPanelRow + 1);
             return;
         }
 
         if (JOY_NEW(DPAD_LEFT))
         {
             PlaySE(SE_SELECT);
-            if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_IVS)
+            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            {
+                sStatEditorDataPtr->panel = PANEL_LEFT;
+                sStatEditorDataPtr->leftRow = LEFT_ROW_NICKNAME;
+            }
+            else if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_IVS)
+            {    
                 sStatEditorDataPtr->rightPanelColumn = RIGHT_PANEL_EVS;
+            }
             else
             {
                 sStatEditorDataPtr->panel = PANEL_LEFT;
@@ -1544,8 +1870,15 @@ static void Task_StatEditorMain(u8 taskId)
         if (JOY_NEW(DPAD_RIGHT))
         {
             PlaySE(SE_SELECT);
-            if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS)
+            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            {
+                sStatEditorDataPtr->panel = PANEL_LEFT;
+                sStatEditorDataPtr->leftRow = LEFT_ROW_NICKNAME;
+            }
+            else if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS)
+            {
                 sStatEditorDataPtr->rightPanelColumn = RIGHT_PANEL_IVS;
+            }
             else
             {
                 sStatEditorDataPtr->panel = PANEL_LEFT;
