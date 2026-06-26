@@ -560,6 +560,8 @@ void StatEditor_Init(MainCallback callback)
     sStatEditorDataPtr->leftRow               = LEFT_ROW_NICKNAME;
     sStatEditorDataPtr->rightPanelColumn      = RIGHT_PANEL_EVS;
     sStatEditorDataPtr->rightPanelRow         = 0;
+    sStatEditorDataPtr->monSpriteId           = MAX_SPRITES;
+    sStatEditorDataPtr->monShadowSpriteId     = MAX_SPRITES;
 
     SetMainCallback2(StatEditor_RunSetup);
 }
@@ -587,7 +589,7 @@ static void StatEditor_VBlankCB(void)
     LoadOam();
     ProcessSpriteCopyRequests();
     TransferPlttBuffer();
-    if (P_STAT_EDITOR_MON_IDLE_ANIMS && sStatEditorDataPtr->monSpriteId != 0 && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
+    if (P_STAT_EDITOR_MON_IDLE_ANIMS && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
         RunMonAnimTimer();
 }
 
