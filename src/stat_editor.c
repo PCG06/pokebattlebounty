@@ -83,10 +83,14 @@ struct StatEditorResources
 #define RIGHT_PANEL_EVS 0
 #define RIGHT_PANEL_IVS 1
 
-#define EDIT_INPUT_INCREASE     0
-#define EDIT_INPUT_MAX_INCREASE 1
-#define EDIT_INPUT_DECREASE     2
-#define EDIT_INPUT_MAX_DECREASE 3
+enum {
+    EDIT_INPUT_INCREASE,
+    EDIT_INPUT_INCREASE_BY_10,
+    EDIT_INPUT_INCREASE_MAX,
+    EDIT_INPUT_DECREASE,
+    EDIT_INPUT_DECREASE_BY_10,
+    EDIT_INPUT_DECREASE_MAX,
+};
 
 #define MIN_STAT 0
 
@@ -1545,12 +1549,12 @@ static void Task_LeftPanelEditMode(u8 taskId)
 
     case LEFT_ROW_ABILITY:
     case LEFT_ROW_NATURE:
-        if (JOY_NEW(DPAD_RIGHT))
+        if (JOY_REPEAT(DPAD_RIGHT))
         {
             PlaySE(SE_SELECT);
             HandleLeftPanelNextValue();
         }
-        else if (JOY_NEW(DPAD_LEFT))
+        else if (JOY_REPEAT(DPAD_LEFT))
         {
             PlaySE(SE_SELECT);
             HandleLeftPanelPreviousValue();
@@ -1570,23 +1574,27 @@ static void Task_HPTypeEditMode(u8 taskId)
         return;
     }
 
-    bool32 forward;
-
-    if (JOY_NEW(DPAD_RIGHT))
-        forward = TRUE;
-    else if (JOY_NEW(DPAD_LEFT))
-        forward = FALSE;
-    else
-        return;
-
     struct Pokemon *mon = GetCurrentPartyMon();
     u32 oldMaxHP  = GetMonData(mon, MON_DATA_MAX_HP);
     u32 currentHP = GetMonData(mon, MON_DATA_HP);
     s32 hpLost    = oldMaxHP - currentHP;
 
-    PlaySE(SE_SELECT);
-    SetHiddenPowerType(forward);
-    CalculateMonStats(mon);
+    if (JOY_REPEAT(DPAD_RIGHT))
+    {
+        PlaySE(SE_SELECT);
+        SetHiddenPowerType(TRUE);
+        CalculateMonStats(mon);
+    }
+    else if (JOY_REPEAT(DPAD_LEFT))
+    {
+        PlaySE(SE_SELECT);
+        SetHiddenPowerType(FALSE);
+        CalculateMonStats(mon);
+    }
+    else
+    {
+        return;
+    }
 
     if (hpLost > 0 && currentHP != 0)
     {
@@ -1642,7 +1650,7 @@ static void ApplyRightPanelStatChange(void)
 
 static void HandleRightPanelEditInput(u32 input)
 {
-    if ((input <= EDIT_INPUT_MAX_INCREASE) && CHECK_IF_STAT_CANT_INCREASE)
+    if ((input <= EDIT_INPUT_INCREASE_MAX) && CHECK_IF_STAT_CANT_INCREASE)
         return;
 
     if ((input >= EDIT_INPUT_DECREASE) && (sStatEditorDataPtr->statEditingValue == MIN_STAT))
@@ -1654,7 +1662,22 @@ static void HandleRightPanelEditInput(u32 input)
         if (!CHECK_IF_STAT_CANT_INCREASE)
             sStatEditorDataPtr->statEditingValue++;
         break;
-    case EDIT_INPUT_MAX_INCREASE:
+    case EDIT_INPUT_INCREASE_BY_10:
+        if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS)
+        {
+            u32 remaining = MAX_TOTAL_EVS - 10;
+            sStatEditorDataPtr->statEditingValue += (remaining < 10) ? remaining : 10;
+            if (sStatEditorDataPtr->statEditingValue > MAX_PER_STAT_EVS)
+                sStatEditorDataPtr->statEditingValue = MAX_PER_STAT_EVS;
+        }
+        else
+        {
+            sStatEditorDataPtr->statEditingValue += 10;
+            if (sStatEditorDataPtr->statEditingValue > MAX_PER_STAT_IVS)
+                sStatEditorDataPtr->statEditingValue = MAX_PER_STAT_IVS;
+        }
+        break;
+    case EDIT_INPUT_INCREASE_MAX:
         if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS)
         {
             u32 remaining = MAX_TOTAL_EVS - sStatEditorDataPtr->evTotal;
@@ -1671,7 +1694,16 @@ static void HandleRightPanelEditInput(u32 input)
         if (sStatEditorDataPtr->statEditingValue != MIN_STAT)
             sStatEditorDataPtr->statEditingValue--;
         break;
-    case EDIT_INPUT_MAX_DECREASE:
+    case EDIT_INPUT_DECREASE_BY_10:
+        if (sStatEditorDataPtr->statEditingValue != MIN_STAT)
+        {
+            if (sStatEditorDataPtr->statEditingValue > 10)
+                sStatEditorDataPtr->statEditingValue -= 10;
+            else
+                sStatEditorDataPtr->statEditingValue = MIN_STAT;
+        }
+        break;
+    case EDIT_INPUT_DECREASE_MAX:
         sStatEditorDataPtr->statEditingValue = MIN_STAT;
         break;
     }
@@ -1690,14 +1722,18 @@ static void Task_RightPanelEditMode(u8 taskId)
         return;
     }
 
-    if (JOY_NEW(DPAD_LEFT))
+    if (JOY_REPEAT(DPAD_LEFT))
         HandleRightPanelEditInput(EDIT_INPUT_DECREASE);
-    else if (JOY_NEW(DPAD_RIGHT))
+    else if (JOY_REPEAT(DPAD_RIGHT))
         HandleRightPanelEditInput(EDIT_INPUT_INCREASE);
-    else if (JOY_NEW(DPAD_UP) || JOY_NEW(R_BUTTON))
-        HandleRightPanelEditInput(EDIT_INPUT_MAX_INCREASE);
-    else if (JOY_NEW(DPAD_DOWN) || JOY_NEW(L_BUTTON))
-        HandleRightPanelEditInput(EDIT_INPUT_MAX_DECREASE);
+    else if (JOY_REPEAT(DPAD_UP))
+        HandleRightPanelEditInput(EDIT_INPUT_INCREASE_BY_10);
+    else if (JOY_REPEAT(DPAD_DOWN))
+        HandleRightPanelEditInput(EDIT_INPUT_DECREASE_BY_10);
+    else if (JOY_NEW(R_BUTTON))
+        HandleRightPanelEditInput(EDIT_INPUT_INCREASE_MAX);
+    else if (JOY_NEW(L_BUTTON))
+        HandleRightPanelEditInput(EDIT_INPUT_DECREASE_MAX);
 }
 
 static void Task_StatEditorMain(u8 taskId)
