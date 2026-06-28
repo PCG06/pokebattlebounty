@@ -58,11 +58,14 @@ struct StatEditorResources
     u8 rightPanelColumn;
     u8 rightPanelRow;
     u8 rightPanelSelectedStat;
+    u8 pressingArrow;
     bool8 monAnimPlayed; // tracks if the mon's cry has been played at least once
     enum Type hpType;
     enum Species speciesID;
     u16 statEditingValue;
     u16 evTotal;
+    u16 monAnimTimer;
+    u16 selectorCycleTimer;
 };
 
 #define PANEL_LEFT  0
@@ -81,6 +84,10 @@ struct StatEditorResources
 
 #define RIGHT_PANEL_EVS 0
 #define RIGHT_PANEL_IVS 1
+
+#define PRESSING_NONE 0
+#define PRESSING_LEFT 1
+#define PRESSING_RIGHT 2
 
 enum {
     EDIT_INPUT_INCREASE,
@@ -130,8 +137,6 @@ enum WindowIds
 //==========EWRAM==========//
 static EWRAM_DATA struct StatEditorResources *sStatEditorDataPtr = NULL;
 static EWRAM_DATA u8 *sBg1TilemapBuffer = NULL;
-static EWRAM_DATA u16 sMonAnimTimer = 0;
-static EWRAM_DATA u16 sSelectorCycleTimer = 0;
 
 //==========STATIC=DEFINES==========//
 static void StatEditor_RunSetup(void);
@@ -641,9 +646,9 @@ static void StatEditor_VBlankCB(void)
     if (P_STAT_EDITOR_MON_IDLE_ANIMS && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
         RunMonAnimTimer();
     if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
-        sSelectorCycleTimer++;
+        sStatEditorDataPtr->selectorCycleTimer++;
     else
-        sSelectorCycleTimer = 0;
+        sStatEditorDataPtr->selectorCycleTimer = 0;
 }
 
 static bool8 StatEditor_DoGfxSetup(void)
@@ -1065,7 +1070,7 @@ static void CreateMonSprite(u32 dexNum)
     else
         sStatEditorDataPtr->monShadowSpriteId = MAX_SPRITES;
     
-    sMonAnimTimer = 0;
+    sStatEditorDataPtr->monAnimTimer = 0;
     sStatEditorDataPtr->monAnimPlayed = FALSE;
 }
 
@@ -1098,10 +1103,10 @@ static void RunMonAnimTimer(void)
         if (shadowSpriteId != SPRITE_NONE && shadowSpriteId != MAX_SPRITES)
             gSprites[shadowSpriteId].oam.matrixNum = (gSprites[shadowSpriteId].hFlip << 3) | (gSprites[shadowSpriteId].vFlip << 4);
 
-        sMonAnimTimer++;
+        sStatEditorDataPtr->monAnimTimer++;
     }
 
-    if (sMonAnimTimer > P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES && monSpriteId != SPRITE_NONE) // time to re-run the anim
+    if (sStatEditorDataPtr->monAnimTimer > P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES && monSpriteId != SPRITE_NONE) // time to re-run the anim
     {
         struct Pokemon *mon = GetCurrentPartyMon();
 
@@ -1130,7 +1135,7 @@ static void RunMonAnimTimer(void)
         if (shadowSpriteId != SPRITE_NONE && shadowSpriteId != MAX_SPRITES)
             gSprites[shadowSpriteId].callback = SpriteCB_StatEditorMonPokemon;
 
-        sMonAnimTimer = 0;
+        sStatEditorDataPtr->monAnimTimer = 0;
     }
 }
 
@@ -1407,8 +1412,8 @@ static void SelectorCallback(struct Sprite *sprite)
     }
     else
     {
-        bool32 pressingIncrease = JOY_REPEAT(DPAD_RIGHT) || JOY_REPEAT(DPAD_UP);
-        bool32 pressingDecrease = JOY_REPEAT(DPAD_LEFT)  || JOY_REPEAT(DPAD_DOWN);
+        bool32 pressingIncrease = (sStatEditorDataPtr->pressingArrow == PRESSING_RIGHT);
+        bool32 pressingDecrease = (sStatEditorDataPtr->pressingArrow == PRESSING_LEFT);
         bool32 pressing = isLeft ? pressingDecrease : pressingIncrease;
 
         if (pressing)
@@ -1421,14 +1426,14 @@ static void SelectorCallback(struct Sprite *sprite)
         {
             // Cycle using the shared timer so both arrows are always in sync.
             // Each frame lasts 12 ticks, 3 frames total = period of 36.
-            u8 cycleFrame = (sSelectorCycleTimer / 12) % 3;
+            u8 cycleFrame = (sStatEditorDataPtr->selectorCycleTimer / 12) % 3;
 
             if (sprite->animNum != SELECTOR_ANIM_CYCLE)
                 StartSpriteAnim(sprite, SELECTOR_ANIM_CYCLE);
 
             // Override the anim system's frame counter with our synced values
             sprite->animCmdIndex     = cycleFrame;
-            sprite->animDelayCounter = sSelectorCycleTimer % 12;
+            sprite->animDelayCounter = sStatEditorDataPtr->selectorCycleTimer % 12;
         }
     }
 }
@@ -1607,6 +1612,7 @@ static void Task_LeftPanelEditMode(u8 taskId)
         gTasks[taskId].func = Task_StatEditorMain;
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
         PrintTitleToWindowMainState();
         return;
     }
@@ -1624,13 +1630,19 @@ static void Task_LeftPanelEditMode(u8 taskId)
     case LEFT_ROW_NATURE:
         if (JOY_REPEAT(DPAD_RIGHT))
         {
+            sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
             PlaySE(SE_SELECT);
             HandleLeftPanelNextValue();
         }
         else if (JOY_REPEAT(DPAD_LEFT))
         {
+            sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
             PlaySE(SE_SELECT);
             HandleLeftPanelPreviousValue();
+        }
+        else
+        {
+            sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
         }
         break;
     }
@@ -1643,6 +1655,7 @@ static void Task_HPTypeEditMode(u8 taskId)
         gTasks[taskId].func = Task_StatEditorMain;
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
         PrintTitleToWindowMainState();
         return;
     }
@@ -1654,18 +1667,21 @@ static void Task_HPTypeEditMode(u8 taskId)
 
     if (JOY_REPEAT(DPAD_RIGHT))
     {
+        sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
         PlaySE(SE_SELECT);
         SetHiddenPowerType(TRUE);
         CalculateMonStats(mon);
     }
     else if (JOY_REPEAT(DPAD_LEFT))
     {
+        sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
         PlaySE(SE_SELECT);
         SetHiddenPowerType(FALSE);
         CalculateMonStats(mon);
     }
     else
     {
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
         return;
     }
 
@@ -1791,22 +1807,45 @@ static void Task_RightPanelEditMode(u8 taskId)
         gTasks[taskId].func = Task_StatEditorMain;
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
         PrintTitleToWindowMainState();
         return;
     }
 
     if (JOY_REPEAT(DPAD_LEFT))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
         HandleRightPanelEditInput(EDIT_INPUT_DECREASE);
+    }
     else if (JOY_REPEAT(DPAD_RIGHT))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
         HandleRightPanelEditInput(EDIT_INPUT_INCREASE);
+    }
     else if (JOY_REPEAT(DPAD_UP))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
         HandleRightPanelEditInput(EDIT_INPUT_INCREASE_BY_10);
+    }
     else if (JOY_REPEAT(DPAD_DOWN))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
         HandleRightPanelEditInput(EDIT_INPUT_DECREASE_BY_10);
+    }
     else if (JOY_NEW(R_BUTTON))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
         HandleRightPanelEditInput(EDIT_INPUT_INCREASE_MAX);
+    }
     else if (JOY_NEW(L_BUTTON))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
         HandleRightPanelEditInput(EDIT_INPUT_DECREASE_MAX);
+    }
+    else
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
+    }
 }
 
 static void Task_StatEditorMain(u8 taskId)
