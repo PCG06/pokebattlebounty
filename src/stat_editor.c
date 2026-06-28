@@ -51,6 +51,8 @@ struct StatEditorResources
     u8 leftRow;
     u8 partyId;
     u8 hpTypeSpriteId;
+    u8 natureUpSpriteId;
+    u8 natureDownSpriteId;
     u8 monSpriteId;
     u8 monShadowSpriteId;
     u8 leftSelectorSpriteId;
@@ -120,11 +122,12 @@ TLDR: Stat can't increase if you're either: at the maximum amount a stat can hav
 */
 
 
-#define TAG_LEFT_ARROW  30004
-#define TAG_RIGHT_ARROW 30005
-#define TAG_MISC        30006
-#define TAG_MON_SHADOW  30007
-#define TAG_MOVE_TYPES  30008
+#define TAG_LEFT_ARROW    30004
+#define TAG_RIGHT_ARROW   30005
+#define TAG_MISC          30006
+#define TAG_MON_SHADOW    30007
+#define TAG_MOVE_TYPES    30008
+#define TAG_NATURE_ARROWS 30009
 
 enum WindowIds
 {
@@ -157,6 +160,7 @@ static struct Pokemon *GetCurrentPartyMon(void);
 static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
 static void DestroySelectors(void);
+static void DestroyNatureArrows(void);
 
 //==========CONST=DATA==========//
 static const struct BgTemplate sStatEditorBgTemplates[] =
@@ -231,6 +235,7 @@ static const u32 sStatEditorBgTilemap[] = INCGFX_U32("graphics/stat_editor/backg
 static const u16 sStatEditorBgPalette[] = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
 static const u32 sLeftArrow_Gfx[]       = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
 static const u32 sRightArrow_Gfx[]      = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
+static const u32 sNatureArrows_Gfx[]    = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
 static const u16 sMisc_Pal[]            = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
 static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
 static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
@@ -486,6 +491,52 @@ static const struct SpriteTemplate sSpriteTemplate_RightArrow =
     .callback = SelectorCallback,
 };
 
+static const struct CompressedSpriteSheet sSpriteSheet_NatureArrows =
+{
+    .data = sNatureArrows_Gfx,
+    .size = 16*16*2*4/2,
+    .tag = TAG_NATURE_ARROWS,
+};
+
+static const union AnimCmd sSpriteAnim_NatureArrowDown[] =
+{
+    ANIMCMD_FRAME(0, 1),
+    ANIMCMD_END,
+};
+
+static const union AnimCmd sSpriteAnim_NatureArrowUp[] =
+{
+    ANIMCMD_FRAME(4, 1),
+    ANIMCMD_END,
+};
+
+static const union AnimCmd *const sSpriteAnimTable_NatureArrows[] =
+{
+    sSpriteAnim_NatureArrowDown,
+    sSpriteAnim_NatureArrowUp,
+};
+
+static const struct OamData sOamData_NatureArrow =
+{
+    .size = SPRITE_SIZE(16x16),
+    .shape = SPRITE_SHAPE(16x16),
+    .priority = 0,
+};
+
+static const struct SpriteTemplate sSpriteTemplate_NatureArrow =
+{
+    .tileTag    = TAG_NATURE_ARROWS,
+    .paletteTag = TAG_MISC,
+    .oam        = &sOamData_NatureArrow,
+    .anims      = sSpriteAnimTable_NatureArrows,
+    .images     = NULL,
+    .affineAnims = gDummySpriteAffineAnimTable,
+    .callback   = SpriteCallbackDummy,
+};
+
+#define NATURE_ARROW_X       (STARTING_X + 102)
+#define NATURE_ARROW_BASE_Y  (STARTING_Y + 32)
+
 #define STAT_ROW_HEIGHT  16
 #define SECOND_COLUMN    (8 * 4)
 #define THIRD_COLUMN     (8 * 8)
@@ -616,6 +667,8 @@ void StatEditor_Init(MainCallback callback)
     sStatEditorDataPtr->rightPanelRow         = 0;
     sStatEditorDataPtr->monSpriteId           = MAX_SPRITES;
     sStatEditorDataPtr->monShadowSpriteId     = MAX_SPRITES;
+    sStatEditorDataPtr->natureUpSpriteId      = MAX_SPRITES;
+    sStatEditorDataPtr->natureDownSpriteId    = MAX_SPRITES;
 
     SetMainCallback2(StatEditor_RunSetup);
 }
@@ -692,10 +745,13 @@ static bool8 StatEditor_DoGfxSetup(void)
         LoadMonIconPalettes();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
+        LoadCompressedSpriteSheet(&sSpriteSheet_NatureArrows);
         LoadSpritePalette(&sSpritePal_Misc);
         CreateMonSprite(sStatEditorDataPtr->speciesID);
         LoadCompressedSpriteSheet(&sSpriteSheet_HiddenPowerType);
         sStatEditorDataPtr->hpTypeSpriteId = CreateSprite(&sSpriteTemplate_HiddenPowerType, 0, 0, 1);
+        sStatEditorDataPtr->natureUpSpriteId = CreateSprite(&sSpriteTemplate_NatureArrow, 0, 0, 1);
+        sStatEditorDataPtr->natureDownSpriteId = CreateSprite(&sSpriteTemplate_NatureArrow, 0, 0, 1);
         gMain.state++;
         break;
     case 5:
@@ -732,9 +788,11 @@ static bool8 StatEditor_DoGfxSetup(void)
 static void StatEditor_FreeResources(void)
 {
     DestroySelectors();
+    DestroyNatureArrows();
     DestroyMonSprite();
     DestroyMonSpritesGfxManager(MON_SPR_GFX_MANAGER_A);
     DestroySprite(&gSprites[sStatEditorDataPtr->hpTypeSpriteId]);
+    FreeSpritePaletteByTag(TAG_MISC);
     FreeSpriteTilesByTag(TAG_MOVE_TYPES);
     StopCryAndClearCrySongs();
     if (P_STAT_EDITOR_MON_SHADOWS)
@@ -1173,9 +1231,19 @@ static void DestroySelectors(void)
         DestroySprite(&gSprites[sStatEditorDataPtr->rightSelectorSpriteId]);
         FreeSpriteTilesByTag(TAG_RIGHT_ARROW);
     }
-    FreeSpritePaletteByTag(TAG_MISC);
     sStatEditorDataPtr->leftSelectorSpriteId  = 0xFF;
     sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
+}
+
+static void DestroyNatureArrows(void)
+{
+    if (sStatEditorDataPtr->natureUpSpriteId != MAX_SPRITES)
+        DestroySprite(&gSprites[sStatEditorDataPtr->natureUpSpriteId]);
+    if (sStatEditorDataPtr->natureDownSpriteId != MAX_SPRITES)
+        DestroySprite(&gSprites[sStatEditorDataPtr->natureDownSpriteId]);
+    FreeSpriteTilesByTag(TAG_NATURE_ARROWS);
+    sStatEditorDataPtr->leftSelectorSpriteId  = MAX_SPRITES;
+    sStatEditorDataPtr->rightSelectorSpriteId = MAX_SPRITES;
 }
 
 static void PrintTitleToWindowMainState(void)
@@ -1233,13 +1301,38 @@ static void PrintTitleToWindowEditState(void)
     CopyWindowToVram(WINDOW_MAIN_HEADER, COPYWIN_FULL);
 }
 
+static void UpdateNatureArrowSprites(void)
+{
+    u32 nature = GetMonData(GetCurrentPartyMon(), MON_DATA_HIDDEN_NATURE);
+    u32 natureUpStat = gNaturesInfo[nature].statUp;
+    u32 natureDownStat = gNaturesInfo[nature].statDown;
+    struct Sprite *upSprite = &gSprites[sStatEditorDataPtr->natureUpSpriteId];
+    struct Sprite *downSprite = &gSprites[sStatEditorDataPtr->natureDownSpriteId];
+
+    StartSpriteAnim(upSprite,   1);
+    StartSpriteAnim(downSprite, 0);
+
+    if (natureUpStat == natureDownStat)
+    {
+        upSprite->invisible   = TRUE;
+        downSprite->invisible = TRUE;
+        return;
+    }
+
+    upSprite->x = NATURE_ARROW_X;
+    upSprite->y = NATURE_ARROW_BASE_Y + (natureUpStat * STAT_ROW_HEIGHT);
+    upSprite->invisible = FALSE;
+
+    downSprite->x = NATURE_ARROW_X;
+    downSprite->y = NATURE_ARROW_BASE_Y + (natureDownStat * STAT_ROW_HEIGHT);
+    downSprite->invisible = FALSE;
+}
+
 static void PrintMonStats(void)
 {
     struct Pokemon *mon = GetCurrentPartyMon();
     u32 nature = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
     enum Ability ability = GetMonAbility(mon);
-    u32 natureUpStat = gNaturesInfo[nature].statUp;
-    u32 natureDownStat = gNaturesInfo[nature].statDown;
     u32 currentStat;
 
     FillWindowPixelBuffer(WINDOW_STATS_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
@@ -1251,38 +1344,7 @@ static void PrintMonStats(void)
     PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuEV,   8 + SECOND_COLUMN, 0, 0, FONT_WHITE, FONT_NARROW);
     PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuIV,   8 + THIRD_COLUMN,  0, 0, FONT_WHITE, FONT_NARROW);
 
-    static const struct 
-    {
-        u8 statIndex;
-        u8 x;
-        u8 y;
-    } sNatureStats[] = {
-        {STAT_HP,    0,  0},
-        {STAT_ATK,   0,  STARTING_Y + (STAT_ROW_HEIGHT * 1)},
-        {STAT_DEF,   0,  STARTING_Y + (STAT_ROW_HEIGHT * 2)},
-        {STAT_SPATK, 0,  STARTING_Y + (STAT_ROW_HEIGHT * 3)},
-        {STAT_SPDEF, 0,  STARTING_Y + (STAT_ROW_HEIGHT * 4)},
-        {STAT_SPEED, 0,  STARTING_Y + (STAT_ROW_HEIGHT * 5)},
-    };
-
-    // Print stat labels and nature colors
-    for (u32 i = STAT_HP; i < NUM_STATS; i++)
-    {
-        u32 color = FONT_BLACK;
-
-        if (P_STAT_EDITOR_NATURE_COLORS)
-        {
-            if (natureUpStat == natureDownStat)
-                color = FONT_BLACK;
-            else if (sNatureStats[i].statIndex == natureUpStat)
-                color = FONT_RED;
-            else if (sNatureStats[i].statIndex == natureDownStat)
-                color = FONT_BLUE;
-            else
-                color = FONT_BLACK;
-        }
-        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, COMPOUND_STRING(""), sNatureStats[i].x, sNatureStats[i].y, 0, color, FONT_NARROW);
-    }
+    UpdateNatureArrowSprites();
 
     // Print Mon Stats
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
@@ -1418,20 +1480,16 @@ static void SelectorCallback(struct Sprite *sprite)
 
         if (pressing)
         {
-            // Hold on the last frame while a key is pressed
             if (sprite->animNum != SELECTOR_ANIM_ACTIVE)
                 StartSpriteAnim(sprite, SELECTOR_ANIM_ACTIVE);
         }
         else
         {
-            // Cycle using the shared timer so both arrows are always in sync.
-            // Each frame lasts 12 ticks, 3 frames total = period of 36.
             u8 cycleFrame = (sStatEditorDataPtr->selectorCycleTimer / 12) % 3;
 
             if (sprite->animNum != SELECTOR_ANIM_CYCLE)
                 StartSpriteAnim(sprite, SELECTOR_ANIM_CYCLE);
 
-            // Override the anim system's frame counter with our synced values
             sprite->animCmdIndex     = cycleFrame;
             sprite->animDelayCounter = sStatEditorDataPtr->selectorCycleTimer % 12;
         }
