@@ -112,22 +112,26 @@ TLDR: Stat can't increase if you're either: at the maximum amount a stat can hav
   \> Together, these two check if you're editing an EV and already at the maximum amount of EVs
 */
 
-#define TAG_SELECTOR    30004
-#define TAG_MON_SHADOW  30005
-#define TAG_MOVE_TYPES  30006
+
+#define TAG_LEFT_ARROW  30004
+#define TAG_RIGHT_ARROW 30005
+#define TAG_MISC        30006
+#define TAG_MON_SHADOW  30007
+#define TAG_MOVE_TYPES  30008
 
 enum WindowIds
 {
-    WINDOW_1,
-    WINDOW_2,
-    WINDOW_3,
-    WINDOW_4
+    WINDOW_MAIN_HEADER,
+    WINDOW_STATS_HEADER,
+    WINDOW_STATS_PANEL,
+    WINDOW_LEFT_PANEL,
 };
 
 //==========EWRAM==========//
 static EWRAM_DATA struct StatEditorResources *sStatEditorDataPtr = NULL;
 static EWRAM_DATA u8 *sBg1TilemapBuffer = NULL;
 static EWRAM_DATA u16 sMonAnimTimer = 0;
+static EWRAM_DATA u16 sSelectorCycleTimer = 0;
 
 //==========STATIC=DEFINES==========//
 static void StatEditor_RunSetup(void);
@@ -144,8 +148,8 @@ static void DestroyMonSprite(void);
 static void PlayMonCry(struct Pokemon *mon);
 static void RunMonAnimTimer(void);
 static void PrintMonStats(void);
-static void SelectorCallback(struct Sprite *sprite);
 static struct Pokemon *GetCurrentPartyMon(void);
+static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
 static void DestroySelectors(void);
 
@@ -174,27 +178,37 @@ static const struct BgTemplate sStatEditorBgTemplates[] =
 
 static const struct WindowTemplate sMenuWindowTemplates[] = 
 {
-    [WINDOW_1] = 
+    [WINDOW_MAIN_HEADER] = 
     {
         .bg = 0,            // which bg to print text on
         .tilemapLeft = 1,   // position from left (per 8 pixels)
         .tilemapTop = 0,    // position from top (per 8 pixels)
-        .width = 30,        // width (per 8 pixels)
+        .width = 16,        // width (per 8 pixels)
         .height = 2,        // height (per 8 pixels)
         .paletteNum = 15,   // palette index to use for text
         .baseBlock = 1,     // tile start in VRAM
     },
-    [WINDOW_2] = 
+    [WINDOW_STATS_HEADER] =
+    {
+        .bg = 0,             // which bg to print text on
+        .tilemapLeft = 17,   // position from left (per 8 pixels)
+        .tilemapTop = 1,     // position from top (per 8 pixels)
+        .width = 12,         // width (per 8 pixels)
+        .height = 2,         // height (per 8 pixels)
+        .paletteNum = 15,    // palette index to use for text
+        .baseBlock = 1 + 32,     // tile start in VRAM
+    },
+    [WINDOW_STATS_PANEL] = 
     {
         .bg = 0,            // which bg to print text on
         .tilemapLeft = 14,   // position from left (per 8 pixels)
-        .tilemapTop = 2,    // position from top (per 8 pixels)
+        .tilemapTop = 3,    // position from top (per 8 pixels)
         .width = 18,        // width (per 8 pixels)
         .height = 15,        // height (per 8 pixels)
         .paletteNum = 15,   // palette index to use for text
-        .baseBlock = 1 + 60,     // tile start in VRAM
+        .baseBlock = 1 + 32 + 24,     // tile start in VRAM
     },
-    [WINDOW_3] = 
+    [WINDOW_LEFT_PANEL] = 
     {
         .bg = 0,            // which bg to print text on
         .tilemapLeft = 0,   // position from left (per 8 pixels)
@@ -202,7 +216,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .width = 14,        // width (per 8 pixels)
         .height = 8,        // height (per 8 pixels)
         .paletteNum = 15,   // palette index to use for text
-        .baseBlock = 1 + 60 + 306,     // tile start in VRAM
+        .baseBlock = 1 + 32 + 24 + 306,     // tile start in VRAM
     },
     DUMMY_WIN_TEMPLATE
 };
@@ -210,8 +224,9 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
 static const u32 sStatEditorBgTiles[]   = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
 static const u32 sStatEditorBgTilemap[] = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
 static const u16 sStatEditorBgPalette[] = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
-static const u16 sSelector_Pal[]        = INCGFX_U16("graphics/stat_editor/selector.png", ".gbapal");
-static const u32 sSelector_Gfx[]        = INCGFX_U32("graphics/stat_editor/selector.png", ".4bpp.smol");
+static const u32 sLeftArrow_Gfx[]       = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
+static const u32 sRightArrow_Gfx[]      = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
+static const u16 sMisc_Pal[]            = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
 static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
 static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
 static const u8 sLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
@@ -386,61 +401,101 @@ static const u8 sMenuWindowFontColors[][3] =
 
 static const struct OamData sOamData_Selector =
 {
-    .size = SPRITE_SIZE(8x16),
-    .shape = SPRITE_SHAPE(8x16),
+    .size = SPRITE_SIZE(16x16),
+    .shape = SPRITE_SHAPE(16x16),
     .priority = 0,
 };
 
-static const struct CompressedSpriteSheet sSpriteSheet_Selector =
+static const struct CompressedSpriteSheet sSpriteSheet_LeftArrow =
 {
-    .data = sSelector_Gfx,
-    .size = 8*16*4/2,
-    .tag = TAG_SELECTOR,
+    .data = sLeftArrow_Gfx,
+    .size = 16*16*3*4/2,
+    .tag = TAG_LEFT_ARROW,
 };
 
-static const struct SpritePalette sSpritePal_Selector =
+static const struct CompressedSpriteSheet sSpriteSheet_RightArrow =
 {
-    .data = sSelector_Pal,
-    .tag = TAG_SELECTOR
+    .data = sRightArrow_Gfx,
+    .size = 16*16*3*4/2,
+    .tag = TAG_RIGHT_ARROW,
 };
 
-static const union AnimCmd sSpriteAnim_Selector0[] =
+static const struct SpritePalette sSpritePal_Misc =
 {
-    ANIMCMD_FRAME(0, 16),
+    .data = sMisc_Pal,
+    .tag  = TAG_MISC,
+};
+
+static const union AnimCmd sSpriteAnim_ArrowIdle[] =
+{
+    ANIMCMD_FRAME(0, 1),
     ANIMCMD_END,
 };
 
-static const union AnimCmd *const sSpriteAnimTable_Selector[] =
+static const union AnimCmd sSpriteAnim_ArrowCycle[] =
 {
-    sSpriteAnim_Selector0,
+    ANIMCMD_FRAME(0, 12),
+    ANIMCMD_FRAME(4, 12),
+    ANIMCMD_FRAME(8, 12),
+    ANIMCMD_JUMP(0),
 };
 
-static const struct SpriteTemplate sSpriteTemplate_Selector =
+static const union AnimCmd sSpriteAnim_ArrowActive[] =
 {
-    .tileTag = TAG_SELECTOR,
-    .paletteTag = TAG_SELECTOR,
+    ANIMCMD_FRAME(8, 1),
+    ANIMCMD_END,
+};
+
+enum {
+    SELECTOR_ANIM_IDLE,
+    SELECTOR_ANIM_CYCLE,
+    SELECTOR_ANIM_ACTIVE,
+};
+
+static const union AnimCmd *const sSpriteAnimTable_Arrow[] =
+{
+    [SELECTOR_ANIM_IDLE]   = sSpriteAnim_ArrowIdle,
+    [SELECTOR_ANIM_CYCLE]  = sSpriteAnim_ArrowCycle,
+    [SELECTOR_ANIM_ACTIVE] = sSpriteAnim_ArrowActive,
+};
+
+static const struct SpriteTemplate sSpriteTemplate_LeftArrow =
+{
+    .tileTag = TAG_LEFT_ARROW,
+    .paletteTag = TAG_MISC,
     .oam = &sOamData_Selector,
-    .anims = sSpriteAnimTable_Selector,
+    .anims = sSpriteAnimTable_Arrow,
     .images = NULL,
     .affineAnims = gDummySpriteAffineAnimTable,
-    .callback = SelectorCallback
+    .callback = SelectorCallback,
+};
+
+static const struct SpriteTemplate sSpriteTemplate_RightArrow =
+{
+    .tileTag = TAG_RIGHT_ARROW,
+    .paletteTag = TAG_MISC,
+    .oam = &sOamData_Selector,
+    .anims = sSpriteAnimTable_Arrow,
+    .images = NULL,
+    .affineAnims = gDummySpriteAffineAnimTable,
+    .callback = SelectorCallback,
 };
 
 #define STAT_ROW_HEIGHT  16
 #define SECOND_COLUMN    (8 * 4)
 #define THIRD_COLUMN     (8 * 8)
 #define STARTING_X       28
-#define STARTING_Y       9
+#define STARTING_Y       1
 
-#define LEFT_PANEL_SELECTOR_WIDTH          78
+#define LEFT_PANEL_SELECTOR_WIDTH          75
 #define RIGHT_PANEL_SELECTOR_WIDTH         28
-#define RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH 32
+#define RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH 40
 
 #define LEFT_NICKNAME_Y  12
 #define LEFT_ABILITY_Y   34
 #define LEFT_NATURE_Y    50
 
-#define TYPE_ICON_X 220
+#define TYPE_ICON_X 216
 #define TYPE_ICON_Y 129
 
 #define WINDOW3_SCREEN_X 8
@@ -451,11 +506,11 @@ static const struct SpriteTemplate sSpriteTemplate_Selector =
 #define SELECTOR_LEFT_ABILITY_Y  (WINDOW3_SCREEN_Y + LEFT_ABILITY_Y + 4)
 #define SELECTOR_LEFT_NATURE_Y   (WINDOW3_SCREEN_Y + LEFT_NATURE_Y + 4)
 
-#define SELECTOR_RIGHT_EV_LEFT_EDGE_X  (52 + SECOND_COLUMN + 82)
-#define SELECTOR_RIGHT_IV_LEFT_EDGE_X  (52 + THIRD_COLUMN + 82)
-#define SELECTOR_RIGHT_BASE_Y          (STARTING_Y + 24)
+#define SELECTOR_RIGHT_EV_LEFT_EDGE_X  (54 + SECOND_COLUMN + 82)
+#define SELECTOR_RIGHT_IV_LEFT_EDGE_X  (54 + THIRD_COLUMN + 82)
+#define SELECTOR_RIGHT_BASE_Y          (8 + STARTING_Y + 25)
 
-#define SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X (TYPE_ICON_X - 16)
+#define SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X (TYPE_ICON_X - 20)
 #define SELECTOR_RIGHT_HP_TYPE_Y            TYPE_ICON_Y
 
 #define MON_ICON_X (32 + 6)
@@ -471,29 +526,29 @@ struct StatPrintCoords
 
 static const struct StatPrintCoords sStatPrintData[] =
 {
-    [MON_DATA_MAX_HP]    = {STARTING_X,                STARTING_Y},
-    [MON_DATA_HP_EV]     = {STARTING_X + SECOND_COLUMN, STARTING_Y},
-    [MON_DATA_HP_IV]     = {STARTING_X + THIRD_COLUMN,  STARTING_Y},
+    [MON_DATA_MAX_HP]    = {STARTING_X,                     STARTING_Y},
+    [MON_DATA_HP_EV]     = {STARTING_X + SECOND_COLUMN + 2, STARTING_Y},
+    [MON_DATA_HP_IV]     = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y},
 
-    [MON_DATA_ATK]       = {STARTING_X,                STARTING_Y + STAT_ROW_HEIGHT},
-    [MON_DATA_ATK_EV]    = {STARTING_X + SECOND_COLUMN, STARTING_Y + STAT_ROW_HEIGHT},
-    [MON_DATA_ATK_IV]    = {STARTING_X + THIRD_COLUMN,  STARTING_Y + STAT_ROW_HEIGHT},
+    [MON_DATA_ATK]       = {STARTING_X,                     STARTING_Y + STAT_ROW_HEIGHT},
+    [MON_DATA_ATK_EV]    = {STARTING_X + SECOND_COLUMN + 2, STARTING_Y + STAT_ROW_HEIGHT},
+    [MON_DATA_ATK_IV]    = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y + STAT_ROW_HEIGHT},
 
-    [MON_DATA_DEF]       = {STARTING_X,                STARTING_Y + (STAT_ROW_HEIGHT * 2)},
-    [MON_DATA_DEF_EV]    = {STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 2)},
-    [MON_DATA_DEF_IV]    = {STARTING_X + THIRD_COLUMN,  STARTING_Y + (STAT_ROW_HEIGHT * 2)},
+    [MON_DATA_DEF]       = {STARTING_X,                     STARTING_Y + (STAT_ROW_HEIGHT * 2)},
+    [MON_DATA_DEF_EV]    = {STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 2)},
+    [MON_DATA_DEF_IV]    = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y + (STAT_ROW_HEIGHT * 2)},
 
-    [MON_DATA_SPATK]     = {STARTING_X,                STARTING_Y + (STAT_ROW_HEIGHT * 3)},
-    [MON_DATA_SPATK_EV]  = {STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 3)},
-    [MON_DATA_SPATK_IV]  = {STARTING_X + THIRD_COLUMN,  STARTING_Y + (STAT_ROW_HEIGHT * 3)},
+    [MON_DATA_SPATK]     = {STARTING_X,                     STARTING_Y + (STAT_ROW_HEIGHT * 3)},
+    [MON_DATA_SPATK_EV]  = {STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 3)},
+    [MON_DATA_SPATK_IV]  = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y + (STAT_ROW_HEIGHT * 3)},
 
-    [MON_DATA_SPDEF]     = {STARTING_X,                STARTING_Y + (STAT_ROW_HEIGHT * 4)},
-    [MON_DATA_SPDEF_EV]  = {STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 4)},
-    [MON_DATA_SPDEF_IV]  = {STARTING_X + THIRD_COLUMN,  STARTING_Y + (STAT_ROW_HEIGHT * 4)},
+    [MON_DATA_SPDEF]     = {STARTING_X,                     STARTING_Y + (STAT_ROW_HEIGHT * 4)},
+    [MON_DATA_SPDEF_EV]  = {STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 4)},
+    [MON_DATA_SPDEF_IV]  = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y + (STAT_ROW_HEIGHT * 4)},
 
-    [MON_DATA_SPEED]     = {STARTING_X,                STARTING_Y + (STAT_ROW_HEIGHT * 5)},
-    [MON_DATA_SPEED_EV]  = {STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 5)},
-    [MON_DATA_SPEED_IV]  = {STARTING_X + THIRD_COLUMN,  STARTING_Y + (STAT_ROW_HEIGHT * 5)},
+    [MON_DATA_SPEED]     = {STARTING_X,                     STARTING_Y + (STAT_ROW_HEIGHT * 5)},
+    [MON_DATA_SPEED_EV]  = {STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 5)},
+    [MON_DATA_SPEED_IV]  = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y + (STAT_ROW_HEIGHT * 5)},
 };
 
 static const u16 sStatsToPrintActual[] = {
@@ -514,6 +569,9 @@ static const u8 sGenderColors[2][3] =
     {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_RED}
 };
 
+static const u8 sText_MenuStat[]              = _("Stat");
+static const u8 sText_MenuEV[]                = _("EVs");
+static const u8 sText_MenuIV[]                = _("IVs");
 static const u8 sText_MenuLRButtonParty[]     = _("Party");
 static const u8 sText_MenuStartButtonMoves[]  = _("Moves");
 static const u8 sText_MenuABButtonSave[]      = _("Save");
@@ -582,6 +640,10 @@ static void StatEditor_VBlankCB(void)
     TransferPlttBuffer();
     if (P_STAT_EDITOR_MON_IDLE_ANIMS && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
         RunMonAnimTimer();
+    if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
+        sSelectorCycleTimer++;
+    else
+        sSelectorCycleTimer = 0;
 }
 
 static bool8 StatEditor_DoGfxSetup(void)
@@ -623,8 +685,9 @@ static bool8 StatEditor_DoGfxSetup(void)
         sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
         FreeMonIconPalettes();
         LoadMonIconPalettes();
-        LoadCompressedSpriteSheet(&sSpriteSheet_Selector);
-        LoadSpritePalette(&sSpritePal_Selector);
+        LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
+        LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
+        LoadSpritePalette(&sSpritePal_Misc);
         CreateMonSprite(sStatEditorDataPtr->speciesID);
         LoadCompressedSpriteSheet(&sSpriteSheet_HiddenPowerType);
         sStatEditorDataPtr->hpTypeSpriteId = CreateSprite(&sSpriteTemplate_HiddenPowerType, 0, 0, 1);
@@ -761,9 +824,9 @@ static void StatEditor_InitWindows(void)
     InitWindows(sMenuWindowTemplates);
     DeactivateAllTextPrinters();
     ScheduleBgCopyTilemapToVram(0);
-    FillWindowPixelBuffer(WINDOW_1, PIXEL_FILL(0));
-    PutWindowTilemap(WINDOW_1);
-    CopyWindowToVram(WINDOW_1, COPYWIN_FULL);
+    FillWindowPixelBuffer(WINDOW_MAIN_HEADER, PIXEL_FILL(0));
+    PutWindowTilemap(WINDOW_MAIN_HEADER);
+    CopyWindowToVram(WINDOW_MAIN_HEADER, COPYWIN_FULL);
     ScheduleBgCopyTilemapToVram(2);
 }
 
@@ -1080,49 +1143,53 @@ static void RunMonAnimTimer(void)
 static u8 CreateSelectors(void)
 {
     if (sStatEditorDataPtr->leftSelectorSpriteId == 0xFF)
-        sStatEditorDataPtr->leftSelectorSpriteId = CreateSprite(&sSpriteTemplate_Selector, SELECTOR_LEFT_EDGE_X, SELECTOR_LEFT_NICKNAME_Y, 0);
+        sStatEditorDataPtr->leftSelectorSpriteId = CreateSprite(&sSpriteTemplate_LeftArrow,  SELECTOR_LEFT_EDGE_X, SELECTOR_LEFT_NICKNAME_Y, 0);
 
     if (sStatEditorDataPtr->rightSelectorSpriteId == 0xFF)
-        sStatEditorDataPtr->rightSelectorSpriteId = CreateSprite(&sSpriteTemplate_Selector, SELECTOR_LEFT_EDGE_X + LEFT_PANEL_SELECTOR_WIDTH, SELECTOR_LEFT_NICKNAME_Y, 0);
+        sStatEditorDataPtr->rightSelectorSpriteId = CreateSprite(&sSpriteTemplate_RightArrow, SELECTOR_LEFT_EDGE_X + LEFT_PANEL_SELECTOR_WIDTH, SELECTOR_LEFT_NICKNAME_Y, 0);
 
     gSprites[sStatEditorDataPtr->leftSelectorSpriteId].invisible = FALSE;
     gSprites[sStatEditorDataPtr->rightSelectorSpriteId].invisible = FALSE;
 
-    // Flip sprite for right side cursor
-    gSprites[sStatEditorDataPtr->rightSelectorSpriteId].hFlip = TRUE;
-
-    StartSpriteAnim(&gSprites[sStatEditorDataPtr->leftSelectorSpriteId], 0);
-    StartSpriteAnim(&gSprites[sStatEditorDataPtr->rightSelectorSpriteId], 0);
+    StartSpriteAnim(&gSprites[sStatEditorDataPtr->leftSelectorSpriteId],  SELECTOR_ANIM_IDLE);
+    StartSpriteAnim(&gSprites[sStatEditorDataPtr->rightSelectorSpriteId], SELECTOR_ANIM_IDLE);
     return sStatEditorDataPtr->leftSelectorSpriteId;
 }
 
 static void DestroySelectors(void)
 {
     if (sStatEditorDataPtr->leftSelectorSpriteId != 0xFF)
+    {
         DestroySprite(&gSprites[sStatEditorDataPtr->leftSelectorSpriteId]);
+        FreeSpriteTilesByTag(TAG_LEFT_ARROW);
+    }
     if (sStatEditorDataPtr->rightSelectorSpriteId != 0xFF)
+    {
         DestroySprite(&gSprites[sStatEditorDataPtr->rightSelectorSpriteId]);
-    sStatEditorDataPtr->leftSelectorSpriteId = 0xFF;
+        FreeSpriteTilesByTag(TAG_RIGHT_ARROW);
+    }
+    FreeSpritePaletteByTag(TAG_MISC);
+    sStatEditorDataPtr->leftSelectorSpriteId  = 0xFF;
     sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
 }
 
 static void PrintTitleToWindowMainState(void)
 {
-    FillWindowPixelBuffer(WINDOW_1, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_MAIN_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     if (gPartiesCount[B_TRAINER_PLAYER] > 1)
     {
-        BlitBitmapToWindow(WINDOW_1, sLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
-        PrintTextOnWindowWithFont(WINDOW_1, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
+        BlitBitmapToWindow(WINDOW_MAIN_HEADER, sLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
+        PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
     }
 
     if (P_STAT_EDITOR_MOVE_RELEARNER)
     {
-        BlitBitmapToWindow(WINDOW_1, sStart_ButtonGfx, 65, BUTTON_Y, 24, 8);
-        PrintTextOnWindowWithFont(WINDOW_1, sText_MenuStartButtonMoves, 93, 0, 0, FONT_WHITE, FONT_NARROW);
+        BlitBitmapToWindow(WINDOW_MAIN_HEADER, sStart_ButtonGfx, 65, BUTTON_Y, 24, 8);
+        PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuStartButtonMoves, 93, 0, 0, FONT_WHITE, FONT_NARROW);
     }
-    PutWindowTilemap(WINDOW_1);
-    CopyWindowToVram(WINDOW_1, COPYWIN_FULL);
+    PutWindowTilemap(WINDOW_MAIN_HEADER);
+    CopyWindowToVram(WINDOW_MAIN_HEADER, COPYWIN_FULL);
 }
 
 void GetDPadText(void)
@@ -1131,34 +1198,34 @@ void GetDPadText(void)
     {
         if (sStatEditorDataPtr->leftRow == LEFT_ROW_ABILITY)
         {
-            BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
-            PrintTextOnWindowWithFont(WINDOW_1, sText_MenuDPadChangeAbility, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+            BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeAbility, 27, 0, 0, FONT_WHITE, FONT_NARROW);
         }
         else if (sStatEditorDataPtr->leftRow == LEFT_ROW_NATURE)
         {
-            BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
-            PrintTextOnWindowWithFont(WINDOW_1, sText_MenuDPadChangeNature, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+            BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeNature, 27, 0, 0, FONT_WHITE, FONT_NARROW);
         }
     }
     else if (sStatEditorDataPtr->panel == PANEL_RIGHT)
     {
-        BlitBitmapToWindow(WINDOW_1, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
+        BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
         if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
-            PrintTextOnWindowWithFont(WINDOW_1, sText_MenuDPadChangeHPType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeHPType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
         else
-            PrintTextOnWindowWithFont(WINDOW_1, sText_MenuDPadChangeStat, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeStat, 27, 0, 0, FONT_WHITE, FONT_NARROW);
     }
 }
 
 static void PrintTitleToWindowEditState(void)
 {
-    FillWindowPixelBuffer(WINDOW_1, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_MAIN_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     GetDPadText();
-    BlitBitmapToWindow(WINDOW_1, sA_ButtonGfx, 75, BUTTON_Y, 8, 8);
-    BlitBitmapToWindow(WINDOW_1, sB_ButtonGfx, 85, BUTTON_Y, 8, 8);
-    PrintTextOnWindowWithFont(WINDOW_1, sText_MenuABButtonSave, 97, 0, 0, FONT_WHITE, FONT_NARROW);
-    PutWindowTilemap(WINDOW_1);
-    CopyWindowToVram(WINDOW_1, COPYWIN_FULL);
+    BlitBitmapToWindow(WINDOW_MAIN_HEADER, sA_ButtonGfx, 75, BUTTON_Y, 8, 8);
+    BlitBitmapToWindow(WINDOW_MAIN_HEADER, sB_ButtonGfx, 85, BUTTON_Y, 8, 8);
+    PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuABButtonSave, 97, 0, 0, FONT_WHITE, FONT_NARROW);
+    PutWindowTilemap(WINDOW_MAIN_HEADER);
+    CopyWindowToVram(WINDOW_MAIN_HEADER, COPYWIN_FULL);
 }
 
 static void PrintMonStats(void)
@@ -1170,20 +1237,22 @@ static void PrintMonStats(void)
     u32 natureDownStat = gNaturesInfo[nature].statDown;
     u32 currentStat;
 
-    FillWindowPixelBuffer(WINDOW_2, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
-    FillWindowPixelBuffer(WINDOW_3, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_STATS_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_STATS_PANEL, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_LEFT_PANEL, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     sStatEditorDataPtr->evTotal = 0;
+    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuStat, 4,                 0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuEV,   8 + SECOND_COLUMN, 0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuIV,   8 + THIRD_COLUMN,  0, 0, FONT_WHITE, FONT_NARROW);
 
-    struct StatLabelInfo 
+    static const struct 
     {
         u8 statIndex;
         u8 x;
         u8 y;
-    };
-
-    static const struct StatLabelInfo sStatLabels[] = {
-        {STAT_HP,    0,  STARTING_Y + (STAT_ROW_HEIGHT * 0)},
+    } sNatureStats[] = {
+        {STAT_HP,    0,  0},
         {STAT_ATK,   0,  STARTING_Y + (STAT_ROW_HEIGHT * 1)},
         {STAT_DEF,   0,  STARTING_Y + (STAT_ROW_HEIGHT * 2)},
         {STAT_SPATK, 0,  STARTING_Y + (STAT_ROW_HEIGHT * 3)},
@@ -1200,14 +1269,14 @@ static void PrintMonStats(void)
         {
             if (natureUpStat == natureDownStat)
                 color = FONT_BLACK;
-            else if (sStatLabels[i].statIndex == natureUpStat)
+            else if (sNatureStats[i].statIndex == natureUpStat)
                 color = FONT_RED;
-            else if (sStatLabels[i].statIndex == natureDownStat)
+            else if (sNatureStats[i].statIndex == natureDownStat)
                 color = FONT_BLUE;
             else
                 color = FONT_BLACK;
         }
-        PrintTextOnWindowWithFont(WINDOW_2, COMPOUND_STRING(""), sStatLabels[i].x, sStatLabels[i].y, 0, color, FONT_NARROW);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, COMPOUND_STRING(""), sNatureStats[i].x, sNatureStats[i].y, 0, color, FONT_NARROW);
     }
 
     // Print Mon Stats
@@ -1215,41 +1284,43 @@ static void PrintMonStats(void)
     {
         currentStat = GetMonData(mon, sStatsToPrintActual[i]);
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        PrintTextOnWindow(WINDOW_2, gStringVar2, sStatPrintData[sStatsToPrintActual[i]].x, sStatPrintData[sStatsToPrintActual[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, sStatPrintData[sStatsToPrintActual[i]].x, sStatPrintData[sStatsToPrintActual[i]].y, 0, FONT_BLACK);
 
         // EVs
         currentStat = GetMonData(mon, sStatsToPrintEVs[i]);
         sStatEditorDataPtr->evTotal += currentStat;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        PrintTextOnWindow(WINDOW_2, gStringVar2, sStatPrintData[sStatsToPrintEVs[i]].x, sStatPrintData[sStatsToPrintEVs[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, sStatPrintData[sStatsToPrintEVs[i]].x, sStatPrintData[sStatsToPrintEVs[i]].y, 0, FONT_BLACK);
 
         // IVs
         currentStat = GetMonData(mon, sStatsToPrintIVs[i]);
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        PrintTextOnWindow(WINDOW_2, gStringVar2, sStatPrintData[sStatsToPrintIVs[i]].x, sStatPrintData[sStatsToPrintIVs[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, sStatPrintData[sStatsToPrintIVs[i]].x, sStatPrintData[sStatsToPrintIVs[i]].y, 0, FONT_BLACK);
     }
 
     ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, 3);
-    PrintTextOnWindow(WINDOW_2, gStringVar2, STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
+    PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
 
     UpdateHiddenPowerTypeIcon();
 
     // Print ability / nature / name
     GetMonNickname(mon, gStringVar2);
-    PrintTextOnWindowWithFont(WINDOW_3, gStringVar2, 8, LEFT_NICKNAME_Y, 0, FONT_WHITE, FONT_SHORT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, gStringVar2, 12, LEFT_NICKNAME_Y, 0, FONT_WHITE, FONT_SHORT_NARROW);
 
     StringCopy(gStringVar2, gAbilitiesInfo[ability].name);
-    PrintTextOnWindowWithFont(WINDOW_3, sText_MenuDPadChangeAbility, 2, LEFT_ABILITY_Y, 0, FONT_BLACK, FONT_SMALL_NARROWER);
-    PrintTextOnWindowWithFont(WINDOW_3, gStringVar2, 32, LEFT_ABILITY_Y, 0, FONT_BLACK, FONT_SMALL_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, sText_MenuDPadChangeAbility, 2, LEFT_ABILITY_Y, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, gStringVar2, 32, LEFT_ABILITY_Y, 0, FONT_BLACK, FONT_SMALL_NARROW);
 
     StringCopy(gStringVar2, gNaturesInfo[nature].name);
-    PrintTextOnWindowWithFont(WINDOW_3, sText_MenuDPadChangeNature, 2, LEFT_NATURE_Y, 0, FONT_BLACK, FONT_SMALL_NARROWER);
-    PrintTextOnWindowWithFont(WINDOW_3, gStringVar2, 32, LEFT_NATURE_Y, 0, FONT_BLACK, FONT_SMALL_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, sText_MenuDPadChangeNature, 2, LEFT_NATURE_Y, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, gStringVar2, 32, LEFT_NATURE_Y, 0, FONT_BLACK, FONT_SMALL_NARROW);
 
-    PutWindowTilemap(WINDOW_3);
-    CopyWindowToVram(WINDOW_3, COPYWIN_FULL);
-    PutWindowTilemap(WINDOW_2);
-    CopyWindowToVram(WINDOW_2, COPYWIN_FULL);
+    PutWindowTilemap(WINDOW_STATS_HEADER);
+    PutWindowTilemap(WINDOW_STATS_PANEL);
+    PutWindowTilemap(WINDOW_LEFT_PANEL);
+    CopyWindowToVram(WINDOW_STATS_HEADER, COPYWIN_FULL);
+    CopyWindowToVram(WINDOW_STATS_PANEL, COPYWIN_FULL);
+    CopyWindowToVram(WINDOW_LEFT_PANEL, COPYWIN_FULL);
 }
 
 struct SpriteCoords
@@ -1277,59 +1348,88 @@ static void SelectorCallback(struct Sprite *sprite)
     };
 
     bool32 isLeft = (sprite == &gSprites[sStatEditorDataPtr->leftSelectorSpriteId]);
-    u32 leftEdgeX;
-    u32 y;
-    bool32 shouldInvis = FALSE;
 
+    // Position
     if (sStatEditorDataPtr->panel == PANEL_LEFT)
     {
+        u32 leftEdgeX;
         if (sStatEditorDataPtr->leftRow == LEFT_ROW_NICKNAME)
+        {
             leftEdgeX = SELECTOR_LEFT_EDGE_X;
+            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH);
+        }
         else
+        {
             leftEdgeX = SELECTOR_LEFT_EDGE_X + 26;
-        y = sLeftPanelY[sStatEditorDataPtr->leftRow];
-        sprite->x = isLeft ? leftEdgeX : (leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH);
-        sprite->y = y;
+            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH + 3);
+        }
+        sprite->y = sLeftPanelY[sStatEditorDataPtr->leftRow];
     }
     else
     {
         if (sStatEditorDataPtr->rightPanelRow != RIGHT_PANEL_ROW_HP_TYPE)
             sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
 
-        leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
-        y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
+        u32 leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
+        u32 y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
+
         if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH);
         else
             sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH);
         sprite->y = y;
+    }
 
-        // Don't show cursor on left when stat is empty, on right when stat is maxed
-        if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT
-         && sStatEditorDataPtr->rightPanelRow != RIGHT_PANEL_ROW_HP_TYPE) // exclude hidden power type from this
+    // Visibility: hide left when at min, right when at max (edit mode, stats only)
+    if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT
+     && sStatEditorDataPtr->panel == PANEL_RIGHT
+     && sStatEditorDataPtr->rightPanelRow != RIGHT_PANEL_ROW_HP_TYPE)
+    {
+        if (isLeft && sStatEditorDataPtr->statEditingValue == MIN_STAT)
         {
-            if (isLeft && sStatEditorDataPtr->statEditingValue == MIN_STAT)
-                shouldInvis = TRUE;
-            else if (!isLeft && CHECK_IF_STAT_CANT_INCREASE)
-                shouldInvis = TRUE;
+            sprite->invisible = TRUE;
+            return;
+        }
+        if (!isLeft && CHECK_IF_STAT_CANT_INCREASE)
+        {
+            sprite->invisible = TRUE;
+            return;
         }
     }
 
-    if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
+    sprite->invisible = FALSE;
+
+    // Animation
+    if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_SELECT)
     {
-        if (sprite->data[0] == 32)
-            sprite->invisible = TRUE;
-        if (sprite->data[0] >= 48)
-        {
-            sprite->invisible = shouldInvis;
-            sprite->data[0] = 0;
-        }
-        sprite->data[0]++;
+        if (sprite->animNum != SELECTOR_ANIM_IDLE)
+            StartSpriteAnim(sprite, SELECTOR_ANIM_IDLE);
     }
     else
     {
-        sprite->invisible = FALSE;
-        sprite->data[0] = 0;
+        bool32 pressingIncrease = JOY_REPEAT(DPAD_RIGHT) || JOY_REPEAT(DPAD_UP);
+        bool32 pressingDecrease = JOY_REPEAT(DPAD_LEFT)  || JOY_REPEAT(DPAD_DOWN);
+        bool32 pressing = isLeft ? pressingDecrease : pressingIncrease;
+
+        if (pressing)
+        {
+            // Hold on the last frame while a key is pressed
+            if (sprite->animNum != SELECTOR_ANIM_ACTIVE)
+                StartSpriteAnim(sprite, SELECTOR_ANIM_ACTIVE);
+        }
+        else
+        {
+            // Cycle using the shared timer so both arrows are always in sync.
+            // Each frame lasts 12 ticks, 3 frames total = period of 36.
+            u8 cycleFrame = (sSelectorCycleTimer / 12) % 3;
+
+            if (sprite->animNum != SELECTOR_ANIM_CYCLE)
+                StartSpriteAnim(sprite, SELECTOR_ANIM_CYCLE);
+
+            // Override the anim system's frame counter with our synced values
+            sprite->animCmdIndex     = cycleFrame;
+            sprite->animDelayCounter = sSelectorCycleTimer % 12;
+        }
     }
 }
 
@@ -1800,8 +1900,6 @@ static void Task_StatEditorMain(u8 taskId)
 
             PlaySE(SE_SELECT);
             sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-            gSprites[sStatEditorDataPtr->leftSelectorSpriteId].data[0] = 32;
-            gSprites[sStatEditorDataPtr->rightSelectorSpriteId].data[0] = 32;
             PrintTitleToWindowEditState();
             gTasks[taskId].func = Task_LeftPanelEditMode;
             return;
@@ -1815,8 +1913,6 @@ static void Task_StatEditorMain(u8 taskId)
             {
                 PlaySE(SE_SELECT);
                 sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-                gSprites[sStatEditorDataPtr->leftSelectorSpriteId].data[0] = 32;
-                gSprites[sStatEditorDataPtr->rightSelectorSpriteId].data[0] = 32;
                 PrintTitleToWindowEditState();
                 gTasks[taskId].func = Task_HPTypeEditMode;
                 return;
@@ -1836,8 +1932,6 @@ static void Task_StatEditorMain(u8 taskId)
 
             PlaySE(SE_SELECT);
             sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-            gSprites[sStatEditorDataPtr->leftSelectorSpriteId].data[0] = 32;
-            gSprites[sStatEditorDataPtr->rightSelectorSpriteId].data[0] = 32;
             PrintTitleToWindowEditState();
             gTasks[taskId].func = Task_RightPanelEditMode;
             return;
