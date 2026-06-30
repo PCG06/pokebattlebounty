@@ -1717,7 +1717,8 @@ static void Task_LeftPanelEditMode(u8 taskId)
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->savedCallback = CB2_StatEditorChangePokemonNickname;
         gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
-        Task_StatEditorTurnOff(taskId);
+        BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
+        gTasks[taskId].func = Task_StatEditorTurnOff;
         break;
 
     case LEFT_ROW_ABILITY:
@@ -2032,8 +2033,11 @@ static void Task_StatEditorMain(u8 taskId)
             }
 
             PlaySE(SE_SELECT);
-            sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
-            PrintTitleToWindowEditState();
+            if (sStatEditorDataPtr->leftRow != LEFT_ROW_NICKNAME) // prevent title window from changing
+            {
+                sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
+                PrintTitleToWindowEditState();
+            }
             gTasks[taskId].func = Task_LeftPanelEditMode;
             return;
         }
