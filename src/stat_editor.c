@@ -2086,7 +2086,7 @@ static void HandleRightPanelEditInput(u32 input)
     case EDIT_INPUT_INCREASE_BY_10:
         if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS)
         {
-            u32 remaining = MAX_TOTAL_EVS - 10;
+            u32 remaining = MAX_TOTAL_EVS - sStatEditorDataPtr->evTotal;
             sStatEditorDataPtr->statEditingValue += (remaining < 10) ? remaining : 10;
             if (sStatEditorDataPtr->statEditingValue > MAX_PER_STAT_EVS)
                 sStatEditorDataPtr->statEditingValue = MAX_PER_STAT_EVS;
