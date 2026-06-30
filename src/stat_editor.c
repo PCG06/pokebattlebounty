@@ -2215,7 +2215,6 @@ static void Task_StatEditorMain(u8 taskId)
         gRelearnMode = RELEARN_MODE_STAT_EDITOR;
         sStatEditorDataPtr->savedCallback = CB2_InitLearnMove;
         gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
-        gInitialSummaryScreenCallback = NULL; // prevent opening summary when exiting relearner
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         return;

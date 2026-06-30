@@ -569,7 +569,14 @@ static void Task_MoveRelearner_Quit(u8 taskId)
     if (gPaletteFade.active)
         return;
 
-    if (gInitialSummaryScreenCallback != NULL)
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+    {
+        if (P_PARTY_MENU_STAT_EDITOR)
+            StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
+        else if (P_SUMMARY_SCREEN_STAT_EDITOR)
+            StatEditor_Init(CB2_ReturnToSummaryScreenFromMoveRelearner);
+    }
+    else if (gInitialSummaryScreenCallback != NULL)
     {
         if (gRelearnMode == RELEARN_MODE_PSS_PAGE_CONTEST_MOVES)
             ShowPokemonSummaryScreen(SUMMARY_MODE_RELEARNER_CONTEST, gParties[B_TRAINER_PLAYER], gTasks[taskId].tPartyIndex, gPartiesCount[B_TRAINER_PLAYER] - 1, gInitialSummaryScreenCallback);
@@ -578,18 +585,7 @@ static void Task_MoveRelearner_Quit(u8 taskId)
     }
     else
     {
-        if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
-        {
-            gSpecialVar_0x8004 = gTasks[taskId].tPartyIndex;
-            if (P_PARTY_MENU_STAT_EDITOR)
-                StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
-            else if (P_SUMMARY_SCREEN_STAT_EDITOR)
-                StatEditor_Init(CB2_ReturnToSummaryScreenFromMoveRelearner);
-        }
-        else
-        {
-            SetMainCallback2(CB2_ReturnToField);
-        }
+        SetMainCallback2(CB2_ReturnToField);
     }
 
     FreeMoveRelearnerResources();
