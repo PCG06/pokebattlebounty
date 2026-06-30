@@ -35,6 +35,7 @@
 #include "task.h"
 #include "text_window.h"
 #include "trainer_pokemon_sprites.h"
+#include "tv.h"
 #include "constants/rgb.h"
 #include "constants/songs.h"
 
@@ -134,7 +135,9 @@ enum WindowIds
     WINDOW_MAIN_HEADER,
     WINDOW_STATS_HEADER,
     WINDOW_STATS_PANEL,
-    WINDOW_LEFT_PANEL,
+    WINDOW_NICKNAME,
+    WINDOW_ABILITIES,
+    WINDOW_NATURES,
 };
 
 //==========EWRAM==========//
@@ -189,43 +192,63 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
 {
     [WINDOW_MAIN_HEADER] = 
     {
-        .bg = 0,            // which bg to print text on
-        .tilemapLeft = 1,   // position from left (per 8 pixels)
-        .tilemapTop = 0,    // position from top (per 8 pixels)
-        .width = 16,        // width (per 8 pixels)
-        .height = 2,        // height (per 8 pixels)
-        .paletteNum = 15,   // palette index to use for text
-        .baseBlock = 1,     // tile start in VRAM
+        .bg = 0,          // which bg to print text on
+        .tilemapLeft = 1, // position from left (per 8 pixels)
+        .tilemapTop = 0,  // position from top (per 8 pixels)
+        .width = 16,      // width (per 8 pixels)
+        .height = 2,      // height (per 8 pixels)
+        .paletteNum = 15, // palette index to use for text
+        .baseBlock = 1,   // tile start in VRAM
     },
     [WINDOW_STATS_HEADER] =
     {
-        .bg = 0,             // which bg to print text on
-        .tilemapLeft = 17,   // position from left (per 8 pixels)
-        .tilemapTop = 1,     // position from top (per 8 pixels)
-        .width = 12,         // width (per 8 pixels)
-        .height = 2,         // height (per 8 pixels)
-        .paletteNum = 15,    // palette index to use for text
-        .baseBlock = 1 + 32,     // tile start in VRAM
+        .bg = 0,
+        .tilemapLeft = 17,
+        .tilemapTop = 1,
+        .width = 12,
+        .height = 2,
+        .paletteNum = 15,
+        .baseBlock = 1 + 32,
     },
     [WINDOW_STATS_PANEL] = 
     {
-        .bg = 0,            // which bg to print text on
-        .tilemapLeft = 14,   // position from left (per 8 pixels)
-        .tilemapTop = 3,    // position from top (per 8 pixels)
-        .width = 18,        // width (per 8 pixels)
-        .height = 15,        // height (per 8 pixels)
-        .paletteNum = 15,   // palette index to use for text
-        .baseBlock = 1 + 32 + 24,     // tile start in VRAM
+        .bg = 0,
+        .tilemapLeft = 14,
+        .tilemapTop = 3,
+        .width = 16,
+        .height = 14,
+        .paletteNum = 15,
+        .baseBlock = 1 + 32 + 24,
     },
-    [WINDOW_LEFT_PANEL] = 
+    [WINDOW_NICKNAME] = 
     {
-        .bg = 0,            // which bg to print text on
-        .tilemapLeft = 0,   // position from left (per 8 pixels)
-        .tilemapTop = 11,    // position from top (per 8 pixels)
-        .width = 14,        // width (per 8 pixels)
-        .height = 8,        // height (per 8 pixels)
-        .paletteNum = 15,   // palette index to use for text
-        .baseBlock = 1 + 32 + 24 + 306,     // tile start in VRAM
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 11,
+        .width = 10,
+        .height = 3,
+        .paletteNum = 15,
+        .baseBlock = 1 + 32 + 24 + 224,
+    },
+    [WINDOW_ABILITIES] = 
+    {
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 15,
+        .width = 14,
+        .height = 2,
+        .paletteNum = 15,
+        .baseBlock = 1 + 32 + 24 + 224 + 36,
+    },
+    [WINDOW_NATURES] = 
+    {
+        .bg = 0,
+        .tilemapLeft = 0,
+        .tilemapTop = 17,
+        .width = 14,
+        .height = 2,
+        .paletteNum = 15,
+        .baseBlock = 1 + 32 + 24 + 224 + 36 + 28,
     },
     DUMMY_WIN_TEMPLATE
 };
@@ -543,7 +566,7 @@ static const struct SpriteTemplate sSpriteTemplate_NatureArrow =
 #define STARTING_X       28
 #define STARTING_Y       1
 
-#define LEFT_PANEL_SELECTOR_WIDTH          75
+#define LEFT_PANEL_SELECTOR_WIDTH          74
 #define RIGHT_PANEL_SELECTOR_WIDTH         28
 #define RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH 40
 
@@ -917,17 +940,6 @@ static void PrintTextOnWindowWithFont(u8 windowId, const u8 *string, u8 x, u8 y,
 static void PrintTextOnWindow(u8 windowId, const u8 *string, u8 x, u8 y, u8 lineSpacing, u8 colorId)
 {
     PrintTextOnWindowWithFont(windowId, string, x, y, lineSpacing, colorId, FONT_NORMAL);
-}
-
-static void PrintTextOnWindowToFitPx(u8 windowId, const u8 *string, u8 x, u8 y, u8 lineSpacing, u8 colorId, u32 width)
-{
-    u32 fontId = GetFontIdToFit(string, FONT_NORMAL, 0, width);
-    PrintTextOnWindowWithFont(windowId, string, x, y, lineSpacing, colorId, fontId);
-}
-
-static void UNUSED PrintTextOnWindowToFit(u8 windowId, const u8 *string, u8 x, u8 y, u8 lineSpacing, u8 colorId)
-{
-    PrintTextOnWindowToFitPx(windowId, string, x, y, lineSpacing, colorId, WindowWidthPx(windowId));
 }
 
 //
@@ -1333,11 +1345,14 @@ static void PrintMonStats(void)
     struct Pokemon *mon = GetCurrentPartyMon();
     u32 nature = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
     enum Ability ability = GetMonAbility(mon);
-    u32 currentStat;
+    u32 currentStat, digits;
+    s32 xPos;
 
     FillWindowPixelBuffer(WINDOW_STATS_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
     FillWindowPixelBuffer(WINDOW_STATS_PANEL, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
-    FillWindowPixelBuffer(WINDOW_LEFT_PANEL, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_NICKNAME, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_ABILITIES, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
+    FillWindowPixelBuffer(WINDOW_NATURES, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     sStatEditorDataPtr->evTotal = 0;
     PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuStat, 4,                 0, 0, FONT_WHITE, FONT_NARROW);
@@ -1350,44 +1365,59 @@ static void PrintMonStats(void)
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
     {
         currentStat = GetMonData(mon, sStatsToPrintActual[i]);
-        ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, sStatPrintData[sStatsToPrintActual[i]].x, sStatPrintData[sStatsToPrintActual[i]].y, 0, FONT_BLACK);
+        digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
+        ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
+        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sStatsToPrintActual[i]].x;
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sStatsToPrintActual[i]].y, 0, FONT_BLACK);
 
         // EVs
         currentStat = GetMonData(mon, sStatsToPrintEVs[i]);
+        digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         sStatEditorDataPtr->evTotal += currentStat;
-        ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, sStatPrintData[sStatsToPrintEVs[i]].x, sStatPrintData[sStatsToPrintEVs[i]].y, 0, FONT_BLACK);
+        ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
+        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sStatsToPrintEVs[i]].x;
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sStatsToPrintEVs[i]].y, 0, FONT_BLACK);
 
         // IVs
         currentStat = GetMonData(mon, sStatsToPrintIVs[i]);
-        ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, 3);
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, sStatPrintData[sStatsToPrintIVs[i]].x, sStatPrintData[sStatsToPrintIVs[i]].y, 0, FONT_BLACK);
+        digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
+        ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
+        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sStatsToPrintIVs[i]].x;
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sStatsToPrintIVs[i]].y, 0, FONT_BLACK);
     }
 
-    ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, 3);
-    PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
+    digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
+    ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, digits);
+    PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
 
     UpdateHiddenPowerTypeIcon();
 
     // Print ability / nature / name
     GetMonNickname(mon, gStringVar2);
-    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, gStringVar2, 12, LEFT_NICKNAME_Y, 0, FONT_WHITE, FONT_SHORT_NARROW);
+    xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NICKNAME)) + 1 : 12;
+    PrintTextOnWindowWithFont(WINDOW_NICKNAME, gStringVar2, xPos, LEFT_NICKNAME_Y, 0, FONT_WHITE, FONT_SHORT_NARROW);
 
     StringCopy(gStringVar2, gAbilitiesInfo[ability].name);
-    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, sText_MenuDPadChangeAbility, 2, LEFT_ABILITY_Y, 0, FONT_BLACK, FONT_SMALL_NARROWER);
-    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, gStringVar2, 32, LEFT_ABILITY_Y, 0, FONT_BLACK, FONT_SMALL_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_ABILITIES, sText_MenuDPadChangeAbility, 3, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    u32 fontId = GetFontIdToFit(gStringVar2, FONT_SMALL_NARROW, 0, WindowWidthPx(WINDOW_ABILITIES) - 48);
+    xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(fontId, gStringVar2, WindowWidthPx(WINDOW_ABILITIES) + 28) : 32;
+    PrintTextOnWindowWithFont(WINDOW_ABILITIES, gStringVar2, xPos, 2, 0, FONT_BLACK, fontId);
 
     StringCopy(gStringVar2, gNaturesInfo[nature].name);
-    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, sText_MenuDPadChangeNature, 2, LEFT_NATURE_Y, 0, FONT_BLACK, FONT_SMALL_NARROWER);
-    PrintTextOnWindowWithFont(WINDOW_LEFT_PANEL, gStringVar2, 32, LEFT_NATURE_Y, 0, FONT_BLACK, FONT_SMALL_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_NATURES, sText_MenuDPadChangeNature, 2, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NATURES) + 28) : 32;
+    PrintTextOnWindowWithFont(WINDOW_NATURES, gStringVar2, xPos, 2, 0, FONT_BLACK, FONT_SMALL_NARROW);
 
     PutWindowTilemap(WINDOW_STATS_HEADER);
-    PutWindowTilemap(WINDOW_STATS_PANEL);
-    PutWindowTilemap(WINDOW_LEFT_PANEL);
     CopyWindowToVram(WINDOW_STATS_HEADER, COPYWIN_FULL);
+    PutWindowTilemap(WINDOW_STATS_PANEL);
     CopyWindowToVram(WINDOW_STATS_PANEL, COPYWIN_FULL);
-    CopyWindowToVram(WINDOW_LEFT_PANEL, COPYWIN_FULL);
+    PutWindowTilemap(WINDOW_NICKNAME);
+    CopyWindowToVram(WINDOW_NICKNAME, COPYWIN_FULL);
+    PutWindowTilemap(WINDOW_ABILITIES);
+    CopyWindowToVram(WINDOW_ABILITIES, COPYWIN_FULL);
+    PutWindowTilemap(WINDOW_NATURES);
+    CopyWindowToVram(WINDOW_NATURES, COPYWIN_FULL);
 }
 
 struct SpriteCoords
@@ -1420,16 +1450,20 @@ static void SelectorCallback(struct Sprite *sprite)
     if (sStatEditorDataPtr->panel == PANEL_LEFT)
     {
         u32 leftEdgeX;
+        u32 rightEdgeX;
+
         if (sStatEditorDataPtr->leftRow == LEFT_ROW_NICKNAME)
         {
             leftEdgeX = SELECTOR_LEFT_EDGE_X;
-            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH);
+            rightEdgeX = leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH;
         }
         else
         {
-            leftEdgeX = SELECTOR_LEFT_EDGE_X + 26;
-            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH + 3);
+            leftEdgeX = SELECTOR_LEFT_EDGE_X + 29;
+            rightEdgeX = leftEdgeX + LEFT_PANEL_SELECTOR_WIDTH - 1;
         }
+
+        sprite->x = isLeft ? leftEdgeX : rightEdgeX;
         sprite->y = sLeftPanelY[sStatEditorDataPtr->leftRow];
     }
     else
@@ -1438,13 +1472,15 @@ static void SelectorCallback(struct Sprite *sprite)
             sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
 
         u32 leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
-        u32 y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
+        u32 rightEdgeX;
 
         if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
-            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH);
+            rightEdgeX = leftEdgeX + RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH;
         else
-            sprite->x = isLeft ? leftEdgeX : (leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH);
-        sprite->y = y;
+            rightEdgeX = leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH;
+
+        sprite->x = isLeft ? leftEdgeX : rightEdgeX;
+        sprite->y = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].y;
     }
 
     // Visibility: hide left when at min, right when at max (edit mode, stats only)

@@ -18,5 +18,7 @@
 #define P_STAT_EDITOR_MON_IDLE_ANIMS        TRUE  // If TRUE, loops the Pokémon animations regularly as an "idle" anim.
 #define P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES 300   // Number of frames between each idle anim if P_STAT_EDITOR_MON_IDLE_ANIMS is TRUE.
 #define P_STAT_EDITOR_MON_SHADOWS           TRUE  // If TRUE, displays a shadow for the Pokémon sprite.
+#define P_STAT_EDITOR_CENTER_ALIGN_TEXT     TRUE  // If TRUE, center aligns texts such as nickname, ability and nature.
+#define P_STAT_EDITOR_CENTER_ALIGN_STATS    FALSE // If TRUE, center aligns all stat numbers.
 
 #endif // GUARD_INCLUDE_CONSTANTS_STAT_EDITOR_H
