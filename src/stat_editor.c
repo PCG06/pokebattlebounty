@@ -1355,9 +1355,9 @@ static void PrintMonStats(void)
     FillWindowPixelBuffer(WINDOW_NATURES, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     sStatEditorDataPtr->evTotal = 0;
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuStat, 4,                 0, 0, FONT_WHITE, FONT_NARROW);
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuEV,   8 + SECOND_COLUMN, 0, 0, FONT_WHITE, FONT_NARROW);
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuIV,   8 + THIRD_COLUMN,  0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuStat, 3,  0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuEV,   40, 0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuIV,   76, 0, 0, FONT_WHITE, FONT_NARROW);
 
     UpdateNatureArrowSprites();
 
