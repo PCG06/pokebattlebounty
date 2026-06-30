@@ -256,18 +256,18 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
 static const u32 sStatEditorBgTiles[]   = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
 static const u32 sStatEditorBgTilemap[] = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
 static const u16 sStatEditorBgPalette[] = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
-static const u32 sLeftArrow_Gfx[]       = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
-static const u32 sRightArrow_Gfx[]      = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
-static const u32 sNatureArrows_Gfx[]    = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
-static const u16 sMisc_Pal[]            = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
+static const u32 sLeftArrowGfx[]        = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
+static const u32 sRightArrowGfx[]       = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
+static const u32 sNatureArrowsGfx[]     = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
+static const u16 sMiscPalette[]         = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
 static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
 static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
 static const u8 sLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
 static const u8 sStart_ButtonGfx[]      = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
 static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
 static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
-static const u32 sMoveTypes_Gfx[]       = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
-static const u16 sMoveTypes_Pal[]       = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
+static const u32 sMoveTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
+static const u16 sMoveTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
 
 static const struct SpritePalette sSpritePal_MonShadow =
 {
@@ -403,7 +403,7 @@ static const union AnimCmd *const sSpriteAnimTable_HiddenPowerType[NUMBER_OF_MON
 
 static const struct CompressedSpriteSheet sSpriteSheet_HiddenPowerType =
 {
-    .data = sMoveTypes_Gfx,
+    .data = sMoveTypesGfx,
     .size = NUMBER_OF_MON_TYPES * 0x100,
     .tag = TAG_MOVE_TYPES
 };
@@ -441,21 +441,21 @@ static const struct OamData sOamData_Selector =
 
 static const struct CompressedSpriteSheet sSpriteSheet_LeftArrow =
 {
-    .data = sLeftArrow_Gfx,
+    .data = sLeftArrowGfx,
     .size = 16*16*3*4/2,
     .tag = TAG_LEFT_ARROW,
 };
 
 static const struct CompressedSpriteSheet sSpriteSheet_RightArrow =
 {
-    .data = sRightArrow_Gfx,
+    .data = sRightArrowGfx,
     .size = 16*16*3*4/2,
     .tag = TAG_RIGHT_ARROW,
 };
 
 static const struct SpritePalette sSpritePal_Misc =
 {
-    .data = sMisc_Pal,
+    .data = sMiscPalette,
     .tag  = TAG_MISC,
 };
 
@@ -516,7 +516,7 @@ static const struct SpriteTemplate sSpriteTemplate_RightArrow =
 
 static const struct CompressedSpriteSheet sSpriteSheet_NatureArrows =
 {
-    .data = sNatureArrows_Gfx,
+    .data = sNatureArrowsGfx,
     .size = 16*16*2*4/2,
     .tag = TAG_NATURE_ARROWS,
 };
@@ -895,7 +895,7 @@ static bool8 StatEditor_LoadGraphics(void)
         sStatEditorDataPtr->gfxLoadState++;
         break;
     case 3:
-        LoadPalette(sMoveTypes_Pal, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
+        LoadPalette(sMoveTypesPalette, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
         sStatEditorDataPtr->gfxLoadState++;
         break;
     default:
