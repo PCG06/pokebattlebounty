@@ -12,6 +12,14 @@
 #define P_START_MENU_STAT_EDITOR            FALSE // If TRUE, the stat editor will be accessible through the start menu. (opens on first Pokémon)
 #define P_SUMMARY_SCREEN_STAT_EDITOR        TRUE  // If TRUE, the stat editor will be accessible through the summary screen on the stat menu by clicking Start. (opens on selected Pokémon)
 
+// Hidden Power or Terastal Config
+#define P_STAT_EDITOR_HP_OR_TERA    P_STAT_EDITOR_TERASTAL
+
+// defines for the config above
+#define P_STAT_EDITOR_NONE          0 // neither will be available
+#define P_STAT_EDITOR_HIDDEN_POWER  1 // allows change of Hidden Power type (affects IVs)
+#define P_STAT_EDITOR_TERASTAL      2 // allows change of Tera Type
+
 // General Configs
 #define P_STAT_EDITOR_NATURE_ARROWS         TRUE  // If TRUE, stats increased or decreased by nature will have arrows, red and up = increased, blue and down = decreased.
 #define P_STAT_EDITOR_MOVE_RELEARNER        TRUE  // If TRUE, the move relearner will be accessible through the stat editor by pressing Start.

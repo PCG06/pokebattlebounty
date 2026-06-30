@@ -51,7 +51,7 @@ struct StatEditorResources
     u8 panelInputMode;
     u8 leftRow;
     u8 partyId;
-    u8 hpTypeSpriteId;
+    u8 typeSpriteId;
     u8 natureUpSpriteId;
     u8 natureDownSpriteId;
     u8 monSpriteId;
@@ -128,7 +128,8 @@ TLDR: Stat can't increase if you're either: at the maximum amount a stat can hav
 #define TAG_MISC          30006
 #define TAG_MON_SHADOW    30007
 #define TAG_MOVE_TYPES    30008
-#define TAG_NATURE_ARROWS 30009
+#define TAG_TERA_TYPES    30009
+#define TAG_NATURE_ARROWS 30010
 
 enum WindowIds
 {
@@ -268,6 +269,8 @@ static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_b
 static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
 static const u32 sMoveTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
 static const u16 sMoveTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
+static const u32 sTeraTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/tera_types.png", ".4bpp.smol");
+static const u16 sTeraTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/tera_types.png", ".gbapal");
 
 static const struct SpritePalette sSpritePal_MonShadow =
 {
@@ -414,6 +417,147 @@ static const struct SpriteTemplate sSpriteTemplate_HiddenPowerType =
     .paletteTag = TAG_MOVE_TYPES,
     .oam = &sOamData_HiddenPowerType,
     .anims = sSpriteAnimTable_HiddenPowerType,
+};
+
+static const union AnimCmd sSpriteAnim_TeraTypeNone[] = {
+    ANIMCMD_FRAME(TYPE_NONE * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeNormal[] = {
+    ANIMCMD_FRAME(TYPE_NORMAL * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeFighting[] = {
+    ANIMCMD_FRAME(TYPE_FIGHTING * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeFlying[] = {
+    ANIMCMD_FRAME(TYPE_FLYING * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypePoison[] = {
+    ANIMCMD_FRAME(TYPE_POISON * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeGround[] = {
+    ANIMCMD_FRAME(TYPE_GROUND * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeRock[] = {
+    ANIMCMD_FRAME(TYPE_ROCK * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeBug[] = {
+    ANIMCMD_FRAME(TYPE_BUG * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeGhost[] = {
+    ANIMCMD_FRAME(TYPE_GHOST * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeSteel[] = {
+    ANIMCMD_FRAME(TYPE_STEEL * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeMystery[] = {
+    ANIMCMD_FRAME(TYPE_MYSTERY * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeFire[] = {
+    ANIMCMD_FRAME(TYPE_FIRE * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeWater[] = {
+    ANIMCMD_FRAME(TYPE_WATER * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeGrass[] = {
+    ANIMCMD_FRAME(TYPE_GRASS * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeElectric[] = {
+    ANIMCMD_FRAME(TYPE_ELECTRIC * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypePsychic[] = {
+    ANIMCMD_FRAME(TYPE_PSYCHIC * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeIce[] = {
+    ANIMCMD_FRAME(TYPE_ICE * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeDragon[] = {
+    ANIMCMD_FRAME(TYPE_DRAGON * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeDark[] = {
+    ANIMCMD_FRAME(TYPE_DARK * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeFairy[] = {
+    ANIMCMD_FRAME(TYPE_FAIRY * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+static const union AnimCmd sSpriteAnim_TeraTypeStellar[] = {
+    ANIMCMD_FRAME(TYPE_STELLAR * 4, 0, FALSE, FALSE),
+    ANIMCMD_END
+};
+
+static const union AnimCmd *const sSpriteAnimTable_TeraType[NUMBER_OF_MON_TYPES] = {
+    [TYPE_NONE] = sSpriteAnim_TeraTypeNone,
+    [TYPE_NORMAL] = sSpriteAnim_TeraTypeNormal,
+    [TYPE_FIGHTING] = sSpriteAnim_TeraTypeFighting,
+    [TYPE_FLYING] = sSpriteAnim_TeraTypeFlying,
+    [TYPE_POISON] = sSpriteAnim_TeraTypePoison,
+    [TYPE_GROUND] = sSpriteAnim_TeraTypeGround,
+    [TYPE_ROCK] = sSpriteAnim_TeraTypeRock,
+    [TYPE_BUG] = sSpriteAnim_TeraTypeBug,
+    [TYPE_GHOST] = sSpriteAnim_TeraTypeGhost,
+    [TYPE_STEEL] = sSpriteAnim_TeraTypeSteel,
+    [TYPE_MYSTERY] = sSpriteAnim_TeraTypeMystery,
+    [TYPE_FIRE] = sSpriteAnim_TeraTypeFire,
+    [TYPE_WATER] = sSpriteAnim_TeraTypeWater,
+    [TYPE_GRASS] = sSpriteAnim_TeraTypeGrass,
+    [TYPE_ELECTRIC] = sSpriteAnim_TeraTypeElectric,
+    [TYPE_PSYCHIC] = sSpriteAnim_TeraTypePsychic,
+    [TYPE_ICE] = sSpriteAnim_TeraTypeIce,
+    [TYPE_DRAGON] = sSpriteAnim_TeraTypeDragon,
+    [TYPE_DARK] = sSpriteAnim_TeraTypeDark,
+    [TYPE_FAIRY] = sSpriteAnim_TeraTypeFairy,
+    [TYPE_STELLAR] = sSpriteAnim_TeraTypeStellar
+};
+
+static const struct OamData sOamData_TeraType =
+{
+    .y = 0,
+    .affineMode = ST_OAM_AFFINE_OFF,
+    .objMode = ST_OAM_OBJ_NORMAL,
+    .mosaic = FALSE,
+    .bpp = ST_OAM_4BPP,
+    .shape = SPRITE_SHAPE(16x16),
+    .x = 0,
+    .matrixNum = 0,
+    .size = SPRITE_SIZE(16x16),
+    .tileNum = 0,
+    .priority = 1,
+    .paletteNum = 0,
+    .affineParam = 0,
+};
+
+static const struct CompressedSpriteSheet sSpriteSheet_TeraType =
+{
+    .data = sTeraTypesGfx,
+    .size = NUMBER_OF_MON_TYPES * (16 * 16),
+    .tag = TAG_TERA_TYPES
+};
+
+static const struct SpriteTemplate sSpriteTemplate_TeraType =
+{
+    .tileTag = TAG_TERA_TYPES,
+    .paletteTag = TAG_TERA_TYPES,
+    .oam = &sOamData_TeraType,
+    .anims = sSpriteAnimTable_TeraType,
 };
 
 enum FontColors
@@ -648,16 +792,17 @@ static const u8 sGenderColors[2][3] =
     {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_RED}
 };
 
-static const u8 sText_MenuStat[]              = _("Stat");
-static const u8 sText_MenuEV[]                = _("EVs");
-static const u8 sText_MenuIV[]                = _("IVs");
-static const u8 sText_MenuLRButtonParty[]     = _("Party");
-static const u8 sText_MenuStartButtonMoves[]  = _("Moves");
-static const u8 sText_MenuABButtonSave[]      = _("Save");
-static const u8 sText_MenuDPadChangeStat[]    = _("Stat");
-static const u8 sText_MenuDPadChangeAbility[] = _("Ability");
-static const u8 sText_MenuDPadChangeNature[]  = _("Nature");
-static const u8 sText_MenuDPadChangeHPType[]  = _("HP Type");
+static const u8 sText_MenuStat[]                = _("Stat");
+static const u8 sText_MenuEV[]                  = _("EVs");
+static const u8 sText_MenuIV[]                  = _("IVs");
+static const u8 sText_MenuLRButtonParty[]       = _("Party");
+static const u8 sText_MenuStartButtonMoves[]    = _("Moves");
+static const u8 sText_MenuABButtonSave[]        = _("Save");
+static const u8 sText_MenuDPadChangeStat[]      = _("Stat");
+static const u8 sText_MenuDPadChangeAbility[]   = _("Ability");
+static const u8 sText_MenuDPadChangeNature[]    = _("Nature");
+static const u8 sText_MenuDPadChangeHPType[]    = _("HP Type");
+static const u8 sText_MenuDPadChangeTeraType[]  = _("Tera Type");
 
 // Begin Generic UI Initialization Code
 
@@ -771,8 +916,16 @@ static bool8 StatEditor_DoGfxSetup(void)
         LoadCompressedSpriteSheet(&sSpriteSheet_NatureArrows);
         LoadSpritePalette(&sSpritePal_Misc);
         CreateMonSprite(sStatEditorDataPtr->speciesID);
-        LoadCompressedSpriteSheet(&sSpriteSheet_HiddenPowerType);
-        sStatEditorDataPtr->hpTypeSpriteId = CreateSprite(&sSpriteTemplate_HiddenPowerType, 0, 0, 1);
+        if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
+        {
+            LoadCompressedSpriteSheet(&sSpriteSheet_HiddenPowerType);
+            sStatEditorDataPtr->typeSpriteId = CreateSprite(&sSpriteTemplate_HiddenPowerType, 0, 0, 1);
+        }
+        else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
+        {
+            LoadCompressedSpriteSheet(&sSpriteSheet_TeraType);
+            sStatEditorDataPtr->typeSpriteId = CreateSprite(&sSpriteTemplate_TeraType, 0, 0, 1);
+        }
         sStatEditorDataPtr->natureUpSpriteId = CreateSprite(&sSpriteTemplate_NatureArrow, 0, 0, 1);
         sStatEditorDataPtr->natureDownSpriteId = CreateSprite(&sSpriteTemplate_NatureArrow, 0, 0, 1);
         gMain.state++;
@@ -814,9 +967,10 @@ static void StatEditor_FreeResources(void)
     DestroyNatureArrows();
     DestroyMonSprite();
     DestroyMonSpritesGfxManager(MON_SPR_GFX_MANAGER_A);
-    DestroySprite(&gSprites[sStatEditorDataPtr->hpTypeSpriteId]);
+    DestroySprite(&gSprites[sStatEditorDataPtr->typeSpriteId]);
     FreeSpritePaletteByTag(TAG_MISC);
     FreeSpriteTilesByTag(TAG_MOVE_TYPES);
+    FreeSpriteTilesByTag(TAG_TERA_TYPES);
     StopCryAndClearCrySongs();
     if (P_STAT_EDITOR_MON_SHADOWS)
     {
@@ -895,7 +1049,10 @@ static bool8 StatEditor_LoadGraphics(void)
         sStatEditorDataPtr->gfxLoadState++;
         break;
     case 3:
-        LoadPalette(sMoveTypesPalette, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
+        if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
+            LoadPalette(sMoveTypesPalette, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
+        else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
+            LoadPalette(sTeraTypesPalette, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
         sStatEditorDataPtr->gfxLoadState++;
         break;
     default:
@@ -1106,9 +1263,42 @@ static void SetHiddenPowerType(bool32 forward)
 
 static void UpdateHiddenPowerTypeIcon(void)
 {
-    u8 spriteId = sStatEditorDataPtr->hpTypeSpriteId;
+    u8 spriteId = sStatEditorDataPtr->typeSpriteId;
     struct Sprite *sprite = &gSprites[spriteId];
     enum Type type = GetHiddenPowerType();
+
+    StartSpriteAnim(sprite, type);
+    sprite->oam.paletteNum = gTypesInfo[type].palette;
+    sprite->x = TYPE_ICON_X;
+    sprite->y = TYPE_ICON_Y;
+    sprite->invisible = FALSE;
+    sprite->subpriority = 1;
+}
+
+static void SetTeraTypeSE(bool32 forward)
+{
+    struct Pokemon *mon = GetCurrentPartyMon();
+    enum Type targetType = GetMonData(mon, MON_DATA_TERA_TYPE);
+
+    do
+    {
+        targetType = forward ? (targetType + 1) : (targetType - 1);
+
+        if (targetType > TYPE_STELLAR)
+            targetType = TYPE_NORMAL;
+        if (targetType < TYPE_NORMAL)
+            targetType = TYPE_STELLAR;
+
+    } while (targetType == TYPE_MYSTERY);
+
+    SetMonData(mon, MON_DATA_TERA_TYPE, &targetType);
+}
+
+static void UpdateTeraTypeIcon(void)
+{
+    u8 spriteId = sStatEditorDataPtr->typeSpriteId;
+    struct Sprite *sprite = &gSprites[spriteId];
+    enum Type type = GetMonData(GetCurrentPartyMon(), MON_DATA_TERA_TYPE);
 
     StartSpriteAnim(sprite, type);
     sprite->oam.paletteNum = gTypesInfo[type].palette;
@@ -1296,9 +1486,16 @@ void GetDPadText(void)
     {
         BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
         if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
-            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeHPType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+        {
+            if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
+                PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeHPType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+            else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
+                PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeTeraType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+        }
         else
+        {
             PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeStat, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+        }
     }
 }
 
@@ -1390,7 +1587,10 @@ static void PrintMonStats(void)
     ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, digits);
     PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
 
-    UpdateHiddenPowerTypeIcon();
+    if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
+        UpdateHiddenPowerTypeIcon();
+    else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
+        UpdateTeraTypeIcon();
 
     // Print ability / nature / name
     GetMonNickname(mon, gStringVar2);
@@ -1793,6 +1993,43 @@ static void Task_HPTypeEditMode(u8 taskId)
     PrintMonStats();
 }
 
+static void Task_TeraTypeEditMode(u8 taskId)
+{
+    if (JOY_NEW(B_BUTTON) || JOY_NEW(A_BUTTON))
+    {
+        gTasks[taskId].func = Task_StatEditorMain;
+        PlaySE(SE_SELECT);
+        sStatEditorDataPtr->panelInputMode = PANEL_INPUT_SELECT;
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
+        PrintTitleToWindowMainState();
+        return;
+    }
+
+    struct Pokemon *mon = GetCurrentPartyMon();
+
+    if (JOY_REPEAT(DPAD_RIGHT))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
+        PlaySE(SE_SELECT);
+        SetTeraTypeSE(TRUE);
+        CalculateMonStats(mon);
+    }
+    else if (JOY_REPEAT(DPAD_LEFT))
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
+        PlaySE(SE_SELECT);
+        SetTeraTypeSE(FALSE);
+        CalculateMonStats(mon);
+    }
+    else
+    {
+        sStatEditorDataPtr->pressingArrow = PRESSING_NONE;
+        return;
+    }
+
+    PrintMonStats();
+}
+
 static const u16 sSelectedStatToStatEnum[] = {
     MON_DATA_HP_EV,    MON_DATA_HP_IV,
     MON_DATA_ATK_EV,   MON_DATA_ATK_IV,
@@ -2051,7 +2288,10 @@ static void Task_StatEditorMain(u8 taskId)
                 PlaySE(SE_SELECT);
                 sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
                 PrintTitleToWindowEditState();
-                gTasks[taskId].func = Task_HPTypeEditMode;
+                if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
+                    gTasks[taskId].func = Task_HPTypeEditMode;
+                else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
+                    gTasks[taskId].func = Task_TeraTypeEditMode;
                 return;
             }
 
