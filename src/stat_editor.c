@@ -225,7 +225,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
     {
         .bg = 0,
         .tilemapLeft = 0,
-        .tilemapTop = 11,
+        .tilemapTop = 12,
         .width = 10,
         .height = 3,
         .paletteNum = 15,
@@ -1595,7 +1595,7 @@ static void PrintMonStats(void)
     // Print ability / nature / name
     GetMonNickname(mon, gStringVar2);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NICKNAME)) + 1 : 12;
-    PrintTextOnWindowWithFont(WINDOW_NICKNAME, gStringVar2, xPos, LEFT_NICKNAME_Y, 0, FONT_WHITE, FONT_SHORT_NARROW);
+    PrintTextOnWindowWithFont(WINDOW_NICKNAME, gStringVar2, xPos, 4, 0, FONT_WHITE, FONT_SHORT_NARROW);
 
     StringCopy(gStringVar2, gAbilitiesInfo[ability].name);
     PrintTextOnWindowWithFont(WINDOW_ABILITIES, sText_MenuDPadChangeAbility, 3, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
