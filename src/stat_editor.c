@@ -1510,6 +1510,17 @@ static void PrintTitleToWindowEditState(void)
     CopyWindowToVram(WINDOW_MAIN_HEADER, COPYWIN_FULL);
 }
 
+// Yeah, idk honestly.
+static const u8 sStatsMap[] =
+{
+    [STAT_HP] = 0,
+    [STAT_ATK] = 1,
+    [STAT_DEF] = 2,
+    [STAT_SPEED] = 5,
+    [STAT_SPATK] = 3,
+    [STAT_SPDEF] = 4
+};
+
 static void UpdateNatureArrowSprites(void)
 {
     u32 nature = GetMonData(GetCurrentPartyMon(), MON_DATA_HIDDEN_NATURE);
@@ -1529,11 +1540,11 @@ static void UpdateNatureArrowSprites(void)
     }
 
     upSprite->x = NATURE_ARROW_X;
-    upSprite->y = NATURE_ARROW_BASE_Y + (natureUpStat * STAT_ROW_HEIGHT);
+    upSprite->y = NATURE_ARROW_BASE_Y + (sStatsMap[natureUpStat] * STAT_ROW_HEIGHT);
     upSprite->invisible = FALSE;
 
     downSprite->x = NATURE_ARROW_X;
-    downSprite->y = NATURE_ARROW_BASE_Y + (natureDownStat * STAT_ROW_HEIGHT);
+    downSprite->y = NATURE_ARROW_BASE_Y + (sStatsMap[natureDownStat] * STAT_ROW_HEIGHT);
     downSprite->invisible = FALSE;
 }
 
