@@ -116,7 +116,7 @@ enum Language
 #define BAG_ZCRYSTAL_COUNT 35
 #define BAG_TMHM_COUNT 64
 #define BAG_POKEBALLS_COUNT 28
-#define BAG_OTHERITEMS_COUNT 5
+#define BAG_OTHERITEMS_COUNT 30
 #define BAG_KEYITEMS_COUNT 10
 
 // Number of facilities for Ranking Hall.
