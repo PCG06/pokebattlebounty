@@ -774,16 +774,41 @@ static const struct StatPrintCoords sStatPrintData[] =
     [MON_DATA_SPEED_IV]  = {STARTING_X + THIRD_COLUMN + 2,  STARTING_Y + (STAT_ROW_HEIGHT * 5)},
 };
 
-static const u16 sStatsToPrintActual[] = {
-    MON_DATA_MAX_HP, MON_DATA_ATK, MON_DATA_DEF, MON_DATA_SPEED, MON_DATA_SPATK, MON_DATA_SPDEF,
+static const u16 sActualStatsMap[] = {
+    MON_DATA_MAX_HP,
+    MON_DATA_ATK,
+    MON_DATA_DEF,
+    MON_DATA_SPEED,
+    MON_DATA_SPATK,
+    MON_DATA_SPDEF,
 };
 
-static const u16 sStatsToPrintEVs[] = {
-    MON_DATA_HP_EV, MON_DATA_ATK_EV, MON_DATA_DEF_EV, MON_DATA_SPEED_EV, MON_DATA_SPATK_EV, MON_DATA_SPDEF_EV,
+static const u16 sEVStatsMap[] = {
+    MON_DATA_HP_EV,
+    MON_DATA_ATK_EV,
+    MON_DATA_DEF_EV,
+    MON_DATA_SPEED_EV,
+    MON_DATA_SPATK_EV,
+    MON_DATA_SPDEF_EV,
 };
 
-static const u16 sStatsToPrintIVs[] = {
-    MON_DATA_HP_IV, MON_DATA_ATK_IV, MON_DATA_DEF_IV, MON_DATA_SPEED_IV, MON_DATA_SPATK_IV, MON_DATA_SPDEF_IV,
+static const u16 sIVStatsMap[] = {
+    MON_DATA_HP_IV,
+    MON_DATA_ATK_IV,
+    MON_DATA_DEF_IV,
+    MON_DATA_SPEED_IV,
+    MON_DATA_SPATK_IV,
+    MON_DATA_SPDEF_IV,
+};
+
+static const u8 sStatsMap[] =
+{
+    STAT_HP,
+    STAT_ATK,
+    STAT_DEF,
+    STAT_SPEED,
+    STAT_SPATK,
+    STAT_SPDEF,
 };
 
 static const u8 sGenderColors[2][3] =
@@ -1181,11 +1206,6 @@ static void PlayMonCry(struct Pokemon *mon)
     }
 }
 
-#define HP_TYPE_FROM_BITS(typeBits) \
-    ((((NUMBER_OF_MON_TYPES   - 6) * (typeBits)) / 0x3F + 2 >= TYPE_MYSTERY) \
-     ? (((NUMBER_OF_MON_TYPES - 6) * (typeBits)) / 0x3F + 3) \
-     : (((NUMBER_OF_MON_TYPES - 6) * (typeBits)) / 0x3F + 2))
-
 #define HP_TYPE_BITS(mon) \
     (((GetMonData(mon, MON_DATA_HP_IV)    & 1) << 0) \
    | ((GetMonData(mon, MON_DATA_ATK_IV)   & 1) << 1) \
@@ -1194,19 +1214,92 @@ static void PlayMonCry(struct Pokemon *mon)
    | ((GetMonData(mon, MON_DATA_SPATK_IV) & 1) << 4) \
    | ((GetMonData(mon, MON_DATA_SPDEF_IV) & 1) << 5))
 
+static enum Type GetHiddenPowerTypeFromBits(u32 bits)
+{
+    enum Type hpTypes[NUMBER_OF_MON_TYPES];
+    u32 hpTypeCount = 0;
+
+    for (u32 i = 0; i < NUMBER_OF_MON_TYPES; i++)
+    {
+        if (gTypesInfo[i].isHiddenPowerType)
+            hpTypes[hpTypeCount++] = i;
+    }
+
+    enum Type moveType = ((hpTypeCount - 1) * bits) / 63;
+    return hpTypes[moveType];
+}
+
 static enum Type GetHiddenPowerType(void)
 {
     struct Pokemon *mon = GetCurrentPartyMon();
-    return (HP_TYPE_FROM_BITS(HP_TYPE_BITS(mon)) | F_DYNAMIC_TYPE_IGNORE_PHYSICALITY) & 0x3F;
+    u32 curBits = HP_TYPE_BITS(mon);
+
+    return GetHiddenPowerTypeFromBits(curBits);
+}
+
+static u32 GetBitDifferenceCount(u32 a, u32 b)
+{
+    u32 diff = a ^ b;
+    u32 count = 0;
+
+    while (diff)
+    {
+        count += diff & 1;
+        diff >>= 1;
+    }
+
+    return count;
+}
+
+static u32 GetClosestHiddenPowerBits(u32 curBits, enum Type targetType)
+{
+    u32 bestBits = curBits;
+    u32 bestCost = 7;
+
+    for (u32 bits = 0; bits <= 63; bits++)
+    {
+        if (GetHiddenPowerTypeFromBits(bits) != targetType)
+            continue;
+
+        u32 cost = GetBitDifferenceCount(curBits, bits);
+
+        if (cost < bestCost)
+        {
+            bestCost = cost;
+            bestBits = bits;
+        }
+    }
+
+    return bestBits;
+}
+
+static void ApplyHiddenPowerBits(struct Pokemon *mon, u32 curBits, u32 bestBits)
+{
+    for (u32 i = STAT_HP; i < NUM_STATS; i++)
+    {
+        if (!((curBits ^ bestBits) & (1u << i)))
+            continue;
+
+        u32 iv = GetMonData(mon, sIVStatsMap[i]);
+
+        if (iv == 0)
+            iv = 1;
+        else if (iv == MAX_PER_STAT_IVS)
+            iv = MAX_PER_STAT_IVS - 1;
+        else if (iv & 1)
+            iv--;
+        else
+            iv++;
+
+        SetMonData(mon, sIVStatsMap[i], &iv);
+    }
 }
 
 static void SetHiddenPowerType(bool32 forward)
 {
     struct Pokemon *mon = GetCurrentPartyMon();
-    u32 curBits    = HP_TYPE_BITS(mon);
-    enum Type targetType = HP_TYPE_FROM_BITS(curBits);
-    u32 bestBits   = curBits;
-    u32 bestCost   = 7;
+    u32 curBits = HP_TYPE_BITS(mon);
+    enum Type targetType = GetHiddenPowerTypeFromBits(curBits);
 
     do
     {
@@ -1219,46 +1312,9 @@ static void SetHiddenPowerType(bool32 forward)
 
     } while (targetType == TYPE_MYSTERY);
 
-    // That's 63. I don't like using hexa here but did for consistency
-    for (u32 bits = 0; bits <= 0x3F; bits++)
-    {
-        if (HP_TYPE_FROM_BITS(bits) == targetType)
-        {
-            u32 diff = curBits ^ bits;
-            u32 cost = 0;
+    u32 bestBits = GetClosestHiddenPowerBits(curBits, targetType);
 
-            while (diff)
-            {
-                cost += diff & 1;
-                diff >>= 1;
-            }
-
-            if (cost < bestCost)
-            {
-                bestCost = cost;
-                bestBits = bits;
-            }
-        }
-    }
-
-    for (u32 i = STAT_HP; i < NUM_STATS; i++)
-    {
-        if ((curBits ^ bestBits) & (1u << i))
-        {
-            u32 iv = GetMonData(mon, sStatsToPrintIVs[i]);
-
-            if (iv == 0)
-                iv = 1;
-            else if (iv == MAX_PER_STAT_IVS)
-                iv = MAX_PER_STAT_IVS - 1;
-            else if (iv & 1)
-                iv--;
-            else
-                iv++;
-
-            SetMonData(mon, sStatsToPrintIVs[i], &iv);
-        }
-    }
+    ApplyHiddenPowerBits(mon, curBits, bestBits);
 }
 
 static void UpdateHiddenPowerTypeIcon(void)
@@ -1510,17 +1566,6 @@ static void PrintTitleToWindowEditState(void)
     CopyWindowToVram(WINDOW_MAIN_HEADER, COPYWIN_FULL);
 }
 
-// Yeah, idk honestly.
-static const u8 sStatsMap[] =
-{
-    [STAT_HP] = 0,
-    [STAT_ATK] = 1,
-    [STAT_DEF] = 2,
-    [STAT_SPEED] = 5,
-    [STAT_SPATK] = 3,
-    [STAT_SPDEF] = 4
-};
-
 static void UpdateNatureArrowSprites(void)
 {
     u32 nature = GetMonData(GetCurrentPartyMon(), MON_DATA_HIDDEN_NATURE);
@@ -1572,26 +1617,26 @@ static void PrintMonStats(void)
     // Print Mon Stats
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
     {
-        currentStat = GetMonData(mon, sStatsToPrintActual[i]);
+        currentStat = GetMonData(mon, sActualStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
-        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sStatsToPrintActual[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sStatsToPrintActual[i]].y, 0, FONT_BLACK);
+        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sActualStatsMap[i]].x;
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sActualStatsMap[i]].y, 0, FONT_BLACK);
 
         // EVs
-        currentStat = GetMonData(mon, sStatsToPrintEVs[i]);
+        currentStat = GetMonData(mon, sEVStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         sStatEditorDataPtr->evTotal += currentStat;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
-        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sStatsToPrintEVs[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sStatsToPrintEVs[i]].y, 0, FONT_BLACK);
+        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sEVStatsMap[i]].x;
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sEVStatsMap[i]].y, 0, FONT_BLACK);
 
         // IVs
-        currentStat = GetMonData(mon, sStatsToPrintIVs[i]);
+        currentStat = GetMonData(mon, sIVStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
-        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sStatsToPrintIVs[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sStatsToPrintIVs[i]].y, 0, FONT_BLACK);
+        xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sIVStatsMap[i]].x;
+        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sIVStatsMap[i]].y, 0, FONT_BLACK);
     }
 
     digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
