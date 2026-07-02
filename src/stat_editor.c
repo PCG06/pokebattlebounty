@@ -193,7 +193,7 @@ static const struct BgTemplate sStatEditorBgTemplates[] =
     }
 };
 
-static const struct WindowTemplate sMenuWindowTemplates[] = 
+static const struct WindowTemplate sMenuWindowTemplates[] =
 {
     [WINDOW_MAIN_HEADER] = 
     {
@@ -806,14 +806,13 @@ static const u16 sIVStatsMap[] = {
     MON_DATA_SPDEF_IV,
 };
 
-static const u8 sStatsMap[] =
-{
-    STAT_HP,
-    STAT_ATK,
-    STAT_DEF,
-    STAT_SPEED,
-    STAT_SPATK,
-    STAT_SPDEF,
+static const u8 sStatsMap[] = {
+    [STAT_HP] = 0,
+    [STAT_ATK] = 1,
+    [STAT_DEF] = 2,
+    [STAT_SPATK] = 3,
+    [STAT_SPDEF] = 4,
+    [STAT_SPEED] = 5,
 };
 
 static const u8 sGenderColors[2][3] =
