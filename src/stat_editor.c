@@ -940,8 +940,6 @@ static bool8 StatEditor_DoGfxSetup(void)
     case 4:
         sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
         UpdateMoveRelearnerState();
-        FreeMonIconPalettes();
-        LoadMonIconPalettes();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_NatureArrows);
