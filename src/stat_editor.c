@@ -1,5 +1,7 @@
 #include "global.h"
 #include "battle.h"
+#include "battle_factory.h"
+#include "battle_tent.h"
 #include "bg.h"
 #include "data.h"
 #include "decompress.h"
@@ -62,6 +64,7 @@ struct StatEditorResources
     u8 rightPanelRow;
     u8 rightPanelSelectedStat;
     u8 pressingArrow;
+    bool8 hasRelearnableMoves;
     bool8 monAnimPlayed; // tracks if the mon's cry has been played at least once
     enum Type hpType;
     enum Species speciesID;
@@ -161,6 +164,7 @@ static void PlayMonCry(struct Pokemon *mon);
 static void RunMonAnimTimer(void);
 static void PrintMonStats(void);
 static struct Pokemon *GetCurrentPartyMon(void);
+static void UpdateMoveRelearnerState(void);
 static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
 static void DestroySelectors(void);
@@ -935,6 +939,7 @@ static bool8 StatEditor_DoGfxSetup(void)
         break;
     case 4:
         sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
+        UpdateMoveRelearnerState();
         FreeMonIconPalettes();
         LoadMonIconPalettes();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
@@ -1190,6 +1195,37 @@ static u8 CreateStatEditorMonSprite(struct Pokemon *mon, bool32 isShadow)
     }
 
     return spriteId;
+}
+
+static bool32 HasAnyRelearnableMoves(enum MoveRelearnerStates state)
+{
+    struct BoxPokemon *boxMon = &GetCurrentPartyMon()->box;
+    return CanBoxMonRelearnMoves(boxMon, state);
+}
+
+static void UpdateMoveRelearnerState(void)
+{
+    sStatEditorDataPtr->hasRelearnableMoves = FALSE;
+    gMoveRelearnerState = MOVE_RELEARNER_LEVEL_UP_MOVES;
+
+    for (enum MoveRelearnerStates i = MOVE_RELEARNER_LEVEL_UP_MOVES; i < MOVE_RELEARNER_COUNT; i++)
+    {
+        u32 state = (gMoveRelearnerState + i) % MOVE_RELEARNER_COUNT;
+        if (HasAnyRelearnableMoves(state))
+        {
+            sStatEditorDataPtr->hasRelearnableMoves = TRUE;
+            gMoveRelearnerState = state;
+            break;
+        }
+    }
+}
+
+static inline bool32 ShouldShowMoveRelearner(void)
+{
+    return (P_STAT_EDITOR_MOVE_RELEARNER
+         && sStatEditorDataPtr->hasRelearnableMoves
+         && !InBattleFactory()
+         && !InSlateportBattleTent());
 }
 
 static void PlayMonCry(struct Pokemon *mon)
@@ -1515,7 +1551,7 @@ static void PrintTitleToWindowMainState(void)
         PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
     }
 
-    if (P_STAT_EDITOR_MOVE_RELEARNER)
+    if (ShouldShowMoveRelearner())
     {
         BlitBitmapToWindow(WINDOW_MAIN_HEADER, sStart_ButtonGfx, 65, BUTTON_Y, 24, 8);
         PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuStartButtonMoves, 93, 0, 0, FONT_WHITE, FONT_NARROW);
@@ -1813,6 +1849,8 @@ static void ReloadNewPokemon(u8 taskId)
     DestroyMonSprite();
     sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
     gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
+    UpdateMoveRelearnerState();
+    PrintTitleToWindowMainState();
     gTasks[taskId].func = Task_DelayedSpriteLoad;
     gTasks[taskId].data[11] = 0;
 }
@@ -2263,7 +2301,7 @@ static void Task_StatEditorMain(u8 taskId)
         return;
     }
 
-    if (JOY_NEW(START_BUTTON) && P_STAT_EDITOR_MOVE_RELEARNER)
+    if (JOY_NEW(START_BUTTON) && ShouldShowMoveRelearner())
     {
         PlaySE(SE_SELECT);
         gRelearnMode = RELEARN_MODE_STAT_EDITOR;
