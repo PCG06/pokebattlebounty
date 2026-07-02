@@ -228,14 +228,13 @@ TEST("Item names fit on Shop Screen")
 TEST("Item descriptions fit on Bag and Shop Screen")
 {
     u32 i;
-    const u32 widthPx = 102;
-    u32 fontId = FONT_NORMAL;
+    const u32 fontId = FONT_NORMAL, widthPx = 102;
     enum Item item = ITEM_NONE;
     for (i = 1; i < ITEMS_COUNT; i++)
     {
-        PARAMETRIZE_LABEL("%S", GetItemDescription(i)) { item = i; fontId = (GetItemPocket(i) == POCKET_TM_HM) ? FONT_NARROW : fontId; }
+        PARAMETRIZE_LABEL("%S", gItemsInfo[i].description) { item = i; }
     }
-    EXPECT_LE(GetStringWidth(fontId, GetItemDescription(item), 0), widthPx);
+    EXPECT_LE(GetStringWidth(fontId, gItemsInfo[item].description, 0), widthPx);
 }
 
 TEST("Species names fit on Battle Screen HP box")

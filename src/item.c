@@ -16,8 +16,6 @@
 #include "battle_pyramid_bag.h"
 #include "graphics.h"
 #include "shop_criteria.h"
-#include "line_break.h"
-#include "move.h"
 #include "constants/battle.h"
 #include "constants/items.h"
 #include "constants/moves.h"
@@ -798,14 +796,6 @@ bool32 RemovePyramidBagItem(enum Item itemId, u16 count)
     }
 }
 
-static const u8 *CreateTMItemDescription(u16 itemId)
-{
-    StringCopy(gStringVar4, GetMoveDescription(ItemIdToBattleMoveId(itemId)));
-    StripLineBreaks(gStringVar4);
-    BreakStringAutomatic(gStringVar4, 102, 3, FONT_NARROW, HIDE_SCROLL_PROMPT);
-    return gStringVar4;
-}
-
 static enum Item SanitizeItemId(enum Item itemId)
 {
     assertf(itemId < ITEMS_COUNT, "invalid item: %d", itemId)
@@ -879,11 +869,7 @@ u32 GetItemHoldEffectParam(enum Item itemId)
 
 const u8 *GetItemDescription(enum Item itemId)
 {
-    itemId = SanitizeItemId(itemId);
-
-    if (GetItemPocket(itemId) == POCKET_TM_HM)
-        return CreateTMItemDescription(itemId);
-    return gItemsInfo[itemId].description;
+    return gItemsInfo[SanitizeItemId(itemId)].description;
 }
 
 u8 GetItemImportance(enum Item itemId)
