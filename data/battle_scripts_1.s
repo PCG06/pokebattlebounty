@@ -197,14 +197,17 @@ BattleScript_ItemStatChange::
 BattleScript_ConsumableBerryStatRaise::
 	call BattleScript_ItemPopUp_Scripting
  	playanimation BS_SCRIPTING, B_ANIM_HELD_ITEM_BERRY
-	call BattleScript_ConsumableItemStatRaise
+	trybattlerstatchange BS_SCRIPTING, STAT_CHANGE_ITEM | STAT_CHANGE_CERTAIN
+	removeitem BS_SCRIPTING
 	return
 
 BattleScript_ConsumableBerryStatRaiseRipen::
 	call BattleScript_AbilityPopUp
+	waitabilitypopup
 	call BattleScript_ItemPopUp_Scripting
  	playanimation BS_SCRIPTING, B_ANIM_HELD_ITEM_BERRY
-	call BattleScript_ConsumableItemStatRaise
+	trybattlerstatchange BS_SCRIPTING, STAT_CHANGE_ITEM | STAT_CHANGE_CERTAIN
+	removeitem BS_SCRIPTING
 	return
 
 BattleScript_ConsumableItemStatRaise::
@@ -1227,6 +1230,8 @@ BattleScript_EffectGuardSwap::
 BattleScript_EffectSpeedSwap::
 	attackcanceler
 	swapstats STAT_SPEED
+	setvolatile BS_ATTACKER, VOLATILE_SPEED_SWAP, 1
+	setvolatile BS_TARGET, VOLATILE_SPEED_SWAP, 1
 	attackanimation
 	waitanimation
 	printstring STRINGID_ATTACKERSWITCHEDSTATWITHTARGET
@@ -4453,6 +4458,7 @@ BattleScript_MoveEffectRecoil::
 
 BattleScript_ItemSteal::
 	playanimation BS_EFFECT_BATTLER, B_ANIM_ITEM_STEAL
+BattleScript_ItemStealNoAnim::
 	printstring STRINGID_PKMNSTOLEITEM
 	waitmessage B_WAIT_TIME_LONG
 	tryactivateabilitywithabilityshield BS_ATTACKER, FALSE
@@ -5079,8 +5085,11 @@ BattleScript_HurtAttackerNoMsg:
 	return
 
 BattleScript_RoughSkinActivates::
+	flushtextbox
 	call BattleScript_AbilityPopUp
+	waitmessage B_WAIT_TIME_LONG
 	call BattleScript_HurtAttackerNoMsg
+	waitabilitypopup
 	return
 
 BattleScript_RockyHelmetActivates::
@@ -5218,6 +5227,7 @@ BattleScript_BerryCureStatusRet::
 	waitmessage B_WAIT_TIME_LONG
 	updatestatusicon BS_SCRIPTING
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_BerryCureStatusAndConfusionRet::
@@ -5229,6 +5239,7 @@ BattleScript_BerryCureStatusAndConfusionRet::
 	printstring STRINGID_PKMNSITEMSNAPPEDOUT
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_GemActivates::
@@ -5247,6 +5258,7 @@ BattleScript_BerryReduceDmg::
 	printstring STRINGID_BERRYDMGREDUCES
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_BerryCureConfusionRet::
@@ -5254,6 +5266,7 @@ BattleScript_BerryCureConfusionRet::
 	printstring STRINGID_PKMNSITEMSNAPPEDOUT
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_MentalHerbCureRet::
@@ -5334,10 +5347,11 @@ BattleScript_ItemHealHP_RemoveItem::
 	return
 
 BattleScript_ItemHealHP_RemoveItemRet_AnimContinue:
-	playanimation BS_ATTACKER, B_ANIM_SIMPLE_HEAL
+	playanimation BS_SCRIPTING, B_ANIM_SIMPLE_HEAL
 	healthbarupdate BS_SCRIPTING, PASSIVE_HP_UPDATE
 	datahpupdate BS_SCRIPTING, PASSIVE_HP_UPDATE
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_BerryPPHeal::
@@ -5351,6 +5365,7 @@ BattleScript_BerryPPHeal_Anim:
 	printstring STRINGID_PKMNSITEMRESTOREDPP
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_AirBalloonMsgInRet::
@@ -5420,6 +5435,14 @@ BattleScript_SelectingNotAllowedMoveAssaultVestInPalace::
 	printstring STRINGID_ASSAULTVESTDOESNTALLOW
 	goto BattleScript_SelectingUnusableMoveInPalace
 
+BattleScript_SelectingCantUseMove::
+	printselectionstring STRINGID_CANTUSEMOVE
+	endselectionscript
+
+BattleScript_SelectingCantUseMoveInPalace::
+	printstring STRINGID_CANTUSEMOVE
+	goto BattleScript_SelectingUnusableMoveInPalace
+
 BattleScript_SelectingNotAllowedPlaceholder::
 	printselectionstring STRINGID_NOTDONEYET
 	endselectionscript
@@ -5451,13 +5474,16 @@ BattleScript_BerryConfuseHealRet_Anim:
 	datahpupdate BS_SCRIPTING, PASSIVE_HP_UPDATE
 	seteffectprimary BS_SCRIPTING, BS_SCRIPTING, MOVE_EFFECT_CONFUSION
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_BerryFocusEnergy::
+	call BattleScript_ItemPopUp_Scripting
 	playanimation BS_SCRIPTING, B_ANIM_HELD_ITEM_BERRY
 	printstring STRINGID_PKMNUSEDXTOGETPUMPED
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_ActionSelectionItemsCantBeUsed::
@@ -5684,29 +5710,36 @@ BattleScript_QuickDrawActivation::
 
 BattleScript_CustapBerryActivation::
 	flushtextbox
+	call BattleScript_ItemPopUp_Scripting
 	playanimation BS_ATTACKER, B_ANIM_HELD_ITEM_BERRY
 	waitanimation
 	printstring STRINGID_CANACTFASTERTHANKSTO
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_ATTACKER
+	waitabilitypopup
 	end2
 
 BattleScript_MicleBerryActivate::
+	call BattleScript_ItemPopUp_Scripting
 	jumpifability BS_SCRIPTING, ABILITY_RIPEN, BattleScript_MicleBerryActivateRet_Ripen
 	goto BattleScript_MicleBerryActivateRet_Anim
 BattleScript_MicleBerryActivateRet_Ripen:
+	waitabilitypopup
 	call BattleScript_AbilityPopUpScripting
 BattleScript_MicleBerryActivateRet_Anim:
 	playanimation BS_SCRIPTING, B_ANIM_HELD_ITEM_BERRY
 	printstring STRINGID_MICLEBERRYACTIVATES
 	waitmessage B_WAIT_TIME_LONG
 	removeitem BS_SCRIPTING
+	waitabilitypopup
 	return
 
 BattleScript_JabocaRowapBerryActivates::
+	call BattleScript_ItemPopUp_Scripting
 	jumpifability BS_TARGET, ABILITY_RIPEN, BattleScript_JabocaRowapBerryActivate_Ripen
 	goto BattleScript_JabocaRowapBerryActivate_Anim
 BattleScript_JabocaRowapBerryActivate_Ripen:
+	waitabilitypopup
 	call BattleScript_AbilityPopUp
 BattleScript_JabocaRowapBerryActivate_Anim:
 	jumpifabsent BS_TARGET, BattleScript_JabocaRowapBerryActivate_Dmg   @ dont play the animation for a fainted target
@@ -6385,3 +6418,9 @@ BattleScript_WildBattleVictory::
 BattleScript_WildBattleVictoryRet:
 	handlefailedvictorycatch
 	return
+
+BattleScript_BelchFails::
+	pause B_WAIT_TIME_SHORT
+	printstring STRINGID_BELCHCANTSELECT
+	waitmessage B_WAIT_TIME_LONG
+	goto BattleScript_MoveEnd
