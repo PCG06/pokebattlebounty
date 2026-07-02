@@ -266,6 +266,7 @@ static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_butt
 static const u8 sLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
 static const u8 sStart_ButtonGfx[]      = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
 static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
+static const u8 sDPadLR_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_lr_button.png", ".4bpp");
 static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
 static const u32 sMoveTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
 static const u16 sMoveTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
@@ -1527,30 +1528,27 @@ void GetDPadText(void)
 {
     if (sStatEditorDataPtr->panel == PANEL_LEFT)
     {
+        BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPadLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
+
         if (sStatEditorDataPtr->leftRow == LEFT_ROW_ABILITY)
-        {
-            BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
-            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeAbility, 27, 0, 0, FONT_WHITE, FONT_NARROW);
-        }
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeAbility, 20, 0, 0, FONT_WHITE, FONT_NARROW);
         else if (sStatEditorDataPtr->leftRow == LEFT_ROW_NATURE)
-        {
-            BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
-            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeNature, 27, 0, 0, FONT_WHITE, FONT_NARROW);
-        }
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeNature, 20, 0, 0, FONT_WHITE, FONT_NARROW);
     }
     else if (sStatEditorDataPtr->panel == PANEL_RIGHT)
     {
-        BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 24, 8);
         if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
         {
+            BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPadLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
             if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
-                PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeHPType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+                PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeHPType, 20, 0, 0, FONT_WHITE, FONT_NARROW);
             else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
-                PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeTeraType, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+                PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeTeraType, 20, 0, 0, FONT_WHITE, FONT_NARROW);
         }
         else
         {
-            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeStat, 27, 0, 0, FONT_WHITE, FONT_NARROW);
+            BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPad_ButtonGfx, 0, BUTTON_Y, 16, 8);
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuDPadChangeStat, 20, 0, 0, FONT_WHITE, FONT_NARROW);
         }
     }
 }
