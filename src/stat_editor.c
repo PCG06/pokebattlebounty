@@ -164,7 +164,7 @@ static void PlayMonCry(struct Pokemon *mon);
 static void RunMonAnimTimer(void);
 static void PrintMonStats(void);
 static struct Pokemon *GetCurrentPartyMon(void);
-static void UpdateMoveRelearnerState(void);
+static bool32 HasAnyRelearnableMoves(void);
 static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
 static void DestroySelectors(void);
@@ -938,7 +938,7 @@ static bool8 StatEditor_DoGfxSetup(void)
         break;
     case 4:
         sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
-        UpdateMoveRelearnerState();
+        sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_NatureArrows);
@@ -1194,27 +1194,11 @@ static u8 CreateStatEditorMonSprite(struct Pokemon *mon, bool32 isShadow)
     return spriteId;
 }
 
-static bool32 HasAnyRelearnableMoves(enum MoveRelearnerStates state)
+static bool32 HasAnyRelearnableMoves(void)
 {
+    gMoveRelearnerState = MOVE_RELEARNER_TEACHABLE_MOVES;
     struct BoxPokemon *boxMon = &GetCurrentPartyMon()->box;
-    return CanBoxMonRelearnMoves(boxMon, state);
-}
-
-static void UpdateMoveRelearnerState(void)
-{
-    sStatEditorDataPtr->hasRelearnableMoves = FALSE;
-    gMoveRelearnerState = MOVE_RELEARNER_LEVEL_UP_MOVES;
-
-    for (enum MoveRelearnerStates i = MOVE_RELEARNER_LEVEL_UP_MOVES; i < MOVE_RELEARNER_COUNT; i++)
-    {
-        u32 state = (gMoveRelearnerState + i) % MOVE_RELEARNER_COUNT;
-        if (HasAnyRelearnableMoves(state))
-        {
-            sStatEditorDataPtr->hasRelearnableMoves = TRUE;
-            gMoveRelearnerState = state;
-            break;
-        }
-    }
+    return CanBoxMonRelearnMoves(boxMon, gMoveRelearnerState);
 }
 
 static inline bool32 ShouldShowMoveRelearner(void)
@@ -1846,7 +1830,7 @@ static void ReloadNewPokemon(u8 taskId)
     DestroyMonSprite();
     sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
     gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
-    UpdateMoveRelearnerState();
+    sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
     PrintTitleToWindowMainState();
     gTasks[taskId].func = Task_DelayedSpriteLoad;
     gTasks[taskId].data[11] = 0;
