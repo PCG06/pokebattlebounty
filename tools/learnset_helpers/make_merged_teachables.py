@@ -71,6 +71,14 @@ def prepare_output(all_learnables, special_movesets, repo_teaching_types, header
 
         learnables = set(all_learnables.get(species_upper, []))
 
+        if species_upper == "SMEARGLE":
+            all_moves = set()
+
+            for moveset in all_learnables.values():
+                all_moves |= set(moveset)
+
+            learnables = all_moves - set(special_movesets["sketchBanned"])
+
         if teaching_type == "ALL_TEACHABLES":
             learnables |= set(special_movesets["universalMoves"])
             learnables -= set(special_movesets["signatureTeachables"])

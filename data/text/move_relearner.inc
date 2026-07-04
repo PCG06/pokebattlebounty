@@ -53,6 +53,9 @@ MoveRelearner_Text_TutorMoveLWR::
 MoveRelearner_Text_MoveLWR::
 	.string "move$"
 
+MoveRelearner_Text_SketchedMoveLWR::
+	.string "sketched move$"
+
 MoveRelearner_Text_WhichXmoveShouldTeach:
 	.string "Which {STR_VAR_3} should I teach?$"
 

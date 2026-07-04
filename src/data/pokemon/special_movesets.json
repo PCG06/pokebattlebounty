@@ -33,5 +33,21 @@
   "extraTutors":
     [
       
+    ],
+  "sketchBanned":
+    [
+      "MOVE_NONE",
+      "MOVE_STRUGGLE",
+      "MOVE_CHATTER",
+      "MOVE_DARK_VOID",
+      "MOVE_V_CREATE",
+      "MOVE_HYPERSPACE_FURY",
+      "MOVE_REVIVAL_BLESSING",
+      "MOVE_BLAZING_TORQUE",
+      "MOVE_WICKED_TORQUE",
+      "MOVE_NOXIOUS_TORQUE",
+      "MOVE_COMBAT_TORQUE",
+      "MOVE_MAGICAL_TORQUE",
+      "MOVE_TERA_STARSTORM"
     ]
 }

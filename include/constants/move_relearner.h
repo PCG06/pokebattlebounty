@@ -2,9 +2,9 @@
 #define GUARD_CONSTANTS_MOVE_RELEARNER_H
 
 // Max number of moves shown by the move relearner.
-// Increased from 25 to 350 so Mew can display all the moves.
+// Increased from 25 to MOVES_COUNT so Smeargle can display all the moves.
 // If you plan on adding more TMs, increase this number too.
-#define MAX_RELEARNER_MOVES 350
+#define MAX_RELEARNER_MOVES MOVES_COUNT
 
 // Move Relearner menu change constants
 enum MoveRelearnerStates

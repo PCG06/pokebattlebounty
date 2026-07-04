@@ -66,7 +66,7 @@ static EWRAM_DATA struct
     u16 movesToLearn[MAX_RELEARNER_MOVES];
     struct ListMenuItem menuItems[MAX_RELEARNER_MOVES + 1];
     u8 mainTask;
-    u8 numMenuChoices;
+    u16 numMenuChoices;
     u8 numToShowAtOnce;
     u8 moveListMenuTask;
     u8 moveListScrollArrowTask;
@@ -447,7 +447,9 @@ static bool32 GameHasDifferentRelearners(void)
 
 static void StoreMoveText(void)
 {
-    if (GameHasDifferentRelearners() || gRelearnMode == RELEARN_MODE_SCRIPT)
+    if (GetBoxMonData(GetSelectedBoxMonFromPcOrParty(), MON_DATA_SPECIES) == SPECIES_SMEARGLE)
+        StringCopy(gStringVar3, MoveRelearner_Text_SketchedMoveLWR);
+    else if (GameHasDifferentRelearners() || gRelearnMode == RELEARN_MODE_SCRIPT)
         StringCopy(gStringVar3, sRelearnTypes[gMoveRelearnerState].moveText);
     else
         StringCopy(gStringVar3, MoveRelearner_Text_MoveLWR);
@@ -811,6 +813,8 @@ static void CreateLearnableMovesList(void)
     struct BoxPokemon *boxmon = GetSelectedBoxMonFromPcOrParty();
     if (gRelearnMode == RELEARN_MODE_SCRIPT || sRelearnTypes[gMoveRelearnerState].isActive())
         sMoveRelearnerStruct->numMenuChoices = sRelearnTypes[gMoveRelearnerState].getMoves(boxmon, sMoveRelearnerStruct->movesToLearn);
+
+    DebugPrintf("%S: numMenuChoices: %d", GetSpeciesName(GetBoxMonData(boxmon, MON_DATA_SPECIES)), sMoveRelearnerStruct->numMenuChoices);
 
     if (P_SORT_MOVES)
         SortMovesAlphabetically(sMoveRelearnerStruct->movesToLearn, sMoveRelearnerStruct->numMenuChoices);
