@@ -6419,3 +6419,15 @@ BattleScript_BelchFails::
 	printstring STRINGID_BELCHCANTSELECT
 	waitmessage B_WAIT_TIME_LONG
 	goto BattleScript_MoveEnd
+
+BattleScript_ElectroBoostChargeUp::
+	printstring STRINGID_ELECTROBOOSTCHARGEUP
+	waitmessage B_WAIT_TIME_LONG
+	playanimation_var BS_ATTACKER, sB_ANIM_ARG1
+	trystatchanges BS_ATTACKER, STAT_CHANGE_NO_FLAGS
+	return
+
+BattleScript_ElectroBoostEnds::
+	printstring STRINGID_ELECTROBOOSTENDS
+	waitmessage B_WAIT_TIME_LONG
+	return

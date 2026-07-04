@@ -445,6 +445,8 @@ enum TypeSideHazard
 #define STATUS_FIELD_PSYCHIC_TERRAIN                (1 << 9)
 #define STATUS_FIELD_ION_DELUGE                     (1 << 10)
 #define STATUS_FIELD_FAIRY_LOCK                     (1 << 11)
+// New Custom Status Field
+#define STATUS_FIELD_ELECTRO_BOOST                  (1 << 12)
 
 #define STATUS_FIELD_TERRAIN_ANY        (STATUS_FIELD_GRASSY_TERRAIN | STATUS_FIELD_MISTY_TERRAIN | STATUS_FIELD_ELECTRIC_TERRAIN | STATUS_FIELD_PSYCHIC_TERRAIN)
 
@@ -843,6 +845,9 @@ enum FaintedActions
     F(STARTING_STATUS_WEATHER_SNOW_TEMPORARY,         weatherSnowTemporary,       (u32, 1)) /* Temporary Snow */                           \
     F(STARTING_STATUS_WEATHER_FOG,                    weatherFog,                 (u32, 1)) /* Permanent Fog */                            \
     F(STARTING_STATUS_WEATHER_FOG_TEMPORARY,          weatherFogTemporary,        (u32, 1)) /* Temporary Fog */                            \
+    /* Custom Statuses */                                                                                                                  \
+    F(STARTING_STATUS_ELECTRO_BOOST,                  electroBoost,               (u32, 1)) /* Electro Boost (Permanent) */                \
+    F(STARTING_STATUS_ELECTRO_BOOST_TEMPORARY,        electroBoostTemporary,      (u32, 1)) /* Electro Boost Temporary (5 turns) */        \
 
 #define UNPACK_STARTING_STATUS_ENUMS(_enum, ...) _enum,
 
