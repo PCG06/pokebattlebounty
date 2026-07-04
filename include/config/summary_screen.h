@@ -51,4 +51,8 @@ Info taken from https://bulbapedia.bulbagarden.net/wiki/Stats_judge.
 #define P_SUMMARY_SCREEN_MOVE_RELEARNER  FALSE  // If TRUE, shows an option for Pokémon to relearn moves on the summary screen moves page.
 #define P_SUMMARY_MOVE_RELEARNER_FULL_PP TRUE   // If TRUE, the move relearner in the summary screen restores relearned moves' PP to full.
 
+// Custom Relearners
+#define P_TEACHABLE_MOVES_RELEARNER      TRUE   // If TRUE, it enables the Pokémon to learn from its pool of teachables moves.
+#define P_EVENT_MOVES_RELEARNER          TRUE   // If TRUE, it enables the Pokemon to learn from its pool of event moves.
+
 #endif // GUARD_CONFIG_SUMMARY_SCREEN_H

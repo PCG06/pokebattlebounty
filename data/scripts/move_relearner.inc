@@ -12,7 +12,8 @@ Common_EventScript_MoveRelearnerDynMultiChoice::
 	dynmultipush MoveRelearner_Text_TMMoves, 2
 	dynmultipush MoveRelearner_Text_TutormoveMoves, 3
 	dynmultipush MoveRelearner_Text_TeachableMoves, 4
-	dynmultipush MoveRelearner_Text_SeeYa, 4
+	dynmultipush MoveRelearner_Text_EventMoves, 5
+	dynmultipush MoveRelearner_Text_SeeYa, 6
 	dynmultistack 0, 0, FALSE, 6, 0, 0, DYN_MULTICHOICE_CB_NONE
 	closemessage
 	switch VAR_RESULT
@@ -21,7 +22,8 @@ Common_EventScript_MoveRelearnerDynMultiChoice::
 	case 2, MoveRelearner_EventScript_TeachTMMoves
 	case 3, MoveRelearner_EventScript_TeachTutorMoves
 	case 4, MoveRelearner_EventScript_TeachTeachableMoves
-	case 5, MoveRelearner_EventScript_PleaseComeAgain
+	case 5, MoveRelearner_EventScript_TeachEventMoves
+	case 6, MoveRelearner_EventScript_PleaseComeAgain
 MoveRelearner_EventScript_PleaseComeAgain:
 	msgbox MoveRelearner_Text_ThankYouComeAgain, MSGBOX_DEFAULT
 	releaseall
@@ -41,6 +43,10 @@ MoveRelearner_EventScript_PushTutorMoves:
 
 MoveRelearner_EventScript_PushTeachableMoves:
 	dynmultipush MoveRelearner_Text_TeachableMoves, 4
+	return
+
+MoveRelearner_EventScript_PushEventMoves:
+	dynmultipush MoveRelearner_Text_EventMoves, 5
 	return
 
 MoveRelearner_EventScript_TeachLevelUpMoves:
@@ -70,6 +76,12 @@ MoveRelearner_EventScript_TeachTutorMoves:
 MoveRelearner_EventScript_TeachTeachableMoves:
 	setmoverelearnerstate MOVE_RELEARNER_TEACHABLE_MOVES
 	bufferstring STR_VAR_3, MoveRelearner_Text_MoveLWR
+	goto MoveRelearner_EventScript_TeachMove
+	end
+
+MoveRelearner_EventScript_TeachEventMoves:
+	setmoverelearnerstate MOVE_RELEARNER_EVENT_MOVES
+	bufferstring STR_VAR_3, MoveRelearner_Text_EventMoveLWR
 	goto MoveRelearner_EventScript_TeachMove
 	end
 

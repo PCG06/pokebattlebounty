@@ -206,7 +206,9 @@ struct PokedexView
     enum Species formSpecies;
     u16 originalSearchSelectionNum;
     u16 moveSelected;
+    u16 movesTotal;
     u16 numTeachableMoves;
+    u8 numEventMoves;
     bool8 justScrolled;
     u8 typeIconSpriteIds[2];
     u8 statBarsSpriteId;
