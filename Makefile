@@ -557,6 +557,9 @@ $(ALL_TEACHING_TYPES_JSON): $(wildcard $(DATA_SRC_SUBDIR)/pokemon/species_info/*
 $(DATA_SRC_SUBDIR)/pokemon/teachable_learnsets.h: $(TEACHABLE_DEPS) | $(ALL_TEACHING_TYPES_JSON)
 	python3 $(LEARNSET_HELPERS_DIR)/make_merged_teachables.py $(LEARNSET_HELPERS_BUILD_DIR)
 
+$(DATA_SRC_SUBDIR)/tutor_moves.h: $(DATA_SRC_SUBDIR)/pokemon/special_movesets.json $(LEARNSET_HELPERS_DIR)/make_tutor_array.py
+	python3 $(LEARNSET_HELPERS_DIR)/make_tutor_array.py
+
 $(DATA_SRC_SUBDIR)/pokemon/species_info.h: $(EVENTMOVES_DEPS)
 	python3 $(LEARNSET_HELPERS_DIR)/event_moves.py
 
