@@ -64,6 +64,7 @@
 #include "sound.h"
 #include "sprite.h"
 #include "start_menu.h"
+#include "stat_editor.h"
 #include "string_util.h"
 #include "strings.h"
 #include "task.h"
@@ -91,6 +92,7 @@
 
 enum {
     MENU_SUMMARY,
+    MENU_STAT_EDITOR,
     MENU_SWITCH,
     MENU_CANCEL1,
     MENU_ITEM,
@@ -556,6 +558,7 @@ static void ShiftMoveSlot(struct BoxPokemon *, u8, u8);
 static void BlitBitmapToPartyWindow(u8, const u8 *, u8, u8, u8, u8, u8);
 static void BlitBitmapToPartyWindow_SwSh(u8, u8, u8, u8, u8, bool8);
 static void CursorCb_Summary(u8);
+static void CursorCb_StatEditor(u8);
 static void CursorCb_Switch(u8);
 static void CursorCb_Cancel1(u8);
 static void CursorCb_Item(u8);
@@ -3722,12 +3725,16 @@ static void SetPartyMonSelectionActions(struct Pokemon *mons, u8 slotId, u8 acti
 
 static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
 {
-    u8 i, j;
+    // u8 i, j;
 
     sPartyMenuInternal->numActions = 0;
     AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_SUMMARY);
 
+    if ((P_STAT_EDITOR_ALWAYS || FlagGet(P_FLAG_STAT_EDITOR_GET)) && P_PARTY_MENU_STAT_EDITOR)
+        AppendToList(sPartyMenuInternal->actions, &sPartyMenuInternal->numActions, MENU_STAT_EDITOR);
+
     // Add field moves to action list
+    /*
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
         for (j = 0; j != FIELD_MOVES_COUNT; j++)
@@ -3739,6 +3746,7 @@ static void SetPartyMonFieldSelectionActions(struct Pokemon *mons, u8 slotId)
             }
         }
     }
+    */
 
     if (!InBattlePike())
     {
@@ -10788,6 +10796,19 @@ static void Task_FirstBattleEnterParty_WaitFadeNormal(u8 taskId)
             DisplayPartyMenuStdMessage(PARTY_MSG_CHOOSE_MON);
         gTasks[taskId].func = Task_HandleChooseMonInput;
     }
+}
+
+static void CB2_StatEditorReturnToPartyMenu(void)
+{
+    StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
+}
+
+static void CursorCb_StatEditor(u8 taskId)
+{
+    PlaySE(SE_SELECT);
+    gSpecialVar_0x8004 = gPartyMenu.slotId;
+    sPartyMenuInternal->exitCallback = CB2_StatEditorReturnToPartyMenu;
+    Task_ClosePartyMenu(taskId);
 }
 
 #if TESTING

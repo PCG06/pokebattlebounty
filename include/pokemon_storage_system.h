@@ -51,7 +51,6 @@ u32 GetCurrentBoxMonData(u8 boxPosition, s32 request);
 void SetCurrentBoxMonData(u8 boxPosition, s32 request, const void *value);
 u32 GetAndCopyBoxMonDataAt(u8 boxId, u8 boxPosition, s32 request, void *dst);
 void SetBoxMonAt(u8 boxId, u8 boxPosition, struct BoxPokemon *src);
-void CopyBoxMonAt(u8 boxId, u8 boxPosition, struct BoxPokemon *dst);
 void ZeroBoxMonAt(u8 boxId, u8 boxPosition);
 void BoxMonAtToMon(u8 boxId, u8 boxPosition, struct Pokemon *dst);
 struct BoxPokemon *GetBoxedMonPtr(u8 boxId, u8 boxPosition);
@@ -60,7 +59,6 @@ s16 AdvanceStorageMonIndex(struct BoxPokemon *boxMons, u8 currIndex, u8 maxIndex
 bool8 CheckFreePokemonStorageSpace(void);
 bool32 CheckBoxMonSanityAt(u32 boxId, u32 boxPosition);
 u32 CountStorageNonEggMons(void);
-u32 CountAllStorageMons(void);
 bool32 AnyStorageMonWithMove(enum Move move);
 
 void ResetWaldaWallpaper(void);
