@@ -208,13 +208,12 @@ struct PokedexView
     u16 moveSelected;
     u16 movesTotal;
     u16 numTeachableMoves;
+    u8 numEventMoves;
     bool8 justScrolled;
     u8 typeIconSpriteIds[2];
     u8 statBarsSpriteId;
     u8 statBarsBgSpriteId;
     u8 categoryIconSpriteId; //Physical/Special/Status category
-    u8 numEggMoves;
-    u8 numLevelUpMoves;
     u8 numPreEvolutions;
 };
 

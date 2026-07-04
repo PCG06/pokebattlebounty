@@ -126,6 +126,10 @@ static const u8 sText_Stats_eggGroup_NO_EGGS_DISCOVERED[] = _("---");
 static const u8 sText_Stats_eggGroup_UNKNOWN[] = _("???");
 static const u8 sText_Dex_SEEN[] = _("SEEN");
 static const u8 sText_Dex_OWN[] = _("OWN");
+static const u8 sText_Stats_Moves[] = _("MOVES");
+static const u8 sText_Stats_Moves_Decapped[] = _("Moves");
+static const u8 sText_Stats_Event[] = _("EVENT");
+static const u8 sText_Stats_Event_Decapped[] = _("Event");
 
 static const u8 sText_EVO_Buttons[] = _("{DPAD_UPDOWN}EVOs  {A_BUTTON}CHECK");
 static const u8 sText_EVO_Buttons_Decapped[] = _("{DPAD_UPDOWN}Evos  {A_BUTTON}Check");
@@ -1994,10 +1998,8 @@ static void Task_LoadStatsScreen(u8 taskId)
     case 4:
         SaveMonDataInStruct();
         sPokedexView->moveSelected = 0;
-        sPokedexView->movesTotal = 0;
-        sPokedexView->numEggMoves = 0;
-        sPokedexView->numLevelUpMoves = 0;
         sPokedexView->numTeachableMoves = 0;
+        sPokedexView->numEventMoves = 0;
         if (CalculateMoves())
             gMain.state++;
         break;
@@ -2166,7 +2168,7 @@ static void PrintStatsScreen_DestroyMoveItemIcon(u8 taskId)
     DestroySprite(&gSprites[gTasks[taskId].data[3]]);       //Destroy item icon
 }
 
-static u32 CountSpeciesEggMoves(enum Species species)
+static u32 UNUSED CountSpeciesEggMoves(enum Species species)
 {
     u32 numEggMoves = 0;
     const u16 *eggMoveLearnset = GetSpeciesEggMoves(species);
@@ -2180,56 +2182,38 @@ static bool8 CalculateMoves(void)
 {
     enum Species species = NationalPokedexNumToSpeciesForm(sPokedexListItem->dexNum);
 
-    u32 numEggMoves = 0;
-    u32 numLevelUpMoves = 0;
     u32 numTeachableMoves = 0;
+    u32 numEventMoves = 0;
     u32 i;
 
     // Mega and Gmax Pokémon don't have distinct learnsets from their base form; so use base species for calculation
     if (gSpeciesInfo[species].isMegaEvolution || gSpeciesInfo[species].isGigantamax)
         species = GetFormSpeciesId(species, 0);
 
-    // Egg moves
-    if (HGSS_SHOW_EGG_MOVES_FOR_EVOS)
-        numEggMoves = CountSpeciesEggMoves(GetEggSpecies(species));
-    else
-        numEggMoves = CountSpeciesEggMoves(species);
-
-    // Level up moves
-    const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
-    for (i = 0; learnset[i].move != LEVEL_UP_MOVE_END; i++)
-        numLevelUpMoves++;
-
-    // TM and Tutor moves
+    // Teachable moves
     const u16 *teachableLearnset = GetSpeciesTeachableLearnset(species);
     for (i = 0; teachableLearnset[i] != MOVE_UNAVAILABLE; i++)
         numTeachableMoves++;
 
-    sPokedexView->numEggMoves = numEggMoves;
-    sPokedexView->numLevelUpMoves = numLevelUpMoves;
+    // Event moves
+    const u16 *eventLearnset = GetSpeciesEventLearnset(species);
+    for (i = 0; eventLearnset[i] != MOVE_UNAVAILABLE; i++)
+        numEventMoves++;
+
     sPokedexView->numTeachableMoves = numTeachableMoves;
-    sPokedexView->movesTotal = (numEggMoves + numLevelUpMoves + numTeachableMoves);
+    sPokedexView->numEventMoves = numEventMoves;
+    sPokedexView->movesTotal = (numTeachableMoves + numEventMoves);
 
     return TRUE;
 }
 
 static enum Move GetSelectedMove(enum Species species, u32 selected)
 {
-    if (selected < sPokedexView->numEggMoves)
-    {
-        if (!HGSS_SHOW_EGG_MOVES_FOR_EVOS)
-            return GetSpeciesEggMoves(species)[selected];
-        enum Species preSpecies = species;
-        while (GetSpeciesPreEvolution(preSpecies) != SPECIES_NONE)
-            preSpecies = GetSpeciesPreEvolution(preSpecies);
-        return GetSpeciesEggMoves(preSpecies)[selected];
-    }
-    selected -= sPokedexView->numEggMoves;
-    if (selected < sPokedexView->numLevelUpMoves)
-        return GetSpeciesLevelUpLearnset(species)[selected].move;
-    selected -= sPokedexView->numLevelUpMoves;
     if (selected < sPokedexView->numTeachableMoves)
         return GetSpeciesTeachableLearnset(species)[selected];
+    selected -= sPokedexView->numTeachableMoves;
+    if (selected < sPokedexView->numEventMoves)
+        return GetSpeciesEventLearnset(species)[selected];
     return MOVE_NONE; //It should never get here but it allows us to visually see errors
 }
 
@@ -2248,39 +2232,21 @@ static void PrintStatsScreen_Moves_Top(u8 taskId)
     StringExpandPlaceholders(gStringVar1, sText_Stats_MoveSelectedMax);
     PrintStatsScreenTextSmallWhite(WIN_STATS_MOVES_TOP, gStringVar1, moves_x-1, moves_y+1);
 
-    //Calculate and retrieve correct move from the arrays
-    if (selected < sPokedexView->numEggMoves)
+    if (selected < sPokedexView->numTeachableMoves)
     {
-        PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, gText_ThreeDashes, moves_x + 113, moves_y + 9);
-        item = ITEM_LUCKY_EGG;
-    }
-    else if (selected < (sPokedexView->numLevelUpMoves + sPokedexView->numEggMoves))
-    {
-        u32 level = GetSpeciesLevelUpLearnset(species)[selected - sPokedexView->numEggMoves].level;
-        ConvertIntToDecimalStringN(gStringVar1, level, STR_CONV_MODE_LEFT_ALIGN, 3); //Move learn lvl
-        PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, sText_Stats_MoveLevel, moves_x + 113, moves_y + 3); //Level text
-        PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, gStringVar1, moves_x + 113, moves_y + 14); //Print level
-        item = ITEM_RARE_CANDY;
-    }
-    else if (move)
-    {
-        enum Item TMHMItemId = ITEM_NONE;
-        for (u32 i = 0; i < NUM_ALL_MACHINES; i++)
-        {
-            if (move == GetTMHMMoveId(i + 1))
-                TMHMItemId = GetTMHMItemId(i + 1);
-        }
-        if (TMHMItemId)
-        {
-            CopyItemName(TMHMItemId, gStringVar1); //TM name
-            PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, gStringVar1, moves_x + 113, moves_y + 9);
-            item = TMHMItemId;
-        }
+        if (!HGSS_DECAPPED)
+            PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, sText_Stats_Moves, moves_x + 111, moves_y + 9);
         else
-        {
-            PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, gText_ThreeDashes, moves_x + 113, moves_y + 9);
-            item = ITEM_TEACHY_TV;
-        }
+            PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, sText_Stats_Moves_Decapped, moves_x + 111, moves_y + 9);
+        item = ITEM_TEACHY_TV;
+    }
+    else if (selected < (sPokedexView->numEventMoves + sPokedexView->numTeachableMoves))
+    {
+        if (!HGSS_DECAPPED)
+            PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, sText_Stats_Event, moves_x + 111, moves_y + 9);
+        else
+            PrintStatsScreenTextSmall(WIN_STATS_MOVES_TOP, sText_Stats_Event_Decapped, moves_x + 111, moves_y + 9);
+        item = ITEM_EON_TICKET;
     }
     else
     {
@@ -2304,7 +2270,7 @@ static void PrintStatsScreen_Moves_Top(u8 taskId)
         SetSpriteInvisibility(0, TRUE);
     }
 
-    //Egg/TM/Level/Tutor Item Icon
+    //Teachable/Event Item Icon
     gTasks[taskId].data[3] = AddItemIconSprite(ITEM_TAG, ITEM_TAG, item);
     gSprites[gTasks[taskId].data[3]].x2 = 203;
     gSprites[gTasks[taskId].data[3]].y2 = 39;

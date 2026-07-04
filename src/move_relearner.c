@@ -58,6 +58,7 @@ struct RelearnType
     bool32 (*hasMoveToRelearn)(struct BoxPokemon*);
     u32 (*getMoves)(struct BoxPokemon *, enum Move *);
     const u8 *moveText;
+    const u8 *moveTitle;
 };
 
 static EWRAM_DATA struct
@@ -66,7 +67,7 @@ static EWRAM_DATA struct
     u16 movesToLearn[MAX_RELEARNER_MOVES];
     struct ListMenuItem menuItems[MAX_RELEARNER_MOVES + 1];
     u8 mainTask;
-    u8 numMenuChoices;
+    u16 numMenuChoices;
     u8 numToShowAtOnce;
     u8 moveListMenuTask;
     u8 moveListScrollArrowTask;
@@ -156,10 +157,10 @@ static const struct SpritePalette sMoveRelearnerPalette =
 static const struct ScrollArrowsTemplate sDisplayModeArrowsTemplate =
 {
     .firstArrowType = SCROLL_ARROW_LEFT,
-    .firstX = 27,
+    .firstX = 24,
     .firstY = 16,
     .secondArrowType = SCROLL_ARROW_RIGHT,
-    .secondX = 117,
+    .secondX = 119,
     .secondY = 16,
     .fullyUpThreshold = -1,
     .fullyDownThreshold = -1,
@@ -257,18 +258,25 @@ static void ShowTeachMoveText();
 static s32 GetCurrentSelectedMove(void);
 static void FreeMoveRelearnerResources(void);
 static void RemoveScrollArrows(void);
+static bool32 DoesBoxMonHaveMultipleRelearnTypes(void);
 static bool32 IsLevelUpMoveRelearnerActive(void);
 static bool32 IsEggMoveRelearnerActive(void);
 static bool32 IsTMMoveRelearnerActive(void);
 static bool32 IsTutorMoveRelearnerActive(void);
+static bool32 IsTeachableMoveRelearnerActive(void);
+static bool32 IsEventMoveRelearnerActive(void);
 static bool32 HasRelearnerLevelUpMoves(struct BoxPokemon *boxMon);
 static bool32 HasRelearnerEggMoves(struct BoxPokemon *boxMon);
 static bool32 HasRelearnerTMMoves(struct BoxPokemon *boxMon);
 static bool32 HasRelearnerTutorMoves(struct BoxPokemon *boxMon);
+static bool32 HasRelearnerTeachableMoves(struct BoxPokemon *boxMon);
+static bool32 HasRelearnerEventMoves(struct BoxPokemon *boxMon);
 static u32 GetRelearnerLevelUpMoves(struct BoxPokemon *mon, u16 *moves);
 static u32 GetRelearnerEggMoves(struct BoxPokemon *mon, u16 *moves);
 static u32 GetRelearnerTMMoves(struct BoxPokemon *mon, u16 *moves);
 static u32 GetRelearnerTutorMoves(struct BoxPokemon *mon, u16 *moves);
+static u32 GetRelearnerTeachableMoves(struct BoxPokemon *mon, u16 *moves);
+static u32 GetRelearnerEventMoves(struct BoxPokemon *mon, u16 *moves);
 
 static void Task_MoveRelearner_HandleInput(u8 taskId);
 static void Task_MoveRelearner_LearnMove(u8 taskId);
@@ -282,26 +290,44 @@ static const struct RelearnType sRelearnTypes[MOVE_RELEARNER_COUNT] =
         .isActive = IsLevelUpMoveRelearnerActive,
         .hasMoveToRelearn = HasRelearnerLevelUpMoves,
         .getMoves = GetRelearnerLevelUpMoves,
-        .moveText = MoveRelearner_Text_LevelUpMoveLWR
+        .moveText = MoveRelearner_Text_LevelUpMoveLWR,
+        .moveTitle = MoveRelearner_Text_LevelUpMoves
     },
     [MOVE_RELEARNER_EGG_MOVES] = {
         .isActive = IsEggMoveRelearnerActive,
         .hasMoveToRelearn = HasRelearnerEggMoves,
         .getMoves = GetRelearnerEggMoves,
-        .moveText = MoveRelearner_Text_EggMoveLWR
+        .moveText = MoveRelearner_Text_EggMoveLWR,
+        .moveTitle = MoveRelearner_Text_LevelUpMoves
     },
     [MOVE_RELEARNER_TM_MOVES] = {
         .isActive = IsTMMoveRelearnerActive,
         .hasMoveToRelearn = HasRelearnerTMMoves,
         .getMoves = GetRelearnerTMMoves,
-        .moveText = MoveRelearner_Text_TMMoveLWR
+        .moveText = MoveRelearner_Text_TMMoveLWR,
+        .moveTitle = MoveRelearner_Text_TMMoves
     },
     [MOVE_RELEARNER_TUTOR_MOVES] = {
         .isActive = IsTutorMoveRelearnerActive,
         .hasMoveToRelearn = HasRelearnerTutorMoves,
         .getMoves = GetRelearnerTutorMoves,
-        .moveText = MoveRelearner_Text_TutorMoveLWR
+        .moveText = MoveRelearner_Text_TutorMoveLWR,
+        .moveTitle = MoveRelearner_Text_TutormoveMoves
     },
+    [MOVE_RELEARNER_TEACHABLE_MOVES] = {
+        .isActive = IsTeachableMoveRelearnerActive,
+        .hasMoveToRelearn = HasRelearnerTeachableMoves,
+        .getMoves = GetRelearnerTeachableMoves,
+        .moveText = MoveRelearner_Text_MoveLWR,
+        .moveTitle = MoveRelearner_Text_TeachableMoves
+    },
+    [MOVE_RELEARNER_EVENT_MOVES] = {
+        .isActive = IsEventMoveRelearnerActive,
+        .hasMoveToRelearn = HasRelearnerEventMoves,
+        .getMoves = GetRelearnerEventMoves,
+        .moveText = MoveRelearner_Text_EventMoveLWR,
+        .moveTitle = MoveRelearner_Text_EventMoves
+    }
 };
 
 static void VBlankCB_MoveRelearner(void)
@@ -430,14 +456,33 @@ static bool32 GameHasDifferentRelearners(void)
 {
     if (P_ENABLE_MOVE_RELEARNERS || P_TM_MOVES_RELEARNER)
         return TRUE;
+    if (P_TEACHABLE_MOVES_RELEARNER || P_EVENT_MOVES_RELEARNER)
+        return TRUE;
     if (P_FLAG_EGG_MOVES || P_FLAG_TUTOR_MOVES)
         return TRUE;
     return FALSE;
 }
 
-static void StoreMoveText(void)
+const u8 *GetMoveRelearnerTitle(u8 category)
 {
     if (GameHasDifferentRelearners() || gRelearnMode == RELEARN_MODE_SCRIPT)
+    {
+        return sRelearnTypes[gMoveRelearnerState].moveTitle;
+    }
+    else
+    {
+        if (category == BATTLE_INFO)
+            return gText_MoveRelearnerBattleMoves;
+        else
+            return gText_MoveRelearnerContestMovesTitle;
+    }
+}
+
+static void StoreMoveText(void)
+{
+    if (GetBoxMonData(GetSelectedBoxMonFromPcOrParty(), MON_DATA_SPECIES) == SPECIES_SMEARGLE && gMoveRelearnerState == MOVE_RELEARNER_TEACHABLE_MOVES)
+        StringCopy(gStringVar3, MoveRelearner_Text_SketchedMoveLWR);
+    else if (GameHasDifferentRelearners() || gRelearnMode == RELEARN_MODE_SCRIPT)
         StringCopy(gStringVar3, sRelearnTypes[gMoveRelearnerState].moveText);
     else
         StringCopy(gStringVar3, MoveRelearner_Text_MoveLWR);
@@ -653,10 +698,11 @@ static void Task_MoveRelearner_HandleInput(u8 taskId)
     s32 itemId = ListMenu_ProcessInput(sMoveRelearnerStruct->moveListMenuTask);
     ListMenuGetScrollAndRow(sMoveRelearnerStruct->moveListMenuTask, &sMoveRelearnerScrollState.listOffset, &sMoveRelearnerScrollState.listRow);
 
+    bool32 keysPressed = !C_HIDE_CONTEST_DATA ? JOY_NEW(SELECT_BUTTON) : ((JOY_NEW(DPAD_LEFT | DPAD_RIGHT)) || GetLRKeysPressed());
     switch (itemId)
     {
     case LIST_NOTHING_CHOSEN:
-        if (JOY_NEW(SELECT_BUTTON) && gRelearnMode != RELEARN_MODE_SCRIPT)
+        if (keysPressed && gRelearnMode != RELEARN_MODE_SCRIPT)
         {
             if (UpdateMoveRelearnerState())
             {
@@ -768,7 +814,8 @@ static void CreateUISprites(void)
 
 static void AddScrollArrows(void)
 {
-    if (!C_HIDE_CONTEST_DATA && sMoveRelearnerStruct->moveDisplayArrowTask == TASK_NONE)
+    if ((!C_HIDE_CONTEST_DATA || DoesBoxMonHaveMultipleRelearnTypes())
+     && sMoveRelearnerStruct->moveDisplayArrowTask == TASK_NONE)
         sMoveRelearnerStruct->moveDisplayArrowTask = AddScrollIndicatorArrowPair(&sDisplayModeArrowsTemplate, &sMoveRelearnerStruct->scrollOffset);
 
     if (sMoveRelearnerStruct->moveListScrollArrowTask == TASK_NONE)
@@ -781,7 +828,8 @@ static void AddScrollArrows(void)
 
 static void RemoveScrollArrows(void)
 {
-    if (!C_HIDE_CONTEST_DATA && sMoveRelearnerStruct->moveDisplayArrowTask != TASK_NONE)
+    if ((!C_HIDE_CONTEST_DATA || DoesBoxMonHaveMultipleRelearnTypes())
+     && sMoveRelearnerStruct->moveDisplayArrowTask == TASK_NONE)
     {
         RemoveScrollIndicatorArrowPair(sMoveRelearnerStruct->moveDisplayArrowTask);
         sMoveRelearnerStruct->moveDisplayArrowTask = TASK_NONE;
@@ -1023,6 +1071,40 @@ static u32 GetRelearnerTutorMoves(struct BoxPokemon *mon, u16 *moves)
     return numMoves;
 }
 
+static u32 GetRelearnerEventMoves(struct BoxPokemon *mon, u16 *moves)
+{
+    enum Species species = GetBoxMonData(mon, MON_DATA_SPECIES);
+    const u16 *eventLearnset = GetSpeciesEventLearnset(species);
+    u32 numMoves = 0;
+
+    for (u32 i = 0; eventLearnset[i] != MOVE_UNAVAILABLE; i++)
+    {
+        enum Move move = eventLearnset[i];
+
+        if (!BoxMonKnowsMove(mon, move))
+            moves[numMoves++] = move;
+    }
+
+    return numMoves;
+}
+
+static u32 GetRelearnerTeachableMoves(struct BoxPokemon *mon, u16 *moves)
+{
+    enum Species species = GetBoxMonData(mon, MON_DATA_SPECIES);
+    const u16 *teachableLearnset = GetSpeciesTeachableLearnset(species);
+    u32 numMoves = 0;
+
+    for (u32 i = 0; teachableLearnset[i] != MOVE_UNAVAILABLE; i++)
+    {
+        enum Move move = teachableLearnset[i];
+
+        if (!BoxMonKnowsMove(mon, move))
+            moves[numMoves++] = move;
+    }
+
+    return numMoves;
+}
+
 void Special_HasMoveToRelearn(void)
 {
     struct BoxPokemon *boxmon = GetSelectedBoxMonFromPcOrParty();
@@ -1030,6 +1112,23 @@ void Special_HasMoveToRelearn(void)
         gSpecialVar_Result = TRUE;
     else
         gSpecialVar_Result = FALSE;
+}
+
+static bool32 DoesBoxMonHaveMultipleRelearnTypes(void)
+{
+    if (!GameHasDifferentRelearners())
+        return FALSE;
+
+    struct BoxPokemon *boxmon = GetSelectedBoxMonFromPcOrParty();
+    u32 count = 0;
+
+    for (enum MoveRelearnerStates state = 0; state < MOVE_RELEARNER_COUNT; state++)
+    {
+        if (CanBoxMonRelearnMoves(boxmon, state))
+            count++;
+    }
+
+    return (count > 1);
 }
 
 bool32 CanBoxMonRelearnMoves(struct BoxPokemon *boxMon, enum MoveRelearnerStates state)
@@ -1133,9 +1232,39 @@ static bool32 HasRelearnerTutorMoves(struct BoxPokemon *boxMon)
     return FALSE;
 }
 
+static bool32 HasRelearnerEventMoves(struct BoxPokemon *boxMon)
+{
+    enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES);
+    const u16 *eventLearnset = GetSpeciesEventLearnset(species);
+    for (u32 i = 0; eventLearnset[i] != MOVE_UNAVAILABLE; i++)
+    {
+        enum Move move = eventLearnset[i];
+
+        if (!BoxMonKnowsMove(boxMon, move))
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+static bool32 HasRelearnerTeachableMoves(struct BoxPokemon *boxMon)
+{
+    enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES);
+    const u16 *teachableLearnset = GetSpeciesTeachableLearnset(species);
+    for (u32 i = 0; teachableLearnset[i] != MOVE_UNAVAILABLE; i++)
+    {
+        enum Move move = teachableLearnset[i];
+
+        if (!BoxMonKnowsMove(boxMon, move))
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
 static bool32 IsLevelUpMoveRelearnerActive(void)
 {
-    return TRUE;
+    return FALSE;
 }
 
 static bool32 IsEggMoveRelearnerActive(void)
@@ -1151,4 +1280,15 @@ static bool32 IsTMMoveRelearnerActive(void)
 static bool32 IsTutorMoveRelearnerActive(void)
 {
     return (FlagGet(P_FLAG_TUTOR_MOVES) || P_ENABLE_MOVE_RELEARNERS);
+}
+
+static bool32 IsTeachableMoveRelearnerActive(void)
+{
+    return P_TEACHABLE_MOVES_RELEARNER;
+}
+
+static bool32 IsEventMoveRelearnerActive(void)
+{
+    // TODO: Add an ingame task to unlock event moves
+    return P_EVENT_MOVES_RELEARNER;
 }
