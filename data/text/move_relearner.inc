@@ -2,22 +2,22 @@ MoveRelearner_Text_WouldLearnNewMoves:
 	.string "Hi, I'm the Move Relearner.\n"
 	.string "Would you like to learn new moves?$"
 
-MoveRelearner_Text_LevelUpMoves:
+MoveRelearner_Text_LevelUpMoves::
 	.string "Level Up Moves$"
 
-MoveRelearner_Text_EggMoves:
+MoveRelearner_Text_EggMoves::
 	.string "Egg Moves$"
 
-MoveRelearner_Text_TMMoves:
+MoveRelearner_Text_TMMoves::
 	.string "TM Moves$"
 
-MoveRelearner_Text_TutormoveMoves:
+MoveRelearner_Text_TutormoveMoves::
 	.string "Tutor Moves$"
 
-MoveRelearner_Text_TeachableMoves:
+MoveRelearner_Text_TeachableMoves::
 	.string "Teachable Moves$"
 
-MoveRelearner_Text_EventMoves:
+MoveRelearner_Text_EventMoves::
 	.string "Event Moves$"
 
 MoveRelearner_Text_SeeYa:

@@ -2076,6 +2076,12 @@ extern const u8 gText_ExpShareOn[];
 extern const u8 gText_ExpShareOff[];
 
 // Move Relearner
+extern const u8 MoveRelearner_Text_LevelUpMoves[];
+extern const u8 MoveRelearner_Text_EggMoves[];
+extern const u8 MoveRelearner_Text_TMMoves[];
+extern const u8 MoveRelearner_Text_TutormoveMoves[];
+extern const u8 MoveRelearner_Text_TeachableMoves[];
+extern const u8 MoveRelearner_Text_EventMoves[];
 extern const u8 MoveRelearner_Text_LevelUpMoveLWR[];
 extern const u8 MoveRelearner_Text_EggMoveLWR[];
 extern const u8 MoveRelearner_Text_TMMoveLWR[];
