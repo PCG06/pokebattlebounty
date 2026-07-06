@@ -1013,7 +1013,7 @@ static void StatEditor_FreeResources(void)
     FreeSpriteTilesByTag(TAG_MOVE_TYPES);
     FreeSpriteTilesByTag(TAG_TERA_TYPES);
     StopCryAndClearCrySongs();
-    if (P_STAT_EDITOR_MON_SHADOWS)
+    if (P_STAT_EDITOR_BG_BLEND || P_STAT_EDITOR_MON_SHADOWS)
     {
         // Clear alpha blending used for the mon shadow
         SetGpuReg(REG_OFFSET_BLDCNT, 0);
@@ -1059,10 +1059,13 @@ static bool8 StatEditor_InitBgs(void)
     ScheduleBgCopyTilemapToVram(3);
     ScheduleBgCopyTilemapToVram(1);
     SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_ON | DISPCNT_OBJ_1D_MAP);
-    if (P_STAT_EDITOR_MON_SHADOWS)
+    if (P_STAT_EDITOR_BG_BLEND || P_STAT_EDITOR_MON_SHADOWS)
     {
-        // Blend the shadow sprite (OBJ, ST_OAM_OBJ_BLEND) against bg 2, which sits behind the mon sprite
-        SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND);
+        if (P_STAT_EDITOR_BG_BLEND)
+            SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG3 | BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG1);
+        else
+            SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG3 | BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND);
+
         SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(14, 6));
     }
     ShowBg(3);
