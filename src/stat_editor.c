@@ -147,6 +147,7 @@ enum WindowIds
 //==========EWRAM==========//
 static EWRAM_DATA struct StatEditorResources *sStatEditorDataPtr = NULL;
 static EWRAM_DATA u8 *sBg1TilemapBuffer = NULL;
+static EWRAM_DATA u16 sBg3TilemapBuffer[0x400] = {0};
 
 //==========STATIC=DEFINES==========//
 static void StatEditor_RunSetup(void);
@@ -190,7 +191,13 @@ static const struct BgTemplate sStatEditorBgTemplates[] =
         .charBaseIndex = 0,
         .mapBaseIndex = 26,
         .priority = 0
-    }
+    },
+    {
+        .bg = 3,
+        .charBaseIndex = 3,
+        .mapBaseIndex = 31,
+        .priority = 3,
+    },
 };
 
 static const struct WindowTemplate sMenuWindowTemplates[] =
@@ -258,24 +265,25 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
     DUMMY_WIN_TEMPLATE
 };
 
-static const u32 sStatEditorBgTiles[]   = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
-static const u32 sStatEditorBgTilemap[] = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
-static const u16 sStatEditorBgPalette[] = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
-static const u32 sLeftArrowGfx[]        = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
-static const u32 sRightArrowGfx[]       = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
-static const u32 sNatureArrowsGfx[]     = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
-static const u16 sMiscPalette[]         = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
-static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
-static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
-static const u8 sLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
-static const u8 sStart_ButtonGfx[]      = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
-static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
-static const u8 sDPadLR_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_lr_button.png", ".4bpp");
-static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
-static const u32 sMoveTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
-static const u16 sMoveTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
-static const u32 sTeraTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/tera_types.png", ".4bpp.smol");
-static const u16 sTeraTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/tera_types.png", ".gbapal");
+static const u32 sStatEditorBgTiles[]       = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
+static const u32 sStatEditorBgTilemap[]     = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
+static const u32 sStatEditorScrollTilemap[] = INCGFX_U32("graphics/stat_editor/scroll_bg.bin", ".smolTM");
+static const u16 sStatEditorBgPalette[]     = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
+static const u32 sLeftArrowGfx[]            = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
+static const u32 sRightArrowGfx[]           = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
+static const u32 sNatureArrowsGfx[]         = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
+static const u16 sMiscPalette[]             = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
+static const u8 sA_ButtonGfx[]              = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
+static const u8 sB_ButtonGfx[]              = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
+static const u8 sLR_ButtonGfx[]             = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
+static const u8 sStart_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
+static const u8 sDPad_ButtonGfx[]           = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
+static const u8 sDPadLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/dpad_lr_button.png", ".4bpp");
+static const u16 sMonShadowPalette[]        = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
+static const u32 sMoveTypesGfx[]            = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
+static const u16 sMoveTypesPalette[]        = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
+static const u32 sTeraTypesGfx[]            = INCGFX_U32("graphics/summary_screen/swsh/tera_types.png", ".4bpp.smol");
+static const u16 sTeraTypesPalette[]        = INCGFX_U16("graphics/summary_screen/swsh/tera_types.png", ".gbapal");
 
 static const struct SpritePalette sSpritePal_MonShadow =
 {
@@ -893,6 +901,11 @@ static void StatEditor_VBlankCB(void)
     LoadOam();
     ProcessSpriteCopyRequests();
     TransferPlttBuffer();
+    if (P_STAT_EDITOR_SUMMARY_SCROLLING_BG)
+    {
+        ChangeBgX(3, 64, BG_COORD_ADD);
+        ChangeBgY(3, 64, BG_COORD_ADD);
+    }
     if (P_STAT_EDITOR_MON_IDLE_ANIMS && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
         RunMonAnimTimer();
     if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
@@ -1041,7 +1054,9 @@ static bool8 StatEditor_InitBgs(void)
     memset(sBg1TilemapBuffer, 0, 0x800);
     ResetBgsAndClearDma3BusyFlags(0);
     InitBgsFromTemplates(0, sStatEditorBgTemplates, NELEMS(sStatEditorBgTemplates));
+    SetBgTilemapBuffer(3, sBg3TilemapBuffer);
     SetBgTilemapBuffer(1, sBg1TilemapBuffer);
+    ScheduleBgCopyTilemapToVram(3);
     ScheduleBgCopyTilemapToVram(1);
     SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_ON | DISPCNT_OBJ_1D_MAP);
     if (P_STAT_EDITOR_MON_SHADOWS)
@@ -1050,6 +1065,7 @@ static bool8 StatEditor_InitBgs(void)
         SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND);
         SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(14, 6));
     }
+    ShowBg(3);
     ShowBg(0);
     ShowBg(1);
     ShowBg(2);
@@ -1073,10 +1089,14 @@ static bool8 StatEditor_LoadGraphics(void)
         }
         break;
     case 2:
-        LoadPalette(sStatEditorBgPalette, 0, 32);
+        DecompressDataWithHeaderWram(sStatEditorScrollTilemap, sBg3TilemapBuffer);
         sStatEditorDataPtr->gfxLoadState++;
         break;
     case 3:
+        LoadPalette(sStatEditorBgPalette, 0, 32);
+        sStatEditorDataPtr->gfxLoadState++;
+        break;
+    case 4:
         if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
             LoadPalette(sMoveTypesPalette, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
         else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)

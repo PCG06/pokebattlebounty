@@ -23,6 +23,7 @@
 // General Configs
 #define P_STAT_EDITOR_NATURE_ARROWS         TRUE  // If TRUE, stats increased or decreased by nature will have arrows, red and up = increased, blue and down = decreased.
 #define P_STAT_EDITOR_MOVE_RELEARNER        TRUE  // If TRUE, the move relearner will be accessible through the stat editor by pressing Start.
+#define P_STAT_EDITOR_SUMMARY_SCROLLING_BG  TRUE  // If TRUE, enables scrolling animated background.
 #define P_STAT_EDITOR_MON_IDLE_ANIMS        TRUE  // If TRUE, loops the Pokémon animations regularly as an "idle" anim.
 #define P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES 300   // Number of frames between each idle anim if P_STAT_EDITOR_MON_IDLE_ANIMS is TRUE.
 #define P_STAT_EDITOR_MON_SHADOWS           TRUE  // If TRUE, displays a shadow for the Pokémon sprite.
