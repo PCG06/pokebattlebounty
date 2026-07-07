@@ -27,6 +27,7 @@
 #include "pokedex.h"
 #include "pokemon.h"
 #include "pokemon_icon.h"
+#include "pokemon_storage_system.h"
 #include "pokemon_summary_screen.h"
 #include "scanline_effect.h"
 #include "script.h"
@@ -52,7 +53,7 @@ struct StatEditorResources
     u8 panel;
     u8 panelInputMode;
     u8 leftRow;
-    u8 partyId;
+    u8 monIndex;
     u8 typeSpriteId;
     u8 natureUpSpriteId;
     u8 natureDownSpriteId;
@@ -148,6 +149,7 @@ enum WindowIds
 static EWRAM_DATA struct StatEditorResources *sStatEditorDataPtr = NULL;
 static EWRAM_DATA u8 *sBg1TilemapBuffer = NULL;
 static EWRAM_DATA u16 sBg3TilemapBuffer[0x400] = {0};
+static EWRAM_DATA struct Pokemon sTempMon = {0};
 
 //==========STATIC=DEFINES==========//
 static void StatEditor_RunSetup(void);
@@ -161,11 +163,16 @@ static void Task_StatEditorWaitFadeIn(u8 taskId);
 static void Task_StatEditorMain(u8 taskId);
 static void CreateMonSprite(u32 dexNum);
 static void DestroyMonSprite(void);
-static void PlayMonCry(struct Pokemon *mon);
+static void PlayMonCry(void);
 static void RunMonAnimTimer(void);
 static void PrintMonStats(void);
-static struct Pokemon *GetCurrentPartyMon(void);
+static bool32 IsEditingBoxMon(void);
+static void LoadCurrentMon(void);
+static void SaveCurrentMon(void);
+static struct BoxPokemon *GetCurrentBoxMon(void);
+static struct Pokemon *GetCurrentMon(void);
 static bool32 HasAnyRelearnableMoves(void);
+static void SetMonPosVars(void);
 static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
 static void DestroySelectors(void);
@@ -833,6 +840,7 @@ static const u8 sText_MenuIV[]                 = _("IVs");
 static const u8 sText_MenuAbility[]            = _("Ability");
 static const u8 sText_MenuNature[]             = _("Nature");
 static const u8 sText_MenuLRButtonParty[]      = _("Party");
+static const u8 sText_MenuLRButtonBox[]        = _("Box");
 static const u8 sText_MenuStartButtonMoves[]   = _("Moves");
 static const u8 sText_MenuABButtonSave[]       = _("Save");
 static const u8 sText_MenuDPadChangeStat[]     = _("Stat");
@@ -865,7 +873,10 @@ void StatEditor_Init(MainCallback callback)
     sStatEditorDataPtr->savedCallback         = callback;
     sStatEditorDataPtr->leftSelectorSpriteId  = 0xFF;
     sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
-    sStatEditorDataPtr->partyId               = gSpecialVar_0x8004;
+    if (IsEditingBoxMon())
+        sStatEditorDataPtr->monIndex           = gSpecialVar_MonBoxPos;
+    else
+        sStatEditorDataPtr->monIndex           = gSpecialVar_0x8004;
     sStatEditorDataPtr->panel                 = PANEL_LEFT;
     sStatEditorDataPtr->leftRow               = LEFT_ROW_NICKNAME;
     sStatEditorDataPtr->rightPanelColumn      = RIGHT_PANEL_EVS;
@@ -950,7 +961,8 @@ static bool8 StatEditor_DoGfxSetup(void)
             gMain.state++;
         break;
     case 4:
-        sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
+        LoadCurrentMon();
+        sStatEditorDataPtr->speciesID = GetMonData(GetCurrentMon(), MON_DATA_SPECIES_OR_EGG);
         sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
@@ -1036,7 +1048,7 @@ static void Task_StatEditorWaitFadeAndBail(u8 taskId)
 
 static void StatEditor_FadeAndBail(void)
 {
-    gLastViewedMonIndex = sStatEditorDataPtr->partyId;
+    gLastViewedMonIndex = sStatEditorDataPtr->monIndex;
     BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
     CreateTask(Task_StatEditorWaitFadeAndBail, 0);
     SetVBlankCallback(StatEditor_VBlankCB);
@@ -1154,9 +1166,54 @@ static void PrintTextOnWindow(u8 windowId, const u8 *string, u8 x, u8 y, u8 line
 //       Stat Editor Code
 //  End of UI setup code, beginning of stat editor specific code
 //
-static struct Pokemon *GetCurrentPartyMon(void)
+static bool32 IsEditingBoxMon(void)
 {
-    return &gParties[B_TRAINER_PLAYER][sStatEditorDataPtr->partyId];
+    return gSpecialVar_0x8004 == PC_MON_CHOSEN;
+}
+
+static void LoadCurrentMon(void)
+{
+    if (IsEditingBoxMon())
+        BoxMonToMon(GetCurrentBoxMon(), &sTempMon);
+}
+
+static void SaveCurrentMon(void)
+{
+    if (IsEditingBoxMon())
+        *GetCurrentBoxMon() = sTempMon.box; // Temp solution, but it works :)
+}
+
+static struct BoxPokemon *GetCurrentBoxMon(void)
+{
+    return GetBoxedMonPtr(gSpecialVar_MonBoxId, sStatEditorDataPtr->monIndex);
+}
+
+static struct Pokemon *GetCurrentMon(void)
+{
+    if (IsEditingBoxMon())
+        return &sTempMon;
+    else
+        return &gParties[B_TRAINER_PLAYER][sStatEditorDataPtr->monIndex];
+}
+
+static bool32 CanCycleBoxOrParty(void)
+{
+    if (!P_STAT_EDITOR_CYCLE_MODE)
+        return FALSE;
+
+    if (IsEditingBoxMon())
+    {
+        if (AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, -1) == -1)
+        {
+            if (AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, 1) == -1)
+                return FALSE;
+        }
+        return TRUE;
+    }
+    else
+    {
+        return gPartiesCount[B_TRAINER_PLAYER] > 1;
+    }
 }
 
 // Mon sprite data fields (copied from swsh_party_menu)
@@ -1173,7 +1230,7 @@ static void SpriteCB_StatEditorMonPokemon(struct Sprite *sprite)
         sprite->sDontFlip = TRUE;
 
         if (!sStatEditorDataPtr->monAnimPlayed)
-            PlayMonCry(GetCurrentPartyMon());
+            PlayMonCry();
 
         PokemonSummaryDoMonAnimation(sprite, sprite->sSpecies, sprite->sIsEgg, sprite->sIsShadow);
         sStatEditorDataPtr->monAnimPlayed = TRUE;
@@ -1220,7 +1277,7 @@ static u8 CreateStatEditorMonSprite(struct Pokemon *mon, bool32 isShadow)
 static bool32 HasAnyRelearnableMoves(void)
 {
     gMoveRelearnerState = MOVE_RELEARNER_TEACHABLE_MOVES;
-    struct BoxPokemon *boxMon = &GetCurrentPartyMon()->box;
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
     return CanBoxMonRelearnMoves(boxMon, gMoveRelearnerState);
 }
 
@@ -1232,8 +1289,9 @@ static inline bool32 ShouldShowMoveRelearner(void)
          && !InSlateportBattleTent());
 }
 
-static void PlayMonCry(struct Pokemon *mon)
+static void PlayMonCry(void)
 {
+    struct Pokemon *mon = GetCurrentMon();
     bool32 isEgg = GetMonData(mon, MON_DATA_SANITY_IS_BAD_EGG) ? TRUE : GetMonData(mon, MON_DATA_IS_EGG);
 
     if (!isEgg)
@@ -1272,7 +1330,7 @@ static enum Type GetHiddenPowerTypeFromBits(u32 bits)
 
 static enum Type GetHiddenPowerType(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 curBits = HP_TYPE_BITS(mon);
 
     return GetHiddenPowerTypeFromBits(curBits);
@@ -1334,11 +1392,12 @@ static void ApplyHiddenPowerBits(struct Pokemon *mon, u32 curBits, u32 bestBits)
 
         SetMonData(mon, sIVStatsMap[i], &iv);
     }
+    SaveCurrentMon();
 }
 
 static void SetHiddenPowerType(bool32 forward)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 curBits = HP_TYPE_BITS(mon);
     enum Type targetType = GetHiddenPowerTypeFromBits(curBits);
 
@@ -1374,7 +1433,7 @@ static void UpdateHiddenPowerTypeIcon(void)
 
 static void SetTeraTypeSE(bool32 forward)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     enum Type targetType = GetMonData(mon, MON_DATA_TERA_TYPE);
 
     do
@@ -1389,13 +1448,14 @@ static void SetTeraTypeSE(bool32 forward)
     } while (targetType == TYPE_MYSTERY);
 
     SetMonData(mon, MON_DATA_TERA_TYPE, &targetType);
+    SaveCurrentMon();
 }
 
 static void UpdateTeraTypeIcon(void)
 {
     u8 spriteId = sStatEditorDataPtr->typeSpriteId;
     struct Sprite *sprite = &gSprites[spriteId];
-    enum Type type = GetMonData(GetCurrentPartyMon(), MON_DATA_TERA_TYPE);
+    enum Type type = GetMonData(GetCurrentMon(), MON_DATA_TERA_TYPE);
 
     StartSpriteAnim(sprite, type);
     sprite->oam.paletteNum = gTypesInfo[type].palette;
@@ -1407,7 +1467,7 @@ static void UpdateTeraTypeIcon(void)
 
 static void CreateMonSprite(u32 dexNum)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 pid = GetMonData(mon, MON_DATA_PERSONALITY);
     bool8 isShiny = GetMonData(mon, MON_DATA_IS_SHINY);
 
@@ -1465,7 +1525,7 @@ static void RunMonAnimTimer(void)
 
     if (sStatEditorDataPtr->monAnimTimer > P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES && monSpriteId != SPRITE_NONE) // time to re-run the anim
     {
-        struct Pokemon *mon = GetCurrentPartyMon();
+        struct Pokemon *mon = GetCurrentMon();
 
         // Clear animation data for both sprites
         for (i = 1; i < 8; i++)
@@ -1549,10 +1609,13 @@ static void PrintTitleToWindowMainState(void)
 {
     FillWindowPixelBuffer(WINDOW_MAIN_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
-    if (gPartiesCount[B_TRAINER_PLAYER] > 1)
+    if (CanCycleBoxOrParty())
     {
         BlitBitmapToWindow(WINDOW_MAIN_HEADER, sLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
-        PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
+        if (IsEditingBoxMon())
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonBox, 19, 0, 0, FONT_WHITE, FONT_NARROW);
+        else
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
     }
 
     if (ShouldShowMoveRelearner())
@@ -1606,7 +1669,7 @@ static void PrintTitleToWindowEditState(void)
 
 static void UpdateNatureArrowSprites(void)
 {
-    u32 nature = GetMonData(GetCurrentPartyMon(), MON_DATA_HIDDEN_NATURE);
+    u32 nature = GetMonData(GetCurrentMon(), MON_DATA_HIDDEN_NATURE);
     u32 natureUpStat = gNaturesInfo[nature].statUp;
     u32 natureDownStat = gNaturesInfo[nature].statDown;
     struct Sprite *upSprite = &gSprites[sStatEditorDataPtr->natureUpSpriteId];
@@ -1633,7 +1696,7 @@ static void UpdateNatureArrowSprites(void)
 
 static void PrintMonStats(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 nature = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
     enum Ability ability = GetMonAbility(mon);
     u32 currentStat, digits;
@@ -1851,8 +1914,10 @@ static void ReloadNewPokemon(u8 taskId)
         gSprites[sStatEditorDataPtr->monShadowSpriteId].invisible = TRUE;
 
     DestroyMonSprite();
-    sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
-    gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
+    LoadCurrentMon();
+    sStatEditorDataPtr->speciesID = GetMonData(GetCurrentMon(), MON_DATA_SPECIES_OR_EGG);
+    SetMonPosVars();
+    DebugPrintf("0x8004=%d box=%d pos=%d\n", gSpecialVar_0x8004, gSpecialVar_MonBoxId, gSpecialVar_MonBoxPos);
     sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
     PrintTitleToWindowMainState();
     gTasks[taskId].func = Task_DelayedSpriteLoad;
@@ -1891,7 +1956,8 @@ static void CB2_ReturnToSummaryScreenFromNamingScreen(void)
 
 static void CB2_ReturnToStatEditorFromNamingScreen(void)
 {
-    SetMonData(&gParties[B_TRAINER_PLAYER][gSpecialVar_0x8004], MON_DATA_NICKNAME, gStringVar2); // partyId gets overwritten to 0.
+    SetBoxMonData(GetSelectedBoxMonFromPcOrParty(), MON_DATA_NICKNAME, gStringVar2);
+
     if (P_PARTY_MENU_STAT_EDITOR)
         StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
     else if (P_SUMMARY_SCREEN_STAT_EDITOR)
@@ -1903,9 +1969,22 @@ static void CB2_StatEditorChangePokemonNickname(void)
     ChangePokemonNicknameWithCallback(CB2_ReturnToStatEditorFromNamingScreen);
 }
 
+static void SetMonPosVars(void)
+{
+    if (IsEditingBoxMon())
+    {
+        gSpecialVar_MonBoxPos = sStatEditorDataPtr->monIndex;
+        gSpecialVar_MonBoxId = StorageGetCurrentBox();
+    }
+    else
+    {
+        gSpecialVar_0x8004 = sStatEditorDataPtr->monIndex;
+    }
+}
+
 static void HandleLeftPanelNextValue(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 val;
 
     switch (sStatEditorDataPtr->leftRow)
@@ -1935,6 +2014,7 @@ static void HandleLeftPanelNextValue(void)
 
         val = slots[(pos + 1) % count];
         SetMonData(mon, MON_DATA_ABILITY_NUM, &val);
+        SaveCurrentMon();
         PrintMonStats();
         break;
     }
@@ -1943,6 +2023,7 @@ static void HandleLeftPanelNextValue(void)
         val = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
         val = (val + 1) % NUM_NATURES;
         SetMonData(mon, MON_DATA_HIDDEN_NATURE, &val);
+        SaveCurrentMon();
         CalculateMonStats(mon);
         PrintMonStats();
         break;
@@ -1951,7 +2032,7 @@ static void HandleLeftPanelNextValue(void)
 
 static void HandleLeftPanelPreviousValue(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 val;
 
     switch (sStatEditorDataPtr->leftRow)
@@ -1981,6 +2062,7 @@ static void HandleLeftPanelPreviousValue(void)
 
         val = slots[(pos == 0) ? (count - 1) : (pos - 1)];
         SetMonData(mon, MON_DATA_ABILITY_NUM, &val);
+        SaveCurrentMon();
         PrintMonStats();
         break;
     }
@@ -1989,6 +2071,7 @@ static void HandleLeftPanelPreviousValue(void)
         val = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
         val = (val == 0) ? (NUM_NATURES - 1) : (val - 1);
         SetMonData(mon, MON_DATA_HIDDEN_NATURE, &val);
+        SaveCurrentMon();
         CalculateMonStats(mon);
         PrintMonStats();
         break;
@@ -2012,7 +2095,7 @@ static void Task_LeftPanelEditMode(u8 taskId)
     case LEFT_ROW_NICKNAME:
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->savedCallback = CB2_StatEditorChangePokemonNickname;
-        gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
+        SetMonPosVars();
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         break;
@@ -2051,7 +2134,7 @@ static void Task_HPTypeEditMode(u8 taskId)
         return;
     }
 
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 oldMaxHP  = GetMonData(mon, MON_DATA_MAX_HP);
     u32 currentHP = GetMonData(mon, MON_DATA_HP);
     s32 hpLost    = oldMaxHP - currentHP;
@@ -2084,6 +2167,7 @@ static void Task_HPTypeEditMode(u8 taskId)
             diff = 0;
 
         SetMonData(mon, MON_DATA_HP, &diff);
+        SaveCurrentMon();
     }
 
     PrintMonStats();
@@ -2101,7 +2185,7 @@ static void Task_TeraTypeEditMode(u8 taskId)
         return;
     }
 
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
 
     if (JOY_REPEAT(DPAD_RIGHT))
     {
@@ -2137,7 +2221,7 @@ static const u16 sSelectedStatToStatEnum[] = {
 
 static void ApplyRightPanelStatChange(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct Pokemon *mon = GetCurrentMon();
     u32 currentStatEnum = sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat];
     s32 amountHPLost = 0;
     u32 currentHP    = 0;
@@ -2150,6 +2234,7 @@ static void ApplyRightPanelStatChange(void)
     }
 
     SetMonData(mon, currentStatEnum, &(sStatEditorDataPtr->statEditingValue));
+    SaveCurrentMon();
     CalculateMonStats(mon);
 
     if ((amountHPLost > 0) && (currentHP != 0))
@@ -2160,6 +2245,7 @@ static void ApplyRightPanelStatChange(void)
             diff = 0;
 
         SetMonData(mon, MON_DATA_HP, &diff);
+        SaveCurrentMon();
     }
 
     PrintMonStats();
@@ -2276,33 +2362,55 @@ static void Task_RightPanelEditMode(u8 taskId)
     }
 }
 
+static void Task_ChangeStatEditorPokemon(u8 taskId, s32 delta)
+{
+    if (IsEditingBoxMon())
+    {
+        s16 newPos = AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, delta);
+        if (newPos != -1)
+        {
+            sStatEditorDataPtr->monIndex = newPos;
+            PlaySE(SE_SELECT);
+            ReloadNewPokemon(taskId);
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+        }
+    }
+    else
+    {
+        u32 count = gPartiesCount[B_TRAINER_PLAYER];
+        sStatEditorDataPtr->monIndex = (sStatEditorDataPtr->monIndex + delta + count) % count;
+        PlaySE(SE_SELECT);
+        ReloadNewPokemon(taskId);
+    }
+}
+
 static void Task_StatEditorMain(u8 taskId)
 {
     if (JOY_NEW(B_BUTTON))
     {
         PlaySE(SE_PC_OFF);
-        gLastViewedMonIndex = sStatEditorDataPtr->partyId;
+        gLastViewedMonIndex = sStatEditorDataPtr->monIndex;
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         return;
     }
 
-    if (JOY_NEW(L_BUTTON))
+    if (CanCycleBoxOrParty())
     {
-        u32 partyId = sStatEditorDataPtr->partyId;
-        sStatEditorDataPtr->partyId = (partyId == 0) ? (gPartiesCount[B_TRAINER_PLAYER] - 1) : (partyId - 1);
-        PlaySE(SE_SELECT);
-        ReloadNewPokemon(taskId);
-        return;
-    }
+        if (JOY_NEW(L_BUTTON))
+        {
+            Task_ChangeStatEditorPokemon(taskId, -1);
+            return;
+        }
 
-    if (JOY_NEW(R_BUTTON))
-    {
-        u32 partyId = sStatEditorDataPtr->partyId;
-        sStatEditorDataPtr->partyId = (partyId == gPartiesCount[B_TRAINER_PLAYER] - 1) ? 0 : (partyId + 1);
-        PlaySE(SE_SELECT);
-        ReloadNewPokemon(taskId);
-        return;
+        if (JOY_NEW(R_BUTTON))
+        {
+            Task_ChangeStatEditorPokemon(taskId, 1);
+            return;
+        }
     }
 
     if (JOY_NEW(START_BUTTON) && ShouldShowMoveRelearner())
@@ -2310,7 +2418,7 @@ static void Task_StatEditorMain(u8 taskId)
         PlaySE(SE_SELECT);
         gRelearnMode = RELEARN_MODE_STAT_EDITOR;
         sStatEditorDataPtr->savedCallback = CB2_InitLearnMove;
-        gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
+        SetMonPosVars();
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         return;
@@ -2391,7 +2499,7 @@ static void Task_StatEditorMain(u8 taskId)
             }
 
             sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
-            sStatEditorDataPtr->statEditingValue = GetMonData(GetCurrentPartyMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat]);
+            sStatEditorDataPtr->statEditingValue = GetMonData(GetCurrentMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat]);
 
             if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS
              && sStatEditorDataPtr->statEditingValue == MIN_STAT
