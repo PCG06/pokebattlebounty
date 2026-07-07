@@ -209,7 +209,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 0,  // position from top (per 8 pixels)
         .width = 16,      // width (per 8 pixels)
         .height = 2,      // height (per 8 pixels)
-        .paletteNum = 15, // palette index to use for text
+        .paletteNum = 2, // palette index to use for text
         .baseBlock = 1,   // tile start in VRAM
     },
     [WINDOW_STATS_HEADER] =
@@ -219,7 +219,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 1,
         .width = 12,
         .height = 2,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32,
     },
     [WINDOW_STATS_PANEL] = 
@@ -229,7 +229,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 3,
         .width = 16,
         .height = 14,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24,
     },
     [WINDOW_NICKNAME] = 
@@ -239,7 +239,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 12,
         .width = 10,
         .height = 3,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24 + 224,
     },
     [WINDOW_ABILITIES] = 
@@ -249,7 +249,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 15,
         .width = 14,
         .height = 2,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24 + 224 + 36,
     },
     [WINDOW_NATURES] = 
@@ -259,7 +259,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 17,
         .width = 14,
         .height = 2,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24 + 224 + 36 + 28,
     },
     DUMMY_WIN_TEMPLATE
@@ -577,16 +577,14 @@ enum FontColors
 {
     FONT_BLACK,
     FONT_WHITE,
-    FONT_RED,
-    FONT_BLUE,
+    FONT_WHITE_BLACK
 };
 
 static const u8 sMenuWindowFontColors[][3] =
 {
-    [FONT_BLACK] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_DARK_GRAY,  TEXT_COLOR_LIGHT_GRAY},
-    [FONT_WHITE] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_WHITE,      TEXT_COLOR_DARK_GRAY},
-    [FONT_RED]   = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_DARK_GRAY},
-    [FONT_BLUE]  = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_BLUE, TEXT_COLOR_DARK_GRAY},
+    [FONT_BLACK]       = {0, 1, 2},
+    [FONT_WHITE]       = {0, 3, 4},
+    [FONT_WHITE_BLACK] = {0, 3, 1}
 };
 
 static const struct OamData sOamData_Selector =
@@ -829,17 +827,19 @@ static const u8 sGenderColors[2][3] =
     {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_RED}
 };
 
-static const u8 sText_MenuStat[]                = _("Stat");
-static const u8 sText_MenuEV[]                  = _("EVs");
-static const u8 sText_MenuIV[]                  = _("IVs");
-static const u8 sText_MenuLRButtonParty[]       = _("Party");
-static const u8 sText_MenuStartButtonMoves[]    = _("Moves");
-static const u8 sText_MenuABButtonSave[]        = _("Save");
-static const u8 sText_MenuDPadChangeStat[]      = _("Stat");
-static const u8 sText_MenuDPadChangeAbility[]   = _("Ability");
-static const u8 sText_MenuDPadChangeNature[]    = _("Nature");
-static const u8 sText_MenuDPadChangeHPType[]    = _("HP Type");
-static const u8 sText_MenuDPadChangeTeraType[]  = _("Tera Type");
+static const u8 sText_MenuStat[]               = _("Stat");
+static const u8 sText_MenuEV[]                 = _("EVs");
+static const u8 sText_MenuIV[]                 = _("IVs");
+static const u8 sText_MenuAbility[]            = _("Ability");
+static const u8 sText_MenuNature[]             = _("Nature");
+static const u8 sText_MenuLRButtonParty[]      = _("Party");
+static const u8 sText_MenuStartButtonMoves[]   = _("Moves");
+static const u8 sText_MenuABButtonSave[]       = _("Save");
+static const u8 sText_MenuDPadChangeStat[]     = _("Stat");
+static const u8 sText_MenuDPadChangeAbility[]  = _("Ability");
+static const u8 sText_MenuDPadChangeNature[]   = _("Nature");
+static const u8 sText_MenuDPadChangeHPType[]   = _("HP Type");
+static const u8 sText_MenuDPadChangeTeraType[] = _("Tera Type");
 
 // Begin Generic UI Initialization Code
 
@@ -1147,7 +1147,7 @@ static void PrintTextOnWindowWithFont(u8 windowId, const u8 *string, u8 x, u8 y,
 
 static void PrintTextOnWindow(u8 windowId, const u8 *string, u8 x, u8 y, u8 lineSpacing, u8 colorId)
 {
-    PrintTextOnWindowWithFont(windowId, string, x, y, lineSpacing, colorId, FONT_NORMAL);
+    PrintTextOnWindowWithFont(windowId, string, x, y, lineSpacing, colorId, FONT_SHORT_NARROW);
 }
 
 //
@@ -1646,9 +1646,9 @@ static void PrintMonStats(void)
     FillWindowPixelBuffer(WINDOW_NATURES, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     sStatEditorDataPtr->evTotal = 0;
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuStat, 3,  0, 0, FONT_WHITE, FONT_NARROW);
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuEV,   40, 0, 0, FONT_WHITE, FONT_NARROW);
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuIV,   76, 0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindow(WINDOW_STATS_HEADER, sText_MenuStat, 3,  0, 0, FONT_WHITE_BLACK);
+    PrintTextOnWindow(WINDOW_STATS_HEADER, sText_MenuEV,   40, 0, 0, FONT_WHITE_BLACK);
+    PrintTextOnWindow(WINDOW_STATS_HEADER, sText_MenuIV,   76, 0, 0, FONT_WHITE_BLACK);
 
     UpdateNatureArrowSprites();
 
@@ -1659,7 +1659,7 @@ static void PrintMonStats(void)
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sActualStatsMap[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sActualStatsMap[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sActualStatsMap[i]].y, 0, FONT_BLACK, FONT_NORMAL);
 
         // EVs
         currentStat = GetMonData(mon, sEVStatsMap[i]);
@@ -1667,19 +1667,19 @@ static void PrintMonStats(void)
         sStatEditorDataPtr->evTotal += currentStat;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sEVStatsMap[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sEVStatsMap[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sEVStatsMap[i]].y, 0, FONT_BLACK, FONT_NORMAL);
 
         // IVs
         currentStat = GetMonData(mon, sIVStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sIVStatsMap[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sIVStatsMap[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sIVStatsMap[i]].y, 0, FONT_BLACK, FONT_NORMAL);
     }
 
     digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
     ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, digits);
-    PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
+    PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK, FONT_NORMAL);
 
     if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
         UpdateHiddenPowerTypeIcon();
@@ -1689,18 +1689,18 @@ static void PrintMonStats(void)
     // Print ability / nature / name
     GetMonNickname(mon, gStringVar2);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NICKNAME)) + 1 : 12;
-    PrintTextOnWindowWithFont(WINDOW_NICKNAME, gStringVar2, xPos, 4, 0, FONT_WHITE, FONT_SHORT_NARROW);
+    PrintTextOnWindow(WINDOW_NICKNAME, gStringVar2, xPos, 4, 0, FONT_WHITE);
 
     StringCopy(gStringVar2, gAbilitiesInfo[ability].name);
-    PrintTextOnWindowWithFont(WINDOW_ABILITIES, sText_MenuDPadChangeAbility, 3, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
-    u32 fontId = GetFontIdToFit(gStringVar2, FONT_SMALL_NARROW, 0, WindowWidthPx(WINDOW_ABILITIES) - 48);
+    PrintTextOnWindowWithFont(WINDOW_ABILITIES, sText_MenuAbility, 3, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    u32 fontId = GetFontIdToFit(gStringVar2, FONT_SHORT_NARROW, 0, WindowWidthPx(WINDOW_ABILITIES) - 48);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(fontId, gStringVar2, WindowWidthPx(WINDOW_ABILITIES) + 28) : 32;
     PrintTextOnWindowWithFont(WINDOW_ABILITIES, gStringVar2, xPos, 2, 0, FONT_BLACK, fontId);
 
     StringCopy(gStringVar2, gNaturesInfo[nature].name);
-    PrintTextOnWindowWithFont(WINDOW_NATURES, sText_MenuDPadChangeNature, 2, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    PrintTextOnWindowWithFont(WINDOW_NATURES, sText_MenuNature, 2, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NATURES) + 28) : 32;
-    PrintTextOnWindowWithFont(WINDOW_NATURES, gStringVar2, xPos, 2, 0, FONT_BLACK, FONT_SMALL_NARROW);
+    PrintTextOnWindow(WINDOW_NATURES, gStringVar2, xPos, 2, 0, FONT_BLACK);
 
     PutWindowTilemap(WINDOW_STATS_HEADER);
     CopyWindowToVram(WINDOW_STATS_HEADER, COPYWIN_FULL);
