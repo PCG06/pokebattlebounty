@@ -85,7 +85,7 @@ struct StatEditorResources
 #define LEFT_ROW_COUNT    3
 
 #define RIGHT_PANEL_ROW_HP_TYPE 6
-#define RIGHT_PANEL_ROW_COUNT   7
+#define RIGHT_PANEL_ROW_COUNT   ((P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_NONE) ? 6 : 7)
 
 #define PANEL_INPUT_SELECT 0
 #define PANEL_INPUT_EDIT   1
@@ -1617,7 +1617,7 @@ void GetDPadText(void)
     }
     else if (sStatEditorDataPtr->panel == PANEL_RIGHT)
     {
-        if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+        if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
         {
             BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPadLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
             if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
@@ -1776,7 +1776,9 @@ static void SelectorCallback(struct Sprite *sprite)
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}},
+#if P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE
         {{SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X, SELECTOR_RIGHT_HP_TYPE_Y},                 {SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X, SELECTOR_RIGHT_HP_TYPE_Y}},
+#endif // P_STAT_EDITOR_HP_OR_TERA
     };
 
     static const u8 sLeftPanelY[LEFT_ROW_COUNT] = {
@@ -1815,7 +1817,7 @@ static void SelectorCallback(struct Sprite *sprite)
         u32 leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
         u32 rightEdgeX;
 
-        if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+        if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             rightEdgeX = leftEdgeX + RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH;
         else
             rightEdgeX = leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH;
@@ -2461,7 +2463,7 @@ static void Task_StatEditorMain(u8 taskId)
     {
         if (JOY_NEW(A_BUTTON))
         {
-            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             {
                 PlaySE(SE_SELECT);
                 sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
@@ -2530,7 +2532,7 @@ static void Task_StatEditorMain(u8 taskId)
         if (JOY_NEW(DPAD_RIGHT))
         {
             PlaySE(SE_SELECT);
-            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             {
                 sStatEditorDataPtr->panel = PANEL_LEFT;
                 sStatEditorDataPtr->leftRow = LEFT_ROW_NICKNAME;
