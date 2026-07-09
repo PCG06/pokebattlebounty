@@ -991,12 +991,6 @@ static bool8 StatEditor_DoGfxSetup(void)
     return FALSE;
 }
 
-#define try_free(ptr) ({        \
-    void ** ptr__ = (void **)&(ptr);   \
-    if (*ptr__ != NULL)                \
-        Free(*ptr__);                  \
-})
-
 static void StatEditor_FreeResources(void)
 {
     DestroySelectors();
@@ -1014,8 +1008,8 @@ static void StatEditor_FreeResources(void)
         SetGpuReg(REG_OFFSET_BLDCNT, 0);
         SetGpuReg(REG_OFFSET_BLDALPHA, 0);
     }
-    try_free(sStatEditorDataPtr);
-    try_free(sBg1TilemapBuffer);
+    TRY_FREE_AND_SET_NULL(sStatEditorDataPtr);
+    TRY_FREE_AND_SET_NULL(sBg1TilemapBuffer);
     FreeAllWindowBuffers();
 }
 
@@ -1953,7 +1947,7 @@ static void SetMonPosVars(void)
     }
 }
 
-static void HandleLeftPanelNextValue(void)
+static void HandleLeftPanelValue(bool32 forward)
 {
     struct BoxPokemon *boxMon = GetCurrentBoxMon();
     u32 val;
@@ -1983,7 +1977,9 @@ static void HandleLeftPanelNextValue(void)
             }
         }
 
-        val = slots[(pos + 1) % count];
+        pos = forward ? ((pos + 1) % count) : (pos == 0 ? count - 1 : pos - 1);
+
+        val = slots[pos];
         SetBoxMonData(boxMon, MON_DATA_ABILITY_NUM, &val);
         PrintMonStats();
         break;
@@ -1991,53 +1987,9 @@ static void HandleLeftPanelNextValue(void)
 
     case LEFT_ROW_NATURE:
         val = GetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE);
-        val = (val + 1) % NUM_NATURES;
-        SetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE, &val);
-        CalculateBoxMonStats(boxMon);
-        PrintMonStats();
-        break;
-    }
-}
 
-static void HandleLeftPanelPreviousValue(void)
-{
-    struct BoxPokemon *boxMon = GetCurrentBoxMon();
-    u32 val;
+        val = forward ? ((val + 1) % NUM_NATURES) : ((val == 0 ? NUM_NATURES - 1 : val - 1));
 
-    switch (sStatEditorDataPtr->leftRow)
-    {
-    case LEFT_ROW_NICKNAME:
-        break;
-
-    case LEFT_ROW_ABILITY:
-    {
-        u8 slots[NUM_ABILITY_SLOTS];
-        u32 count = GetValidAbilitySlots(sStatEditorDataPtr->speciesID, slots);
-
-        if (count <= 1)
-            return;
-
-        u32 current = GetBoxMonData(boxMon, MON_DATA_ABILITY_NUM);
-        u32 pos = 0;
-
-        for (u32 i = 0; i < count; i++)
-        {
-            if (slots[i] == current)
-            {
-                pos = i;
-                break;
-            }
-        }
-
-        val = slots[(pos == 0) ? (count - 1) : (pos - 1)];
-        SetBoxMonData(boxMon, MON_DATA_ABILITY_NUM, &val);
-        PrintMonStats();
-        break;
-    }
-
-    case LEFT_ROW_NATURE:
-        val = GetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE);
-        val = (val == 0) ? (NUM_NATURES - 1) : (val - 1);
         SetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE, &val);
         CalculateBoxMonStats(boxMon);
         PrintMonStats();
@@ -2073,13 +2025,13 @@ static void Task_LeftPanelEditMode(u8 taskId)
         {
             sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
             PlaySE(SE_SELECT);
-            HandleLeftPanelNextValue();
+            HandleLeftPanelValue(TRUE);
         }
         else if (JOY_REPEAT(DPAD_LEFT))
         {
             sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
             PlaySE(SE_SELECT);
-            HandleLeftPanelPreviousValue();
+            HandleLeftPanelValue(FALSE);
         }
         else
         {
