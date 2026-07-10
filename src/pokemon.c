@@ -6718,7 +6718,7 @@ static void ResolveIVs(enum Species species, const u16 *ivsTemplate, u8 *ivs)
     }
 }
 
-static void ResolveEVs(const u16 *evsTemplate, u8 *evs)
+static void ResolveEVs(const u16 *evsTemplate, u8 *evs, bool32 ignoreTotalEvCheck)
 {
     u32 evTotal = 0;
     for (u32 i = 0; i < NUM_STATS; i++)
@@ -6734,6 +6734,8 @@ static void ResolveEVs(const u16 *evsTemplate, u8 *evs)
         }
         evTotal += evs[i];
     }
+    if (!OW_CHECK_FOR_TOTAL_EVS || ignoreTotalEvCheck)
+        return;
     assertf(evTotal <= MAX_TOTAL_EVS, "invalid total ev value of %d above maximum of %d", evTotal, MAX_TOTAL_EVS)
     {
         for (u32 i = 0; i < NUM_STATS; i++)
@@ -6873,7 +6875,7 @@ void CreateMonFromTemplate(struct Pokemon *mon, const struct PokemonTemplate *mo
     u8 ivs[NUM_STATS];
     u8 evs[NUM_STATS];
     ResolveIVs(species, monTemplate->ivs, ivs);
-    ResolveEVs(monTemplate->evs, evs);
+    ResolveEVs(monTemplate->evs, evs, monTemplate->ignoreTotalEvCheck);
     for (u32 i = 0; i < NUM_STATS; i++)
     {
         SetMonData(mon, MON_DATA_HP_IV + i, &ivs[i]);
