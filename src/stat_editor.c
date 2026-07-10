@@ -1162,16 +1162,23 @@ static bool32 CanCycleBoxOrParty(void)
 
     if (IsEditingBoxMon())
     {
-        if (AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, -1) == -1)
-        {
-            if (AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, 1) == -1)
-                return FALSE;
-        }
-        return TRUE;
+        struct BoxPokemon *boxMons = GetBoxedMonPtr(gSpecialVar_MonBoxId, 0);
+
+        return AdvanceStorageMonIndex(boxMons, sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, 2) != -1 
+            || AdvanceStorageMonIndex(boxMons, sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, 0) != -1;
     }
     else
     {
-        return gPartiesCount[B_TRAINER_PLAYER] > 1;
+        u32 count = gPartiesCount[B_TRAINER_PLAYER];
+        u32 validMons = 0;
+
+        for (u32 i = 0; i < count; i++)
+        {
+            if (!GetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_IS_EGG))
+                validMons++;
+        }
+
+        return validMons > 1;
     }
 }
 
@@ -1198,7 +1205,7 @@ static void SpriteCB_StatEditorMonPokemon(struct Sprite *sprite)
 
 static u8 CreateStatEditorMonSprite(struct BoxPokemon *boxMon, bool32 isShadow)
 {
-    u16 species = GetBoxMonData(boxMon, MON_DATA_SPECIES_OR_EGG);
+    enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES_OR_EGG);
     u8 shadowPalette = 0;
     u8 spriteId = CreateSprite(&gMultiuseSpriteTemplate, MON_ICON_X, MON_ICON_Y, 5);
 
@@ -1259,7 +1266,7 @@ static void PlayMonCry(void)
     {
         struct Pokemon *mon = NULL;
         BoxMonToMon(boxMon, mon);
-        enum Species species = GetMonData(mon, MON_DATA_SPECIES);
+        enum Species species = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
 
         if (ShouldPlayNormalMonCry(mon) == TRUE)
             PlayCry_ByMode(species, 0, CRY_MODE_NORMAL);
@@ -2282,7 +2289,8 @@ static void Task_ChangeStatEditorPokemon(u8 taskId, s32 delta)
 {
     if (IsEditingBoxMon())
     {
-        s16 newPos = AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, delta);
+        u8 mode = (delta == 1) ? 0 : 2;
+        s16 newPos = AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, mode);
         if (newPos != -1)
         {
             sStatEditorDataPtr->monIndex = newPos;
@@ -2297,9 +2305,35 @@ static void Task_ChangeStatEditorPokemon(u8 taskId, s32 delta)
     else
     {
         u32 count = gPartiesCount[B_TRAINER_PLAYER];
-        sStatEditorDataPtr->monIndex = (sStatEditorDataPtr->monIndex + delta + count) % count;
-        PlaySE(SE_SELECT);
-        ReloadNewPokemon(taskId);
+        s16 newPos = -1;
+        if (count > 1)
+        {
+            u32 validMons = 0;
+            for (u32 i = 0; i < count; i++)
+            {
+                if (!GetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_IS_EGG))
+                    validMons++;
+            }
+            if (validMons > 1)
+            {
+                newPos = sStatEditorDataPtr->monIndex;
+
+                do
+                {
+                    newPos = (newPos + delta + count) % count;
+                } while (GetMonData(&gParties[B_TRAINER_PLAYER][newPos], MON_DATA_IS_EGG));
+            }
+        }
+        if (newPos != -1)
+        {
+            sStatEditorDataPtr->monIndex = newPos;
+            PlaySE(SE_SELECT);
+            ReloadNewPokemon(taskId);
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+        }
     }
 }
 
