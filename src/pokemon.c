@@ -1319,6 +1319,13 @@ void CreateEnemyEventMon(void)
     }
 }
 
+void CalculateBoxMonStats(struct BoxPokemon *boxMon)
+{
+    struct Pokemon *mon = NULL;
+    BoxMonToMon(boxMon, mon);
+    CalculateMonStats(mon);
+}
+
 void CalculateMonStats(struct Pokemon *mon)
 {
     CalculateMonStatsCont(mon, TRUE);
