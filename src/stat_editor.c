@@ -264,6 +264,7 @@ static const u32 sLeftArrowGfx[]            = INCGFX_U32("graphics/stat_editor/l
 static const u32 sRightArrowGfx[]           = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
 static const u32 sNatureArrowsGfx[]         = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
 static const u16 sMiscPalette[]             = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
+static const u16 sTextPalette[]             = INCGFX_U16("graphics/stat_editor/text.pal", ".gbapal");
 static const u8 sA_ButtonGfx[]              = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
 static const u8 sB_ButtonGfx[]              = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
 static const u8 sLR_ButtonGfx[]             = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
@@ -1085,7 +1086,8 @@ static bool8 StatEditor_LoadGraphics(void)
         sStatEditorDataPtr->gfxLoadState++;
         break;
     case 3:
-        LoadPalette(sStatEditorBgPalette, 0, 32);
+        LoadPalette(sStatEditorBgPalette, 0, PLTT_SIZE_4BPP);
+        LoadPalette(sTextPalette, BG_PLTT_ID(2), PLTT_SIZE_4BPP);
         sStatEditorDataPtr->gfxLoadState++;
         break;
     case 4:
