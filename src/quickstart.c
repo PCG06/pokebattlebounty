@@ -98,6 +98,7 @@ static void CB2_SkipToNewGame(void)
         StringCopy_PlayerName(gSaveBlock1Ptr->rivalName, sText_Rival);
 #endif  // IS_FRLG
 
+        SeedRngAndSetTrainerId();
         ResetSpriteData();
         FreeAllSpritePalettes();
         ResetTasks();
