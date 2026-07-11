@@ -859,9 +859,9 @@ void StatEditor_Init(MainCallback callback)
     sStatEditorDataPtr->leftSelectorSpriteId  = 0xFF;
     sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
     if (IsEditingBoxMon())
-        sStatEditorDataPtr->monIndex           = gSpecialVar_MonBoxPos;
+        sStatEditorDataPtr->monIndex          = gSpecialVar_MonBoxPos;
     else
-        sStatEditorDataPtr->monIndex           = gSpecialVar_0x8004;
+        sStatEditorDataPtr->monIndex          = gSpecialVar_0x8004;
     sStatEditorDataPtr->panel                 = PANEL_LEFT;
     sStatEditorDataPtr->leftRow               = LEFT_ROW_NICKNAME;
     sStatEditorDataPtr->rightPanelColumn      = RIGHT_PANEL_EVS;
@@ -1242,12 +1242,21 @@ static u8 CreateStatEditorMonSprite(struct BoxPokemon *boxMon, bool32 isShadow)
     return spriteId;
 }
 
+// States: Teachable (Lvl, Egg, TM, Tutor) / Event
 static bool32 HasAnyRelearnableMoves(void)
 {
     struct BoxPokemon *boxMon = GetCurrentBoxMon();
-    gMoveRelearnerState = MOVE_RELEARNER_TEACHABLE_MOVES; // States: Teachable (Lvl, Egg, TM, Tutor) / Event
 
-    return CanBoxMonRelearnMoves(boxMon, gMoveRelearnerState);
+    gMoveRelearnerState = MOVE_RELEARNER_TEACHABLE_MOVES;
+    if (CanBoxMonRelearnMoves(boxMon, gMoveRelearnerState))
+        return TRUE;
+
+    if (CanBoxMonRelearnMoves(boxMon, MOVE_RELEARNER_EVENT_MOVES))
+    {
+        gMoveRelearnerState = MOVE_RELEARNER_EVENT_MOVES;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 static inline bool32 ShouldShowMoveRelearner(void)
