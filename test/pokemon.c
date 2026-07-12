@@ -368,17 +368,15 @@ TEST("givemon [moves]")
 
 TEST("givemon [moves (default)]")
 {
-    KNOWN_FAILING; // Level Up moves are disabled
-
     ZeroPlayerPartyMons();
 
     RUN_OVERWORLD_SCRIPT(
         givemon SPECIES_PYUKUMUKU, 100, move1=MOVE_DEFAULT, move2=MOVE_DEFAULT, move3=MOVE_DEFAULT;
     );
 
-    const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(SPECIES_PYUKUMUKU);
+    const u16 *learnset = GetSpeciesTeachableLearnset(SPECIES_PYUKUMUKU);
     u32 learnsetLength;
-    for (learnsetLength = 0; learnset[learnsetLength].move != LEVEL_UP_MOVE_END; learnsetLength++)
+    for (learnsetLength = 0; learnset[learnsetLength] != MOVE_UNAVAILABLE; learnsetLength++)
     {
         ; // we just want to get length of the learnset array
     }

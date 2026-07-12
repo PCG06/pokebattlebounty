@@ -806,14 +806,14 @@ static void GiveParentSharedLevelUpMoves(struct Pokemon *egg, enum Move *fatherM
         }
     }
 
-    const struct LevelUpMove *levelupLearnset = GetSpeciesLevelUpLearnset(species);
+    const u16 *teachableLearnset = GetSpeciesTeachableLearnset(species);
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (sharedMoves[i] == MOVE_NONE)
             break;
-        for (j = 0; levelupLearnset[j].move != LEVEL_UP_MOVE_END; i++)
+        for (j = 0; teachableLearnset[j] != MOVE_UNAVAILABLE; i++)
         {
-            if (sharedMoves[i] == levelupLearnset[j].move)
+            if (sharedMoves[i] == teachableLearnset[j])
             {
                 ADD_OR_REPLACE_MOVE(sharedMoves[i])
                 break;

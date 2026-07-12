@@ -6431,32 +6431,10 @@ static void DeleteInvalidFusionMoves(struct Pokemon *mon, enum Species species)
     {
         enum Move move = GetMonData(mon, MON_DATA_MOVE1 + i);
         bool32 toDelete = TRUE;
-        const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
-        for (u32 j = 0; learnset[j].move != LEVEL_UP_MOVE_END;j++)
+        const u16 *learnset = GetSpeciesTeachableLearnset(species);
+        for (u32 j = 0; learnset[j] != MOVE_UNAVAILABLE; j++)
         {
             if (learnset[j].move == move)
-            {
-                toDelete = FALSE;
-                break;
-            }
-        }
-        if (!toDelete)
-            continue;
-        const u16 *learnset2 = GetSpeciesTeachableLearnset(species);
-        for (u32 j = 0; learnset2[j] != MOVE_UNAVAILABLE;j++)
-        {
-            if (learnset2[j] == move)
-            {
-                toDelete = FALSE;
-                break;
-            }
-        }
-        if (!toDelete)
-            continue;
-        const u16 *learnset3 = GetSpeciesEggMoves(species);
-        for (u32 j = 0; learnset3[j] != MOVE_UNAVAILABLE;j++)
-        {
-            if (learnset3[j] == move)
             {
                 toDelete = FALSE;
                 break;
