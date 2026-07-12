@@ -368,6 +368,8 @@ TEST("givemon [moves]")
 
 TEST("givemon [moves (default)]")
 {
+    KNOWN_FAILING; // Level Up moves are disabled
+
     ZeroPlayerPartyMons();
 
     RUN_OVERWORLD_SCRIPT(

@@ -452,9 +452,7 @@ struct SpeciesInfo /*0xC4*/
     u16 suppressEnemyShadow:1; // If set to true, then a shadow will not be drawn beneath an enemy Pokémon's front sprite during battle.
     enum EggIds eggId:12;
     // Move Data
-    const struct LevelUpMove *levelUpLearnset;
     const u16 *teachableLearnset;
-    const u16 *eggMoveLearnset;
     const u16 *eventLearnset;
     const struct Evolution *evolutions;
     const u16 *formSpeciesIdTable;

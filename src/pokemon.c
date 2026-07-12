@@ -456,36 +456,27 @@ const struct NatureInfo gNaturesInfo[NUM_NATURES] =
 #include "data/pokemon/trainer_class_lookups.h"
 #include "data/pokemon/experience_tables.h"
 
-#if P_LVL_UP_LEARNSETS >= GEN_9
-#include "data/pokemon/level_up_learnsets/gen_9.h" // Scarlet/Violet
-#elif P_LVL_UP_LEARNSETS >= GEN_8
-#include "data/pokemon/level_up_learnsets/gen_8.h" // Sword/Shield
-#elif P_LVL_UP_LEARNSETS >= GEN_7
-#include "data/pokemon/level_up_learnsets/gen_7.h" // Ultra Sun/Ultra Moon
-#elif P_LVL_UP_LEARNSETS >= GEN_6
-#include "data/pokemon/level_up_learnsets/gen_6.h" // Omega Ruby/Alpha Sapphire
-#elif P_LVL_UP_LEARNSETS >= GEN_5
-#include "data/pokemon/level_up_learnsets/gen_5.h" // Black 2/White 2
-#elif P_LVL_UP_LEARNSETS >= GEN_4
-#include "data/pokemon/level_up_learnsets/gen_4.h" // HeartGold/SoulSilver
-#elif P_LVL_UP_LEARNSETS >= GEN_3
-#include "data/pokemon/level_up_learnsets/gen_3.h" // Ruby/Sapphire/Emerald
-#elif P_LVL_UP_LEARNSETS >= GEN_2
-#include "data/pokemon/level_up_learnsets/gen_2.h" // Crystal
-#elif P_LVL_UP_LEARNSETS >= GEN_1
-#include "data/pokemon/level_up_learnsets/gen_1.h" // Yellow
-#endif
-
 #include "data/pokemon/teachable_learnsets.h"
-#include "data/pokemon/egg_moves.h"
+#include "data/pokemon/event_learnsets.h"
 #include "data/pokemon/form_species_tables.h"
 #include "data/pokemon/form_change_tables.h"
 #include "data/pokemon/form_change_table_pointers.h"
 #include "data/pokemon/wild_encounter_ow_behavior.h"
 #include "data/object_events/object_event_pic_tables_followers.h"
-#include "data/pokemon/event_learnsets.h"
 
 #include "data/pokemon/species_info.h"
+
+#define LEVEL_UP_MOVE(lvl, moveLearned) {.move = moveLearned, .level = lvl}
+#define LEVEL_UP_END {.move = LEVEL_UP_MOVE_END, .level = 0}
+
+static const struct LevelUpMove sNoneLevelUpLearnset[] = {
+    LEVEL_UP_MOVE(1, MOVE_NONE),
+    LEVEL_UP_END
+};
+
+static const u16 sNoneEggMoveLearnset[] = {
+    MOVE_UNAVAILABLE,
+};
 
 #define PP_UP_SHIFTS(val)           val,        (val) << 2,        (val) << 4,        (val) << 6
 #define PP_UP_SHIFTS_INV(val) (u8)~(val), (u8)~((val) << 2), (u8)~((val) << 4), (u8)~((val) << 6)
@@ -1527,25 +1518,20 @@ void GiveMonInitialMoveset(struct Pokemon *mon)
 void GiveBoxMonInitialMoveset(struct BoxPokemon *boxMon) //Credit: AsparagusEduardo
 {
     enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES);
-    s32 level = GetLevelFromBoxMonExp(boxMon);
     s32 i;
     enum Move moves[MAX_MON_MOVES] = {MOVE_NONE};
     u8 addedMoves = 0;
-    const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
+    const u16 *learnset = GetSpeciesTeachableLearnset(species);
 
-    for (i = 0; learnset[i].move != LEVEL_UP_MOVE_END; i++)
+    for (i = 0; learnset[i] != MOVE_UNAVAILABLE; i++)
     {
         s32 j;
         bool32 alreadyKnown = FALSE;
-
-        if (learnset[i].level > level)
-            break;
-        if (learnset[i].level == 0)
-            continue;
+        enum Move move = learnset[i];
 
         for (j = 0; j < addedMoves; j++)
         {
-            if (moves[j] == learnset[i].move)
+            if (moves[j] == move)
             {
                 alreadyKnown = TRUE;
                 break;
@@ -1555,16 +1541,9 @@ void GiveBoxMonInitialMoveset(struct BoxPokemon *boxMon) //Credit: AsparagusEdua
         if (!alreadyKnown)
         {
             if (addedMoves < MAX_MON_MOVES)
-            {
-                moves[addedMoves] = learnset[i].move;
-                addedMoves++;
-            }
+                moves[addedMoves++] = move;
             else
-            {
-                for (j = 0; j < MAX_MON_MOVES - 1; j++)
-                    moves[j] = moves[j + 1];
-                moves[MAX_MON_MOVES - 1] = learnset[i].move;
-            }
+                break;
         }
     }
     for (i = 0; i < MAX_MON_MOVES; i++)
@@ -1584,28 +1563,23 @@ void GiveBoxMonDefaultMove(struct BoxPokemon *boxMon, u32 slot)
 {
     enum Move move = MOVE_NONE;
     enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES);
-    const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
-    s32 level = GetLevelFromBoxMonExp(boxMon);
-    for (u32 i = 0; learnset[i].move != LEVEL_UP_MOVE_END; i++)
+    const u16 *learnset = GetSpeciesTeachableLearnset(species);
+
+    for (u32 i = 0; learnset[i] != MOVE_UNAVAILABLE; i++)
     {
         s32 j;
         bool32 alreadyKnown = FALSE;
 
-        if (learnset[i].level > level)
-            break;
-        if (learnset[i].level == 0)
-            continue;
-
         for (j = 0; j < slot; j++)
         {
-            if (GetBoxMonData(boxMon, MON_DATA_MOVE1 + j) == learnset[i].move)
+            if (GetBoxMonData(boxMon, MON_DATA_MOVE1 + j) == learnset[i])
             {
                 alreadyKnown = TRUE;
                 break;
             }
         }
         if (!alreadyKnown)
-            move = learnset[i].move;
+            move = learnset[i];
     }
 
     SetBoxMonData(boxMon, MON_DATA_MOVE1 + slot, &move);
@@ -3146,10 +3120,14 @@ u32 GetSpeciesBaseStatTotal(enum Species species)
 
 const struct LevelUpMove *GetSpeciesLevelUpLearnset(enum Species species)
 {
+    return sNoneLevelUpLearnset;
+
+    /*
     const struct LevelUpMove *learnset = gSpeciesInfo[SanitizeSpeciesId(species)].levelUpLearnset;
     if (learnset == NULL)
         return gSpeciesInfo[SPECIES_NONE].levelUpLearnset;
     return learnset;
+    */
 }
 
 const u16 *GetSpeciesTeachableLearnset(enum Species species)
@@ -3162,10 +3140,14 @@ const u16 *GetSpeciesTeachableLearnset(enum Species species)
 
 const u16 *GetSpeciesEggMoves(enum Species species)
 {
+    return sNoneEggMoveLearnset;
+
+    /*
     const u16 *learnset = gSpeciesInfo[SanitizeSpeciesId(species)].eggMoveLearnset;
     if (learnset == NULL)
         return gSpeciesInfo[SPECIES_NONE].eggMoveLearnset;
     return learnset;
+    */
 }
 
 const u16 *GetSpeciesEventLearnset(enum Species species)

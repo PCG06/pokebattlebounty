@@ -145,9 +145,7 @@ const struct SpeciesInfo gSpeciesInfo[] =
             .images = sPicTable_Substitute,
         },
     #endif
-        .levelUpLearnset = sNoneLevelUpLearnset,
         .teachableLearnset = sNoneTeachableLearnset,
-        .eggMoveLearnset = sNoneEggMoveLearnset,
         .eventLearnset = sNoneEventLearnset,
     },
 
@@ -238,7 +236,6 @@ const struct SpeciesInfo gSpeciesInfo[] =
         .iconSprite = gMonIcon_QuestionMark,
         .iconPalIndex = 0,
         FOOTPRINT(QuestionMark)
-        .levelUpLearnset = sNoneLevelUpLearnset,
         .teachableLearnset = sNoneTeachableLearnset,
         .eventLearnset = sNoneEventLearnset,
         .evolutions = EVOLUTION({EVO_LEVEL, 100, SPECIES_NONE},
