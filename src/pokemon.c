@@ -3161,6 +3161,10 @@ const u16 *GetSpeciesEventLearnset(enum Species species)
 //only used in test assumptions at the moment
 bool32 SpeciesHasEggMove(enum Species species, enum Move move)
 {
+    // Egg moves are not used
+    return CanLearnTeachableMove(species, move);
+
+    /*
     const u16 *learnset = GetSpeciesEggMoves(species);
     for (u32 i = 0; learnset[i] != MOVE_UNAVAILABLE; i++)
     {
@@ -3168,6 +3172,7 @@ bool32 SpeciesHasEggMove(enum Species species, enum Move move)
             return TRUE;
     }
     return FALSE;
+    */
 }
 
 const struct Evolution *GetSpeciesEvolutions(enum Species species)
