@@ -1680,6 +1680,9 @@ static enum Ability GetBoxMonAbility(struct BoxPokemon *boxMon)
 static void PrintMonStats(void)
 {
     struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    struct Pokemon mon;
+    BoxMonToMon(boxMon, &mon);
+
     u32 nature = GetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE);
     enum Ability ability = GetBoxMonAbility(boxMon);
     u32 currentStat, digits;
@@ -1701,7 +1704,8 @@ static void PrintMonStats(void)
     // Print Mon Stats
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
     {
-        currentStat = GetBoxMonData(boxMon, sActualStatsMap[i]);
+        currentStat = GetMonData(&mon, sActualStatsMap[i]);
+        DebugPrintf("Current stat: %d", currentStat);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sActualStatsMap[i]].x;

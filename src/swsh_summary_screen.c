@@ -2635,6 +2635,7 @@ static bool8 ExtractMonDataToSummaryStruct(struct Pokemon *mon)
 {
     u32 i;
     struct PokeSummary *sum = &sMonSummaryScreen->summary;
+    CalculateMonStats(mon); // update actual stats after stat editor
     // Spread the data extraction over multiple frames.
     switch (sMonSummaryScreen->switchCounter)
     {
