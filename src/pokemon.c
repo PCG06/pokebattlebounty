@@ -1518,35 +1518,11 @@ void GiveMonInitialMoveset(struct Pokemon *mon)
 void GiveBoxMonInitialMoveset(struct BoxPokemon *boxMon) //Credit: AsparagusEduardo
 {
     enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES);
-    s32 i;
-    enum Move moves[MAX_MON_MOVES] = {MOVE_NONE};
-    u8 addedMoves = 0;
-    const u16 *learnset = GetSpeciesTeachableLearnset(species);
+    enum Move moves[MAX_MON_MOVES] = {MOVE_DEFAULT, MOVE_DEFAULT, MOVE_DEFAULT, MOVE_DEFAULT};
+    
+    ResolveMoves(species, MAX_LEVEL, moves, moves);
 
-    for (i = 0; learnset[i] != MOVE_UNAVAILABLE; i++)
-    {
-        s32 j;
-        bool32 alreadyKnown = FALSE;
-        enum Move move = learnset[i];
-
-        for (j = 0; j < addedMoves; j++)
-        {
-            if (moves[j] == move)
-            {
-                alreadyKnown = TRUE;
-                break;
-            }
-        }
-
-        if (!alreadyKnown)
-        {
-            if (addedMoves < MAX_MON_MOVES)
-                moves[addedMoves++] = move;
-            else
-                break;
-        }
-    }
-    for (i = 0; i < MAX_MON_MOVES; i++)
+    for (u32 i = 0; i < MAX_MON_MOVES; i++)
     {
         SetBoxMonData(boxMon, MON_DATA_MOVE1 + i, &moves[i]);
         u32 pp = GetMovePP(moves[i]);
