@@ -1630,7 +1630,10 @@ enum Move MonTryLearningNewMoveAtLevel(struct Pokemon *mon, bool32 firstMove, u3
 
     if (learnset[sLearningMoveTableID].level == level)
     {
-        gMoveToLearn = learnset[sLearningMoveTableID].move;
+        if (learnset[sLearningMoveTableID].move == LEVEL_UP_MOVE_END)
+            gMoveToLearn = MOVE_NONE;
+        else
+            gMoveToLearn = learnset[sLearningMoveTableID].move;
         sLearningMoveTableID++;
         retVal = GiveMoveToMon(mon, gMoveToLearn);
     }
