@@ -469,8 +469,8 @@ static void AssignDefaultMove(enum Species species, u32 level, enum Move *moves,
     const u16 *learnset = GetSpeciesTeachableLearnset(species);
     for (u32 j = 0; learnset[j] != MOVE_UNAVAILABLE; j++)
     {
-        if (!IS_DUPLICATE_MOVE(learnset[i]))
-            moves[index] = learnset[i];
+        if (!IS_DUPLICATE_MOVE(learnset[j]))
+            moves[index] = learnset[j];
     }
 }
 
