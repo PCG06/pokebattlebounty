@@ -545,8 +545,8 @@ $(OBJ_DIR)/sym_common.ld: sym_common.txt $(C_OBJS) $(wildcard common_syms/*.txt)
 $(OBJ_DIR)/sym_ewram.ld: sym_ewram.txt
 	$(RAMSCRGEN) ewram_data $< ENGLISH > $@
 
-TEACHABLE_DEPS := $(ALL_LEARNABLES_JSON) $(INCLUDE_DIRS)/constants/tms_hms.h $(INCLUDE_DIRS)/config/pokemon.h $(DATA_SRC_SUBDIR)/pokemon/special_movesets.json $(INCLUDE_DIRS)/config/pokedex_plus_hgss.h $(LEARNSET_HELPERS_DIR)/make_merged_teachables.py
-EVENTMOVES_DEPS :=  $(DATA_SRC_SUBDIR)/pokemon/event_learnsets.h
+TEACHABLE_DEPS := $(ALL_LEARNABLES_JSON) $(INCLUDE_DIRS)/config/pokemon.h $(C_SUBDIR)/pokemon.c $(DATA_SRC_SUBDIR)/pokemon/special_movesets.json $(LEARNSET_HELPERS_DIR)/make_merged_teachables.py
+EVENTMOVES_DEPS := $(DATA_SRC_SUBDIR)/pokemon/event_learnsets.h
 
 $(LEARNSET_HELPERS_BUILD_DIR):
 	@mkdir -p $@
@@ -561,7 +561,7 @@ $(DATA_SRC_SUBDIR)/tutor_moves.h: $(DATA_SRC_SUBDIR)/pokemon/special_movesets.js
 	python3 $(LEARNSET_HELPERS_DIR)/make_tutor_array.py
 
 $(DATA_SRC_SUBDIR)/pokemon/species_info.h: $(EVENTMOVES_DEPS)
-	python3 $(LEARNSET_HELPERS_DIR)/event_moves.py
+	python3 $(LEARNSET_HELPERS_DIR)/event_moves_speciesinfo.py
 
 # Linker script
 LD_SCRIPT := ld_script_modern.ld

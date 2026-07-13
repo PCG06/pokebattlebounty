@@ -5046,6 +5046,7 @@ static void Cmd_handlelearnnewmove(void)
     if (!gBattleResources->beforeLvlUp->learnMultipleMoves && gBattleResources->beforeLvlUp->level != (currLvl - 1))
         gBattleResources->beforeLvlUp->learnMultipleMoves = TRUE;
 
+    /*
     if (B_LEVEL_UP_NOTIFICATION >= GEN_9 && gBattleResources->beforeLvlUp->learnMultipleMoves)
     {
         while (gBattleResources->beforeLvlUp->level <= currLvl)
@@ -5067,6 +5068,7 @@ static void Cmd_handlelearnnewmove(void)
         while (learnMove == MON_ALREADY_KNOWS_MOVE)
             learnMove = MonTryLearningNewMove(&gParties[B_TRAINER_PLAYER][monId], FALSE);
     }
+    */
 
     if (learnMove == MOVE_NONE || RECORDED_WILD_BATTLE)
     {

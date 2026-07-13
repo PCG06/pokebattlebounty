@@ -331,7 +331,7 @@ bool32 ShouldRecordStatusMove(enum Move move)
 static bool32 ShouldFailForIllusion(enum Species illusionSpecies, enum BattlerId battlerId)
 {
     u32 learnsetMoveIndex;
-    const struct LevelUpMove *learnset;
+    const u16 *learnset;
 
     if (gBattleHistory->abilities[battlerId] == ABILITY_ILLUSION)
         return FALSE;
@@ -343,14 +343,14 @@ static bool32 ShouldFailForIllusion(enum Species illusionSpecies, enum BattlerId
         if (move == MOVE_NONE)
             continue;
 
-        learnset = GetSpeciesLevelUpLearnset(illusionSpecies);
-        for (learnsetMoveIndex = 0; learnset[learnsetMoveIndex].move != MOVE_UNAVAILABLE; learnsetMoveIndex++)
+        learnset = GetSpeciesTeachableLearnset(illusionSpecies);
+        for (learnsetMoveIndex = 0; learnset[learnsetMoveIndex] != MOVE_UNAVAILABLE; learnsetMoveIndex++)
         {
-            if (learnset[learnsetMoveIndex].move == move)
+            if (learnset[learnsetMoveIndex] == move)
                 break;
         }
         // The used move is in the learnsets of the fake species.
-        if (learnset[learnsetMoveIndex].move != MOVE_UNAVAILABLE)
+        if (learnset[learnsetMoveIndex] != MOVE_UNAVAILABLE)
             continue;
 
         // The used move can be learned from Tm/Hm or Move Tutors.

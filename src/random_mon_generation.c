@@ -466,16 +466,11 @@ static void AssignDefaultMove(enum Species species, u32 level, enum Move *moves,
 {
     u32 i = MAX_MON_MOVES;
     moves[index] = MOVE_NONE;
-    const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(species);
-    for (u32 j = 0; learnset[j].move != LEVEL_UP_MOVE_END; j++)
+    const u16 *learnset = GetSpeciesTeachableLearnset(species);
+    for (u32 j = 0; learnset[j] != MOVE_UNAVAILABLE; j++)
     {
-        if (learnset[j].level > level)
-            break;
-        if (learnset[j].level == 0)
-            continue;
-
-        if (!IS_DUPLICATE_MOVE(learnset[j].move))
-            moves[index] = learnset[j].move;
+        if (!IS_DUPLICATE_MOVE(learnset[j]))
+            moves[index] = learnset[j];
     }
 }
 

@@ -4019,10 +4019,10 @@ static bool32 IsDomeRareMove(enum Move move)
     {
         if (!IsSpeciesEnabled(i))
             continue;
-        const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(i);
-        for (j = 0; learnset[j].move != LEVEL_UP_MOVE_END; j++)
+        const u16 *learnset = GetSpeciesTeachableLearnset(i);
+        for (j = 0; learnset[j] != LEVEL_UP_MOVE_END; j++)
         {
-            if (learnset[j].move == move)
+            if (learnset[j] == move)
             {
                 species++;
                 break;

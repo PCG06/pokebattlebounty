@@ -190,7 +190,7 @@ static void TransferEggMovesFromBoxmonToBoxmon(struct BoxPokemon *receiver, stru
         return;
 
     enum Species eggSpecies = GetEggSpecies(receiverSpecies);
-    const u16 *eggMoveLearnset = GetSpeciesEggMoves(eggSpecies);
+    const u16 *eggMoveLearnset = GetSpeciesTeachableLearnset(eggSpecies); // Egg moves are disabled
     for (u32 i = 0; i < MAX_MON_MOVES; i++)
     {
         enum Move moveToGive = GetBoxMonData(giver, MON_DATA_MOVE1 + i);
@@ -749,7 +749,7 @@ void InheritAbility(struct Pokemon *egg, struct DayCare *daycare)
 
 static void GiveParentEggMoves(struct Pokemon *egg, enum Move *parentMoves, enum Species species)
 {
-    const u16 *eggMoveLearnset = GetSpeciesEggMoves(species);
+    const u16 *eggMoveLearnset = GetSpeciesTeachableLearnset(species); // Egg moves are disabled
     for (u32 i = 0; i < MAX_MON_MOVES; i++)
     {
         if (parentMoves[i] == MOVE_NONE)
@@ -806,14 +806,14 @@ static void GiveParentSharedLevelUpMoves(struct Pokemon *egg, enum Move *fatherM
         }
     }
 
-    const struct LevelUpMove *levelupLearnset = GetSpeciesLevelUpLearnset(species);
+    const u16 *teachableLearnset = GetSpeciesTeachableLearnset(species);
     for (i = 0; i < MAX_MON_MOVES; i++)
     {
         if (sharedMoves[i] == MOVE_NONE)
             break;
-        for (j = 0; levelupLearnset[j].move != LEVEL_UP_MOVE_END; i++)
+        for (j = 0; teachableLearnset[j] != MOVE_UNAVAILABLE; i++)
         {
-            if (sharedMoves[i] == levelupLearnset[j].move)
+            if (sharedMoves[i] == teachableLearnset[j])
             {
                 ADD_OR_REPLACE_MOVE(sharedMoves[i])
                 break;
