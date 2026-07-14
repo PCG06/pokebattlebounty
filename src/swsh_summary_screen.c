@@ -2956,11 +2956,11 @@ static void Task_HandleInput(u8 taskId)
             if (ShouldShowStatEditor() && sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS)
             {
                 sMonSummaryScreen->callback = CB2_StatEditorReturnToSummaryScreen;
-                gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
                 if (sMonSummaryScreen->isBoxMon)
                 {
                     gSpecialVar_0x8004 = PC_MON_CHOSEN;
                     gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
+                    gSpecialVar_MonBoxId = StorageGetCurrentBox();
                 }
                 else
                 {
@@ -2976,7 +2976,6 @@ static void Task_HandleInput(u8 taskId)
             {
                 sMonSummaryScreen->callback = CB2_InitLearnMove;
                 gRelearnMode = sMonSummaryScreen->currPageIndex;
-                gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
                 if (sMonSummaryScreen->isBoxMon)
                 {
                     gSpecialVar_0x8004 = PC_MON_CHOSEN;

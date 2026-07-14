@@ -27,6 +27,7 @@
 #include "task.h"
 #include "trainer_pokemon_sprites.h"
 #include "tv.h"
+#include "constants/party_menu.h"
 #include "constants/rgb.h"
 #include "constants/songs.h"
 
@@ -155,7 +156,7 @@ static void RunMonAnimTimer(void);
 static void PrintMonStats(void);
 static bool32 IsEditingBoxMon(void);
 static struct BoxPokemon *GetCurrentBoxMon(void);
-static bool32 HasAnyRelearnableMoves(void);
+static void UpdateMoveRelearnerState(void);
 static void SetMonPosVars(void);
 static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
@@ -272,10 +273,10 @@ static const u8 sStart_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/st
 static const u8 sDPad_ButtonGfx[]           = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
 static const u8 sDPadLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/dpad_lr_button.png", ".4bpp");
 static const u16 sMonShadowPalette[]        = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
-static const u32 sMoveTypesGfx[]            = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
-static const u16 sMoveTypesPalette[]        = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
-static const u32 sTeraTypesGfx[]            = INCGFX_U32("graphics/summary_screen/swsh/tera_types.png", ".4bpp.smol");
-static const u16 sTeraTypesPalette[]        = INCGFX_U16("graphics/summary_screen/swsh/tera_types.png", ".gbapal");
+static const u32 sMoveTypesGfx[]            = INCGFX_U32("graphics/stat_editor/move_types.png", ".4bpp.smol");
+static const u16 sMoveTypesPalette[]        = INCGFX_U16("graphics/stat_editor/move_types.png", ".gbapal");
+static const u32 sTeraTypesGfx[]            = INCGFX_U32("graphics/stat_editor/tera_types.png", ".4bpp.smol");
+static const u16 sTeraTypesPalette[]        = INCGFX_U16("graphics/stat_editor/tera_types.png", ".gbapal");
 
 static const struct SpritePalette sSpritePal_MonShadow =
 {
@@ -897,7 +898,7 @@ static void StatEditor_VBlankCB(void)
     LoadOam();
     ProcessSpriteCopyRequests();
     TransferPlttBuffer();
-    if (P_STAT_EDITOR_SUMMARY_SCROLLING_BG)
+    if (P_STAT_EDITOR_SCROLLING_BG)
     {
         ChangeBgX(3, 64, BG_COORD_ADD);
         ChangeBgY(3, 64, BG_COORD_ADD);
@@ -947,7 +948,7 @@ static bool8 StatEditor_DoGfxSetup(void)
         break;
     case 4:
         sStatEditorDataPtr->speciesID = GetBoxMonData(GetCurrentBoxMon(), MON_DATA_SPECIES_OR_EGG);
-        sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
+        UpdateMoveRelearnerState();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_NatureArrows);
@@ -1242,21 +1243,34 @@ static u8 CreateStatEditorMonSprite(struct BoxPokemon *boxMon, bool32 isShadow)
     return spriteId;
 }
 
-// States: Teachable (Lvl, Egg, TM, Tutor) / Event
-static bool32 HasAnyRelearnableMoves(void)
+static bool32 HasAnyRelearnableMoves(enum MoveRelearnerStates state)
 {
-    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    return CanBoxMonRelearnMoves(GetCurrentBoxMon(), state);
+}
 
-    gMoveRelearnerState = MOVE_RELEARNER_TEACHABLE_MOVES;
-    if (CanBoxMonRelearnMoves(boxMon, gMoveRelearnerState))
-        return TRUE;
+static void UpdateMoveRelearnerState(void)
+{
+    enum MoveRelearnerStates state;
 
-    if (CanBoxMonRelearnMoves(boxMon, MOVE_RELEARNER_EVENT_MOVES))
+    const enum MoveRelearnerStates sStatEditorRelearnStates[] =
     {
-        gMoveRelearnerState = MOVE_RELEARNER_EVENT_MOVES;
-        return TRUE;
+        MOVE_RELEARNER_TEACHABLE_MOVES,
+        MOVE_RELEARNER_EVENT_MOVES
+    };
+
+    u32 count = ARRAY_COUNT(sStatEditorRelearnStates);
+
+    sStatEditorDataPtr->hasRelearnableMoves = FALSE;
+    for (u32 i = 0; i < count; i++)
+    {
+        state = sStatEditorRelearnStates[i];
+        if (HasAnyRelearnableMoves(state))
+        {
+            sStatEditorDataPtr->hasRelearnableMoves = TRUE;
+            gMoveRelearnerState = state;
+            break;
+        }
     }
-    return FALSE;
 }
 
 static inline bool32 ShouldShowMoveRelearner(void)
@@ -1469,15 +1483,15 @@ static void CreateMonSprite(enum Species species)
 
 static void DestroyMonSprite(void)
 {
-    if (sStatEditorDataPtr->monSpriteId != 0 && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
+    if (sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
     {
         StopPokemonAnimationDelayTask();
         DestroySpriteAndFreeResources(&gSprites[sStatEditorDataPtr->monSpriteId]);
         sStatEditorDataPtr->monSpriteId = MAX_SPRITES;
     }
-    if (sStatEditorDataPtr->monShadowSpriteId != 0 && sStatEditorDataPtr->monShadowSpriteId != MAX_SPRITES)
+    if (sStatEditorDataPtr->monShadowSpriteId != MAX_SPRITES)
     {
-        StopShadowAnimDelayTask();
+        StopPokemonAnimationDelayTask();
         DestroySpriteAndFreeResources(&gSprites[sStatEditorDataPtr->monShadowSpriteId]);
         sStatEditorDataPtr->monShadowSpriteId = MAX_SPRITES;
     }
@@ -1705,7 +1719,6 @@ static void PrintMonStats(void)
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
     {
         currentStat = GetMonData(&mon, sActualStatsMap[i]);
-        DebugPrintf("Current stat: %d", currentStat);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sActualStatsMap[i]].x;
@@ -1905,7 +1918,7 @@ static void ReloadNewPokemon(u8 taskId)
     DestroyMonSprite();
     sStatEditorDataPtr->speciesID = GetBoxMonData(GetCurrentBoxMon(), MON_DATA_SPECIES_OR_EGG);
     SetMonPosVars();
-    sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
+    UpdateMoveRelearnerState();
     PrintTitleToWindowMainState();
     gTasks[taskId].func = Task_DelayedSpriteLoad;
     gTasks[taskId].data[11] = 0;
