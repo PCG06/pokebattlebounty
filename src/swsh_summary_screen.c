@@ -810,7 +810,7 @@ static const struct WindowTemplate sPageMovesTemplate[] = // This is used for bo
         .width = 18,
         .height = 5,
         .paletteNum = 2,
-        .baseBlock = 401,
+        .baseBlock = 411,
     },
 };
 static const struct WindowTemplate sPageMemoTemplate[] =
@@ -2863,8 +2863,7 @@ static void DrawNextSkillsButtonPrompt(u8 mode)
     if (ShouldShowStatEditor())
     {
         FillWindowPixelBuffer(PSS_LABEL_WINDOW_PROMPT_STAT_EDITOR, PIXEL_FILL(0));
-        PrintButtonIcon(PSS_LABEL_WINDOW_PROMPT_STAT_EDITOR, BUTTON_START, 0, 4);
-        PrintTextOnWindowWithFont(PSS_LABEL_WINDOW_PROMPT_STAT_EDITOR, sText_StatEditor, 27, 0, 0, 1, FONT_SMALL);
+        PrintRightAlignedPrompt(PSS_LABEL_WINDOW_PROMPT_STAT_EDITOR, BUTTON_START, sText_StatEditor, 78, 1);
     }
     ScheduleBgCopyTilemapToVram(0);
 }
@@ -2956,11 +2955,11 @@ static void Task_HandleInput(u8 taskId)
             if (ShouldShowStatEditor() && sMonSummaryScreen->currPageIndex == PSS_PAGE_SKILLS)
             {
                 sMonSummaryScreen->callback = CB2_StatEditorReturnToSummaryScreen;
-                gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
                 if (sMonSummaryScreen->isBoxMon)
                 {
                     gSpecialVar_0x8004 = PC_MON_CHOSEN;
                     gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
+                    gSpecialVar_MonBoxId = StorageGetCurrentBox();
                 }
                 else
                 {
@@ -2976,7 +2975,6 @@ static void Task_HandleInput(u8 taskId)
             {
                 sMonSummaryScreen->callback = CB2_InitLearnMove;
                 gRelearnMode = sMonSummaryScreen->currPageIndex;
-                gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
                 if (sMonSummaryScreen->isBoxMon)
                 {
                     gSpecialVar_0x8004 = PC_MON_CHOSEN;

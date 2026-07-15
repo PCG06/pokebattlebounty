@@ -28,7 +28,7 @@
 #define P_STAT_EDITOR_CENTER_ALIGN_STATS    FALSE // If TRUE, center aligns all stat numbers.
 
 // UI Configs
-#define P_STAT_EDITOR_SUMMARY_SCROLLING_BG  TRUE  // If TRUE, enables scrolling animated background.
+#define P_STAT_EDITOR_SCROLLING_BG          TRUE  // If TRUE, enables scrolling animated background.
 #define P_STAT_EDITOR_BG_BLEND              FALSE // If TRUE, enables alpha blending for the main UI (semi-transparency)
 #define P_STAT_EDITOR_MON_IDLE_ANIMS        TRUE  // If TRUE, loops the Pokémon animations regularly as an "idle" anim.
 #define P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES 300   // Number of frames between each idle anim if P_STAT_EDITOR_MON_IDLE_ANIMS is TRUE.
