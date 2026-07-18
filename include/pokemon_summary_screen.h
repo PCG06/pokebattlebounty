@@ -32,6 +32,8 @@ enum PokemonSummaryScreenMode
     SUMMARY_MODE_SELECT_MOVE,
     SUMMARY_MODE_RELEARNER_BATTLE, // returning from move relearner initiated from battle moves page
     SUMMARY_MODE_RELEARNER_CONTEST, // returning from move relearner initiated from contest moves page
+    SUMMARY_MODE_DELETE_BATTLE, // reopening summary screen battle move page after deleting a move
+    SUMMARY_MODE_DELETE_CONTEST, // reopening summary screen contest move page after deleting a move
     SUMMARY_MODE_STAT_EDITOR, // returning from stat editor initiated from skills page
 };
 
