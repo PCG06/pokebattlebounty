@@ -746,6 +746,14 @@ static void Task_MoveRelearner_HandleInput(u8 taskId)
     case LIST_CANCEL:
         PlaySE(SE_SELECT);
         RemoveScrollArrows();
+
+        if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        {
+            gTasks[taskId].func = Task_MoveRelearner_Quit;
+            BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
+            return;
+        }
+
         gTasks[taskId].func = Task_MoveRelearner_Giveup_Prompt;
         if (gRelearnMode == RELEARN_MODE_SCRIPT)
             StringExpandPlaceholders(gStringVar4, gText_MoveRelearnerGiveUp);
