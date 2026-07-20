@@ -1245,7 +1245,8 @@ static u8 CreateStatEditorMonSprite(struct BoxPokemon *boxMon, bool32 isShadow)
 
 static bool32 HasAnyRelearnableMoves(enum MoveRelearnerStates state)
 {
-    return CanBoxMonRelearnMoves(GetCurrentBoxMon(), state);
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    return CanBoxMonRelearnMoves(boxMon, state);
 }
 
 static void UpdateMoveRelearnerState(void)

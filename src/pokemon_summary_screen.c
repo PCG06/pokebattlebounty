@@ -1639,11 +1639,10 @@ static void SetDefaultTilemaps(void)
     }
     else if (sMonSummaryScreen->mode == SUMMARY_MODE_STAT_EDITOR)
     {
-        sMonSummaryScreen->bgDisplayOrder = 1;
-        SetBgTilemapBuffer(1, sMonSummaryScreen->bgTilemapBuffers[PSS_PAGE_SKILLS][0]);
-        SetBgTilemapBuffer(2, sMonSummaryScreen->bgTilemapBuffers[PSS_PAGE_INFO][0]);
-        SetBgAttribute(1, BG_ATTR_PRIORITY, 1);
-        SetBgAttribute(2, BG_ATTR_PRIORITY, 2);
+        SetBgTilemapBuffer(1, sMonSummaryScreen->bgTilemapBuffers[PSS_PAGE_INFO][0]);
+        SetBgTilemapBuffer(2, sMonSummaryScreen->bgTilemapBuffers[PSS_PAGE_SKILLS][0]);
+        SetBgAttribute(1, BG_ATTR_PRIORITY, 2);
+        SetBgAttribute(2, BG_ATTR_PRIORITY, 1);
         ChangeBgX(1, 0x10000, BG_COORD_ADD);
         ChangeBgX(2, 0x10000, BG_COORD_ADD);
         ShowBg(1);
@@ -1760,19 +1759,17 @@ static void HandleStatEditorInput(u8 taskId)
     if (JOY_NEW(START_BUTTON))
     {
         sMonSummaryScreen->callback = CB2_StatEditorReturnToSummaryScreen;
-        gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
         if (sMonSummaryScreen->isBoxMon)
         {
             gSpecialVar_0x8004 = PC_MON_CHOSEN;
             gSpecialVar_MonBoxPos = sMonSummaryScreen->curMonIndex;
+            gSpecialVar_MonBoxId = StorageGetCurrentBox();
         }
         else
         {
             gSpecialVar_0x8004 = sMonSummaryScreen->curMonIndex;
         }
-        StopPokemonAnimations();
         PlaySE(SE_SELECT);
-        BeginCloseSummaryScreen(taskId);
     }
 }
 
