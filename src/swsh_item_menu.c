@@ -627,8 +627,8 @@ static const struct MenuAction sItemMenuActions[] = {
 // these are all 2D arrays with a width of 2 but are represented as 1D arrays
 // ACTION_DUMMY is used to represent blank spaces
 static const u8 sContextMenuItems_ItemsPocket[] = {
-    ACTION_USE,         ACTION_GIVE,
-    ACTION_TOSS,        ACTION_CANCEL
+    ACTION_GIVE,         ACTION_USE,
+    ACTION_DUMMY,        ACTION_CANCEL
 };
 
 static const u8 sContextMenuItems_ItemsPocketNoUse[] = {
@@ -641,13 +641,12 @@ static const u8 sContextMenuItems_KeyItemsPocket[] = {
 };
 
 static const u8 sContextMenuItems_BallsPocket[] = {
-    ACTION_GIVE,        ACTION_DUMMY,
-    ACTION_TOSS,        ACTION_CANCEL
+    ACTION_USE,         ACTION_GIVE,
+    ACTION_DUMMY,       ACTION_CANCEL
 };
 
 static const u8 sContextMenuItems_TmHmPocket[] = {
-    ACTION_USE,         ACTION_GIVE,
-    ACTION_DUMMY,       ACTION_CANCEL
+    ACTION_USE,         ACTION_CANCEL
 };
 
 #if SWSH_ITEM_MENU_BERRY_TAG
@@ -663,11 +662,10 @@ static const u8 sContextMenuItems_BerriesPocketNoUse[] = {
 #else
 static const u8 sContextMenuItems_BerriesPocket[] = {
     ACTION_USE,         ACTION_GIVE,
-    ACTION_TOSS,        ACTION_CANCEL
+    ACTION_DUMMY,       ACTION_CANCEL
 };
 static const u8 sContextMenuItems_BerriesPocketNoUse[] = {
-    ACTION_GIVE,          ACTION_DUMMY,
-    ACTION_TOSS,     ACTION_CANCEL
+    ACTION_GIVE,        ACTION_CANCEL
 };
 #endif
 
@@ -1452,7 +1450,7 @@ static const struct WindowTemplate sContextMenuWindowTemplates[] =
         .bg = 0,
         .tilemapLeft = 2,
         .tilemapTop = 15,
-        .width = 27,
+        .width = 26,
         .height = 4,
         .paletteNum = 15,
         .baseBlock = 367,
@@ -2384,7 +2382,7 @@ static void GetItemNameFromPocket(u8 *dest, enum Item itemId)
     {
     case POCKET_TM_HM:
         end = StringCopy(gStringVar2, GetMoveName(ItemIdToBattleMoveId(itemId)));
-        PrependFontIdToFit(gStringVar2, end, FONT_NARROW, NUM_TECHNICAL_MACHINES >= 100 ? 60 : 65);
+        PrependFontIdToFit(gStringVar2, end, FONT_NARROW, NUM_TECHNICAL_MACHINES >= 100 ? 83 : 88);
         if (GetItemTMHMIndex(itemId) > NUM_TECHNICAL_MACHINES)
         {
             // Get HM number
@@ -2401,12 +2399,12 @@ static void GetItemNameFromPocket(u8 *dest, enum Item itemId)
     case POCKET_BERRIES:
         ConvertIntToDecimalStringN(gStringVar1, ItemIdToBerryType(itemId), STR_CONV_MODE_LEADING_ZEROS, 2);
         end = CopyItemName(itemId, gStringVar2);
-        PrependFontIdToFit(gStringVar2, end, FONT_NARROW, 61);
+        PrependFontIdToFit(gStringVar2, end, FONT_NARROW, 88);
         StringExpandPlaceholders(dest, gText_NumberItem_TMBerry);
         break;
     default:
         end = CopyItemName(itemId, dest);
-        PrependFontIdToFit(dest, end, FONT_NARROW, 88);
+        PrependFontIdToFit(dest, end, FONT_NARROW, 112);
         break;
     }
 }
