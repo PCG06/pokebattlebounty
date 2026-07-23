@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload to Dropbox
         id: dropbox
-        if: github.event_name == 'push' && github.ref == 'refs/heads/pr/patches'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/upcoming'
         run: |
           COMMIT_HASH="${GITHUB_SHA:0:7}"
           FILE="pokebattlebounty_${COMMIT_HASH}.zip"
@@ -158,7 +158,7 @@ jobs:
 
       - name: Upload to Dropbox
         id: dropbox
-        if: github.event_name == 'push' && github.ref == 'refs/heads/pr/patches'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/upcoming'
         run: |
           COMMIT_HASH="${GITHUB_SHA:0:7}"
           FILE="pokebattlebounty-release_${COMMIT_HASH}.zip"
@@ -255,7 +255,7 @@ jobs:
     if: |
       always() &&
       github.actor != 'allcontributors[bot]' &&
-      github.event_name == 'push' && github.ref == 'refs/heads/pr/patches' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/upcoming' &&
       (needs.build-rom.result == 'success' || needs.release.result == 'success')
     runs-on: ubuntu-latest
     needs: [build-rom, release]
