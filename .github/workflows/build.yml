@@ -16,6 +16,10 @@ jobs:
   build-rom:
     if: github.actor != 'allcontributors[bot]'
     runs-on: ubuntu-latest
+    outputs:
+      file_name: ${{ steps.dropbox.outputs.file_name }}
+      download_url: ${{ steps.dropbox.outputs.download_url }}
+      commit_hash: ${{ steps.dropbox.outputs.commit_hash }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -57,9 +61,60 @@ jobs:
       - name: ROM
         run: make -j$(nproc) -O
 
+      - name: Upload to Dropbox
+        id: dropbox
+        if: github.event_name == 'push' && github.ref == 'refs/heads/upcoming'
+        run: |
+          COMMIT_HASH="${GITHUB_SHA:0:7}"
+          FILE="pokebattlebounty_${COMMIT_HASH}.zip"
+          zip -j "$FILE" pokebattlebounty.gba
+
+          # Upload the file
+          curl --fail --silent --show-error \
+          -X POST https://content.dropboxapi.com/2/files/upload \
+          --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+          --header "Dropbox-API-Arg: {\"path\":\"/Battle-Bounty/debug-builds/$FILE\",\"mode\":\"overwrite\"}" \
+          --header "Content-Type: application/octet-stream" \
+          --data-binary @"$FILE"
+
+          # Create a shared link (or reuse the existing one)
+          RESPONSE=$(curl --silent --show-error \
+            -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
+            --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data "{\"path\":\"/Battle-Bounty/debug-builds/$FILE\"}")
+
+          # If the link already exists, fetch it instead.
+          if echo "$RESPONSE" | jq -e '.error[".tag"] == "shared_link_already_exists"' >/dev/null; then
+            RESPONSE=$(curl --fail --silent --show-error \
+              -X POST https://api.dropboxapi.com/2/sharing/list_shared_links \
+              --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+              --header "Content-Type: application/json" \
+              --data "{\"path\":\"/Battle-Bounty/debug-builds/$FILE\",\"direct_only\":true}")
+          fi
+
+          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.url // .links[0].url // empty')
+
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Failed to obtain Dropbox shared link."
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          DOWNLOAD_URL="${DOWNLOAD_URL/?dl=0/?dl=1}"
+          DOWNLOAD_URL="${DOWNLOAD_URL/&dl=0/&dl=1}"
+
+          echo "commit_hash=$COMMIT_HASH" >> "$GITHUB_OUTPUT"
+          echo "file_name=$FILE" >> "$GITHUB_OUTPUT"
+          echo "download_url=$DOWNLOAD_URL" >> "$GITHUB_OUTPUT"
+
   release:
     if: github.actor != 'allcontributors[bot]'
     runs-on: ubuntu-latest
+    outputs:
+      file_name: ${{ steps.dropbox.outputs.file_name }}
+      download_url: ${{ steps.dropbox.outputs.download_url }}
+      commit_hash: ${{ steps.dropbox.outputs.commit_hash }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -100,6 +155,53 @@ jobs:
 
       - name: Release
         run: make -j$(nproc) release
+
+      - name: Upload to Dropbox
+        id: dropbox
+        if: github.event_name == 'push' && github.ref == 'refs/heads/upcoming'
+        run: |
+          COMMIT_HASH="${GITHUB_SHA:0:7}"
+          FILE="pokebattlebounty-release_${COMMIT_HASH}.zip"
+          zip -j "$FILE" pokebattlebounty-release.gba
+
+          # Upload the file
+          curl --fail --silent --show-error \
+          -X POST https://content.dropboxapi.com/2/files/upload \
+          --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+          --header "Dropbox-API-Arg: {\"path\":\"/Battle-Bounty/release-builds/$FILE\",\"mode\":\"overwrite\"}" \
+          --header "Content-Type: application/octet-stream" \
+          --data-binary @"$FILE"
+
+          # Create a shared link (or reuse the existing one)
+          RESPONSE=$(curl --silent --show-error \
+            -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
+            --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data "{\"path\":\"/Battle-Bounty/release-builds/$FILE\"}")
+
+          # If the link already exists, fetch it instead.
+          if echo "$RESPONSE" | jq -e '.error[".tag"] == "shared_link_already_exists"' >/dev/null; then
+            RESPONSE=$(curl --fail --silent --show-error \
+              -X POST https://api.dropboxapi.com/2/sharing/list_shared_links \
+              --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+              --header "Content-Type: application/json" \
+              --data "{\"path\":\"/Battle-Bounty/release-builds/$FILE\",\"direct_only\":true}")
+          fi
+
+          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.url // .links[0].url // empty')
+
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Failed to obtain Dropbox shared link."
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          DOWNLOAD_URL="${DOWNLOAD_URL/?dl=0/?dl=1}"
+          DOWNLOAD_URL="${DOWNLOAD_URL/&dl=0/&dl=1}"
+
+          echo "commit_hash=$COMMIT_HASH" >> "$GITHUB_OUTPUT"
+          echo "file_name=$FILE" >> "$GITHUB_OUTPUT"
+          echo "download_url=$DOWNLOAD_URL" >> "$GITHUB_OUTPUT"
 
   test:
     if: github.actor != 'allcontributors[bot]'
@@ -148,6 +250,66 @@ jobs:
         env:
           TEST: 1
         run: make -j$(nproc) check
+
+  notify-discord:
+    if: |
+      always() &&
+      github.actor != 'allcontributors[bot]' &&
+      github.event_name == 'push' && github.ref == 'refs/heads/upcoming' &&
+      (needs.build-rom.result == 'success' || needs.release.result == 'success')
+    runs-on: ubuntu-latest
+    needs: [build-rom, release]
+    steps:
+      - name: Build embeds
+        id: embeds
+        run: |
+          EMBEDS="[]"
+
+          if [ "${{ needs.build-rom.result }}" == "success" ]; then
+            EMBEDS=$(echo "$EMBEDS" | jq \
+              --arg file "${{ needs.build-rom.outputs.file_name }}" \
+              --arg url "${{ needs.build-rom.outputs.download_url }}" \
+              --arg commit "${{ needs.build-rom.outputs.commit_hash }}" \
+              --arg repo "${{ github.repository }}" \
+              --arg sha "${{ github.sha }}" \
+              '. + [{
+                title: "Debug build uploaded!",
+                color: 65280,
+                fields: [
+                  {name: "File", value: ("[" + $file + "](" + $url + ")"), inline: false},
+                  {name: "Commit", value: ("[`" + $commit + "`](https://github.com/" + $repo + "/commit/" + $sha + ")"), inline: false}
+                ]
+              }]')
+          fi
+
+          if [ "${{ needs.release.result }}" == "success" ]; then
+            EMBEDS=$(echo "$EMBEDS" | jq \
+              --arg file "${{ needs.release.outputs.file_name }}" \
+              --arg url "${{ needs.release.outputs.download_url }}" \
+              --arg commit "${{ needs.release.outputs.commit_hash }}" \
+              --arg repo "${{ github.repository }}" \
+              --arg sha "${{ github.sha }}" \
+              '. + [{
+                title: "Release build uploaded!",
+                color: 65280,
+                fields: [
+                  {name: "File", value: ("[" + $file + "](" + $url + ")"), inline: false},
+                  {name: "Commit", value: ("[`" + $commit + "`](https://github.com/" + $repo + "/commit/" + $sha + ")"), inline: false}
+                ]
+              }]')
+          fi
+
+          echo "embeds<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$EMBEDS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Notify Discord
+        run: |
+          PAYLOAD=$(jq -n --argjson embeds '${{ steps.embeds.outputs.embeds }}' '{embeds: $embeds}')
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "$PAYLOAD" \
+               ${{ secrets.DISCORD_PATCHES_SECRET }}
 
   # Gate job: satisfies the "build" branch protection rule.
   # Passes only when all parallel build/test jobs succeed.
