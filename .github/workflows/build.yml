@@ -23,7 +23,7 @@ jobs:
       - name: Install binutils
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3
+          sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3 jq
 
       - name: Install Poryscript
         run: |
@@ -57,6 +57,76 @@ jobs:
       - name: ROM
         run: make -j$(nproc) -O
 
+      - name: Upload to Dropbox
+        if: github.event_name == 'push' && github.ref == 'refs/heads/pr/patches'
+        run: |
+          COMMIT_HASH="${GITHUB_SHA:0:7}"
+          FILE="pokebattlebounty_${COMMIT_HASH}.zip"
+          zip -j "$FILE" pokebattlebounty.gba
+          echo "COMMIT_HASH=$COMMIT_HASH" >> "$GITHUB_ENV"
+          echo "FILE_NAME=$FILE" >> "$GITHUB_ENV"
+
+          # Upload the file
+          curl --fail --silent --show-error \
+          -X POST https://content.dropboxapi.com/2/files/upload \
+          --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+          --header "Dropbox-API-Arg: {\"path\":\"/Battle-Bounty/debug-builds/$FILE\",\"mode\":\"overwrite\"}" \
+          --header "Content-Type: application/octet-stream" \
+          --data-binary @"$FILE"
+
+          # Create a shared link (or reuse the existing one)
+          RESPONSE=$(curl --silent --show-error \
+            -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
+            --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data "{\"path\":\"/Battle-Bounty/debug-builds/$FILE\"}")
+
+          # If the link already exists, fetch it instead.
+          if echo "$RESPONSE" | jq -e '.error[".tag"] == "shared_link_already_exists"' >/dev/null; then
+            RESPONSE=$(curl --fail --silent --show-error \
+              -X POST https://api.dropboxapi.com/2/sharing/list_shared_links \
+              --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+              --header "Content-Type: application/json" \
+              --data "{\"path\":\"/Battle-Bounty/debug-builds/$FILE\",\"direct_only\":true}")
+          fi
+
+          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.url // .links[0].url // empty')
+
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Failed to obtain Dropbox shared link."
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          DOWNLOAD_URL="${DOWNLOAD_URL/?dl=0/?dl=1}"
+          DOWNLOAD_URL="${DOWNLOAD_URL/&dl=0/&dl=1}"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> "$GITHUB_ENV"
+
+      - name: Notify Discord
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/pr/patches'
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{
+                 \"embeds\": [{
+                   \"title\": \"Debug build uploaded!\",
+                   \"color\": 65280,
+                   \"fields\": [
+                     {
+                       \"name\": \"File\",
+                       \"value\": \"[${{ env.FILE_NAME }}](${{ env.DOWNLOAD_URL }})\",
+                       \"inline\": false
+                     },
+                     {
+                       \"name\": \"Commit\",
+                       \"value\": \"[\`${{ env.COMMIT_HASH }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\",
+                       \"inline\": false
+                     }
+                   ]
+                 }]
+               }" \
+               ${{ secrets.DISCORD_PATCHES_SECRET }}
+
   release:
     if: github.actor != 'allcontributors[bot]'
     runs-on: ubuntu-latest
@@ -67,7 +137,7 @@ jobs:
       - name: Install binutils
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3
+          sudo apt-get install -y --no-install-recommends binutils-arm-none-eabi gcc-arm-none-eabi libnewlib-arm-none-eabi libpng-dev python3 jq
 
       - name: Install Poryscript
         run: |
@@ -100,6 +170,76 @@ jobs:
 
       - name: Release
         run: make -j$(nproc) release
+
+      - name: Upload to Dropbox
+        if: github.event_name == 'push' && github.ref == 'refs/heads/pr/patches'
+        run: |
+          COMMIT_HASH="${GITHUB_SHA:0:7}"
+          FILE="pokebattlebounty-release_${COMMIT_HASH}.zip"
+          zip -j "$FILE" pokebattlebounty-release.gba
+          echo "COMMIT_HASH=$COMMIT_HASH" >> "$GITHUB_ENV"
+          echo "FILE_NAME=$FILE" >> "$GITHUB_ENV"
+
+          # Upload the file
+          curl --fail --silent --show-error \
+          -X POST https://content.dropboxapi.com/2/files/upload \
+          --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+          --header "Dropbox-API-Arg: {\"path\":\"/Battle-Bounty/release-builds/$FILE\",\"mode\":\"overwrite\"}" \
+          --header "Content-Type: application/octet-stream" \
+          --data-binary @"$FILE"
+
+          # Create a shared link (or reuse the existing one)
+          RESPONSE=$(curl --silent --show-error \
+            -X POST https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings \
+            --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+            --header "Content-Type: application/json" \
+            --data "{\"path\":\"/Battle-Bounty/release-builds/$FILE\"}")
+
+          # If the link already exists, fetch it instead.
+          if echo "$RESPONSE" | jq -e '.error[".tag"] == "shared_link_already_exists"' >/dev/null; then
+            RESPONSE=$(curl --fail --silent --show-error \
+              -X POST https://api.dropboxapi.com/2/sharing/list_shared_links \
+              --header "Authorization: Bearer ${{ secrets.DROPBOX_ACCESS_TOKEN }}" \
+              --header "Content-Type: application/json" \
+              --data "{\"path\":\"/Battle-Bounty/release-builds/$FILE\",\"direct_only\":true}")
+          fi
+
+          DOWNLOAD_URL=$(echo "$RESPONSE" | jq -r '.url // .links[0].url // empty')
+
+          if [ -z "$DOWNLOAD_URL" ]; then
+            echo "Failed to obtain Dropbox shared link."
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          DOWNLOAD_URL="${DOWNLOAD_URL/?dl=0/?dl=1}"
+          DOWNLOAD_URL="${DOWNLOAD_URL/&dl=0/&dl=1}"
+          echo "DOWNLOAD_URL=$DOWNLOAD_URL" >> "$GITHUB_ENV"
+
+      - name: Notify Discord
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/pr/patches'
+        run: |
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{
+                 \"embeds\": [{
+                   \"title\": \"Release build uploaded!\",
+                   \"color\": 65280,
+                   \"fields\": [
+                     {
+                       \"name\": \"File\",
+                       \"value\": \"[${{ env.FILE_NAME }}](${{ env.DOWNLOAD_URL }})\",
+                       \"inline\": false
+                     },
+                     {
+                       \"name\": \"Commit\",
+                       \"value\": \"[\`${{ env.COMMIT_HASH }}\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})\",
+                       \"inline\": false
+                     }
+                   ]
+                 }]
+               }" \
+               ${{ secrets.DISCORD_PATCHES_SECRET }}
 
   test:
     if: github.actor != 'allcontributors[bot]'
