@@ -126,6 +126,8 @@ enum MonData {
     MON_DATA_EVOLUTION_TRACKER,
 };
 
+#define BLOCK_AI_DYNAMAX 15 // Used as dynamax level value by the AI to indicate this mon shouldn't dynamax
+
 struct BoxPokemon
 {
     u32 personality;
@@ -281,7 +283,7 @@ struct Volatiles
 {
     VOLATILE_DEFINITIONS(UNPACK_VOLATILE_STRUCT)
     // Expands to:
-    // u32 confusionTurns:3;
+    // u32 confusionTimer:3;
     // u32 flinched:1;
     // u32 uproarTurns:3;
     // etc.
