@@ -11,7 +11,7 @@
 #define BW_BATTLE_UI_INPUTBOX       (FALSE) // Various elements related to navigation e.g. executing a move, use an item, or running away. Requires BW_BATTLE_UI_TEXTBOX.
 #define BW_BATTLE_UI_PARTY_SUMMARY  (TRUE)  // Party summary bar, typically ball_status_bar and ball_display.
 #define BW_BATTLE_UI_HEALTHBOX      (TRUE)  // The real jam. Includes custom status ailment gfx and outlined font as well.
-#define BW_BATTLE_UI_ABILITY_POP_UP (FALSE) // Another real jam. Replaces expansion's functionality, includes customized animation.
+#define BW_BATTLE_UI_ABILITY_POP_UP (TRUE)  // Another real jam. Replaces expansion's functionality, includes customized animation.
 #define BW_BATTLE_UI_WINDOW_SPRITES (TRUE)  // Both Last Used Ball and Move Description trigger sprites are handled here.
 
 // Config safeguards, do not delete unless you know what you're doing!

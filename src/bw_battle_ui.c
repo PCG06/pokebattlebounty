@@ -904,95 +904,18 @@ static void Task_BattleUIHandleAbilityPopUp(u8 taskId)
     }
     case APU_STATE_PRINT:
     {
-        BattleUI_PrepareTextForAbilityPopUp(battler, tAPU_Ability, OPTIONS_TEXT_SPEED_INSTANT);
-        tAPU_State = tAPU_NewAbility ? APU_STATE_MOSAIC : APU_STATE_GLOW;
-        break;
-    }
-
-    // default
-    case APU_STATE_GLOW:
-    {
-        RunTextPrinters();
-        RunTextPrinters();
-        if (IsTextPrinterActiveOnSprite(tAPU_SpriteId1))
-            break;
-
-        PlaySE(SE_M_HARDEN);
-        BeginNormalPaletteFade(1 << (16 + sprite1->oam.paletteNum), 0, 0, 16, RGB_WHITE);
-        tAPU_State = APU_STATE_FADE;
-        // fallthrough
-    }
-    case APU_STATE_FADE:
-    {
-        UpdatePaletteFade();
-        UpdatePaletteFade();
-        UpdatePaletteFade();
-        UpdatePaletteFade();
-        if (gPaletteFade.active)
-            break;
-
-        BeginNormalPaletteFade(1 << (16 + sprite1->oam.paletteNum), 0, 16, 0, RGB_WHITE);
+        BattleUI_PrepareTextForAbilityPopUp(battler, tAPU_NewAbility ? tAPU_NewAbility : tAPU_Ability, OPTIONS_TEXT_SPEED_INSTANT);
         tAPU_State = APU_STATE_WAIT;
         break;
     }
-
-    // ability overwrite
-    case APU_STATE_MOSAIC:
-    {
-        RunTextPrinters();
-        RunTextPrinters();
-        if (IsTextPrinterActiveOnSprite(tAPU_SpriteId1))
-            break;
-
-        tAPU_Timer++;
-        if (tAPU_Timer < 8)
-            break;
-
-        PlaySE(SE_M_TELEPORT);
-        sprite1->oam.mosaic = TRUE;
-        sprite2->oam.mosaic = TRUE;
-        tAPU_Mosaic = 10;
-        SetGpuReg(REG_OFFSET_MOSAIC, (tAPU_Mosaic << 12) | (tAPU_Mosaic << 8));
-        tAPU_State = APU_STATE_REPRINT;
-        break;
-    }
-    case APU_STATE_REPRINT:
-    {
-        tAPU_Mosaic--;
-        SetGpuReg(REG_OFFSET_MOSAIC, (tAPU_Mosaic << 12) | (tAPU_Mosaic << 8));
-        if (tAPU_Mosaic > 5)
-            break;
-
-        BattleUI_PrepareTextForAbilityPopUp(battler, tAPU_NewAbility, TEXT_SKIP_DRAW);
-        tAPU_State = APU_STATE_WAIT;
-        break;
-    }
-
     case APU_STATE_WAIT:
     {
-        if (tAPU_NewAbility)
-        {
-            tAPU_Mosaic--;
-            SetGpuReg(REG_OFFSET_MOSAIC, (tAPU_Mosaic << 12) | (tAPU_Mosaic << 8));
-            if (tAPU_Mosaic > 0)
-                break;
+        RunTextPrinters();
+        RunTextPrinters();
+        if (IsTextPrinterActiveOnSprite(tAPU_SpriteId1))
+            break;
 
-            tAPU_Mosaic = 0;
-            SetGpuReg(REG_OFFSET_MOSAIC, (tAPU_Mosaic << 12) | (tAPU_Mosaic << 8));
-            sprite1->oam.mosaic = FALSE;
-            sprite2->oam.mosaic = FALSE;
-        }
-        else
-        {
-            UpdatePaletteFade();
-            UpdatePaletteFade();
-            UpdatePaletteFade();
-            UpdatePaletteFade();
-            if (gPaletteFade.active)
-                break;
-        }
-
-        tAPU_Timer = 12;
+        tAPU_Timer = 60;
         tAPU_State = APU_STATE_IDLE;
         break;
     }
@@ -1000,13 +923,25 @@ static void Task_BattleUIHandleAbilityPopUp(u8 taskId)
     {
         if (tAPU_Timer == 0 || tAPU_AutoDestroy)
         {
-            tAPU_State = APU_STATE_END;
+            tAPU_State = APU_STATE_SLIDE_OUT;
             break;
         }
 
         if (!gBattleScripting.fixedPopup)
             tAPU_Timer--;
 
+        break;
+    }
+    case APU_STATE_SLIDE_OUT:
+    {
+        if (sprite1->x2 == 0)
+        {
+            tAPU_State = APU_STATE_END;
+            break;
+        }
+
+        u32 speed = isPlayerSide ? TILE_TO_PIXELS(-2) : TILE_TO_PIXELS(2);
+        sprite1->x2 += speed, sprite2->x2 += speed;
         break;
     }
     case APU_STATE_END:

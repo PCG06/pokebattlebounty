@@ -97,17 +97,9 @@ enum
 {
     APU_STATE_SLIDE_IN = 0,
     APU_STATE_PRINT,
-
-    // default
-    APU_STATE_GLOW,
-    APU_STATE_FADE,
-
-    // ability overwrite
-    APU_STATE_MOSAIC,
-    APU_STATE_REPRINT,
-
     APU_STATE_WAIT,
     APU_STATE_IDLE,
+    APU_STATE_SLIDE_OUT,
     APU_STATE_END
 };
 
