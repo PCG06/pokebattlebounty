@@ -2609,7 +2609,7 @@ bool32 IsAnyAbilityPopUpActive(void)
 
 void CreateAbilityPopUp(enum BattlerId battler, enum Ability ability, bool32 isDoubleBattle)
 {
-    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP)
+    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP && !TESTING)
     {
         BattleUI_CreateAbilityPopUp(battler, ability);
         return;
@@ -2678,7 +2678,7 @@ void CreateAbilityPopUp(enum BattlerId battler, enum Ability ability, bool32 isD
 
 void UpdateAbilityPopup(enum BattlerId battler)
 {
-    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP)
+    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP && !TESTING)
     {
         return;
     }
@@ -2758,7 +2758,7 @@ static void SpriteCb_AbilityPopUp(struct Sprite *sprite)
 
 void DestroyAbilityPopUp(enum BattlerId battler)
 {
-    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP)
+    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP && !TESTING)
     {
         BattleUI_DestroyAbilityPopUp(battler);
         return;
@@ -2787,6 +2787,12 @@ static void Task_FreeAbilityPopUpGfx(u8 taskId)
 
 void CreateItemPopUp(enum BattlerId battler)
 {
+    if (BW_BATTLE_UI && BW_BATTLE_UI_ABILITY_POP_UP && !TESTING)
+    {
+        BattleUI_CreateItemPopUp(battler, gLastUsedItem);
+        return;
+    }
+
     u8 *spriteIds;
     u32 xSlide, tileTag;
     enum BattlerPosition battlerPosition = GetBattlerPosition(battler);

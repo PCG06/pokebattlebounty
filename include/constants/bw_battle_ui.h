@@ -68,6 +68,7 @@
 #define tAPU_SpriteId1   data[7]
 #define tAPU_SpriteId2   data[8]
 #define tAPU_Mosaic      data[9]
+#define tAPU_IsItem      data[10]
 
 enum BattleUISpriteTags
 {

@@ -99,6 +99,8 @@ void BattleUI_UpdateHpBarText(void);
 void BattleUI_CreateAbilityPopUp(enum BattlerId, enum Ability);
 void BattleUI_DestroyAbilityPopUp(enum BattlerId);
 
+void BattleUI_CreateItemPopUp(enum BattlerId battler, enum Item item);
+
 u32 BattleUI_CreateGimmickTriggerSprite(enum BattlerId);
 
 s32 BattleUI_GetGimmickIndicatorXOffset(enum BattlerId);
