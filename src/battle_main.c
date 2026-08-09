@@ -64,6 +64,7 @@
 #include "util.h"
 #include "wild_encounter.h"
 #include "window.h"
+#include "bw_battle_ui.h" // bwBattleUI
 #include "constants/abilities.h"
 #include "constants/battle_ai.h"
 #include "constants/battle_move_effects.h"
@@ -1948,7 +1949,7 @@ void CB2_InitEndLinkBattle(void)
         gBattle_BG3_Y = 0;
 
         InitBattleBgsVideo();
-        LoadPalette(gBattleTextboxPalette, BG_PLTT_ID(0), 2 * PLTT_SIZE_4BPP);
+        LoadPalette(BattleUI_GetTextboxPalette(), BG_PLTT_ID(0), 2 * PLTT_SIZE_4BPP); // bwBattleUI
         LoadBattleMenuWindowGfx();
         ResetSpriteData();
         ResetTasks();
@@ -5310,6 +5311,7 @@ static void FreeResetData_ReturnToOvOrDoEvolutions(void)
 
         ClearCurrentTrainerWantRematchVsSeeker();
         gDexNavSpecies = SPECIES_NONE;
+        BattleUI_SetCursorMode(NUM_BUI_CURSOR_MODES); // bwBattleUI
         ResetSpriteData();
         if (!(gBattleTypeFlags & (BATTLE_TYPE_LINK
                                   | BATTLE_TYPE_RECORDED_LINK

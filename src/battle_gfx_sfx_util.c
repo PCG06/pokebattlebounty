@@ -25,6 +25,10 @@
 #include "contest.h"
 #include "trainer.h"
 #include "trainer_pokemon_sprites.h"
+// start bwBattleUI
+#include "bw_battle_ui.h"
+#include "config/bw_battle_ui.h"
+// end bwBattleUI
 #include "constants/songs.h"
 #include "constants/rgb.h"
 #include "constants/battle_palace.h"
@@ -706,6 +710,13 @@ void FreeTrainerFrontPicPalette(enum TrainerPicID trainerPicId)
 
 bool8 BattleLoadAllHealthBoxesGfx(u8 state)
 {
+    // start bwBattleUI
+    if (BW_BATTLE_UI && BW_BATTLE_UI_HEALTHBOX)
+    {
+        return BattleUI_LoadAllHealthboxGfx(state);
+    }
+    // end bwBattleUI
+
     bool8 retVal = FALSE;
 
     if (state != 0)
