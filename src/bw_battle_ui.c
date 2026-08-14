@@ -1069,12 +1069,12 @@ static void BattleUI_DisplayNormalMoveBox(enum BattlerId battler, struct ChooseM
             // pp
             if (gBattleResources->bufferA[battler][2] != TRUE)
             {
-                u8 *txtPtr = ConvertIntToDecimalStringN(gDisplayedStringBattle, moveInfo->currentPp[i],
+                u8 *txtPtr = ConvertIntToDecimalStringN(gDisplayedStringBattle, moveInfo->currentPP[i],
                                                         STR_CONV_MODE_RIGHT_ALIGN, 2);
                 *(txtPtr)++ = CHAR_SLASH;
-                ConvertIntToDecimalStringN(txtPtr, moveInfo->maxPp[i], STR_CONV_MODE_LEFT_ALIGN, 2);
+                ConvertIntToDecimalStringN(txtPtr, moveInfo->maxPP[i], STR_CONV_MODE_LEFT_ALIGN, 2);
 
-                u32 state = GetCurrentPpToMaxPpState(moveInfo->currentPp[i], moveInfo->maxPp[i]);
+                u32 state = GetCurrentPPToMaxPPState(moveInfo->currentPP[i], moveInfo->maxPP[i]);
                 x += GetStringRightAlignXOffset(FONT_SMALL, gDisplayedStringBattle, TILE_TO_PIXELS(12));
 
                 union TextColor clr = sBWBattleUI_TextColors[BUI_TXTCLR_MOVE_BOX];

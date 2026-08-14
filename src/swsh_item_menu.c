@@ -6983,13 +6983,13 @@ static void BagMenu_ShowPPMoveSelectWindow(u8 taskId)
         AddTextPrinterParameterized(windowId, fontId, GetMoveName(move), 8, (i * 16) + 1, TEXT_SKIP_DRAW, NULL);
         if (move != MOVE_NONE)
         {
-            u8 currentPp = GetMonData(mon, MON_DATA_PP1 + i);
-            u8 maxPp = CalculatePPWithBonus(move, GetMonData(mon, MON_DATA_PP_BONUSES), i);
-            u8 ppState = GetCurrentPpToMaxPpState(currentPp, maxPp);
+            u8 currentPP = GetMonData(mon, MON_DATA_PP1 + i);
+            u8 maxPP = CalculatePPWithBonus(move, GetMonData(mon, MON_DATA_PP_BONUSES), i);
+            u8 ppState = GetCurrentPPToMaxPPState(currentPP, maxPP);
             s32 x;
 
-            ConvertIntToDecimalStringN(gStringVar1, currentPp, STR_CONV_MODE_RIGHT_ALIGN, 2);
-            ConvertIntToDecimalStringN(gStringVar2, maxPp, STR_CONV_MODE_RIGHT_ALIGN, 2);
+            ConvertIntToDecimalStringN(gStringVar1, currentPP, STR_CONV_MODE_RIGHT_ALIGN, 2);
+            ConvertIntToDecimalStringN(gStringVar2, maxPP, STR_CONV_MODE_RIGHT_ALIGN, 2);
             StringCopy(gStringVar3, gStringVar1);
             StringAppend(gStringVar3, gText_Slash);
             StringAppend(gStringVar3, gStringVar2);
@@ -8807,7 +8807,7 @@ static u8 BagMenu_BattleTargetSlotId(bool8 partner, u8 partyIndex)
 {
     if (IsMultiBattle())
     {
-        u8 battler = partner ? BATTLE_PARTNER(gBattlerInMenuId) : gBattlerInMenuId;
+        u8 battler = partner ? GetPartnerBattler(gBattlerInMenuId) : gBattlerInMenuId;
         if (gBattlerPartyIndexes[battler] != partyIndex)
             return PARTY_SIZE;
         return (GetBattlerPosition(battler) == B_POSITION_PLAYER_RIGHT) ? 1 : 0;
