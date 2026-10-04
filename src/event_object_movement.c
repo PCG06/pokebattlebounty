@@ -3646,12 +3646,24 @@ u8 CreateCopySpriteAt(struct Sprite *sprite, s16 x, s16 y, u8 subpriority)
 
 void SetObjectEventDirection(struct ObjectEvent *objectEvent, enum Direction direction)
 {
-    s8 d2;
     objectEvent->previousMovementDirection = objectEvent->facingDirection;
     if (!objectEvent->facingDirectionLocked)
     {
-        d2 = direction;
-        objectEvent->facingDirection = d2;
+        enum Direction facingDirection = direction;
+
+        // Player interactions require cardinal facing even while moving diagonally on stairs.
+        if (objectEvent->isPlayer)
+        {
+            if (direction == DIR_SOUTHWEST || direction == DIR_NORTHWEST)
+            {
+                facingDirection = DIR_WEST;
+            }
+            else if (direction == DIR_SOUTHEAST || direction == DIR_NORTHEAST)
+            {
+                facingDirection = DIR_EAST;
+            }
+        }
+        objectEvent->facingDirection = facingDirection;
     }
     objectEvent->movementDirection = direction;
 }
@@ -3915,7 +3927,7 @@ bool8 ObjectEventIsTrainerAndCloseToPlayer(struct ObjectEvent *objectEvent)
     if (!TestPlayerAvatarFlags(PLAYER_AVATAR_FLAG_DASH))
         return FALSE;
 
-    if (objectEvent->trainerType != TRAINER_TYPE_NORMAL && objectEvent->trainerType != TRAINER_TYPE_BURIED)
+    if (!IsNormalTypeTrainer(objectEvent->trainerType) && objectEvent->trainerType != TRAINER_TYPE_BURIED)
         return FALSE;
 
     PlayerGetDestCoords(&playerX, &playerY);
@@ -6517,12 +6529,6 @@ static bool8 IsCoordOutsideObjectEventMovementRange(struct ObjectEvent *objectEv
 
 bool8 IsMetatileDirectionallyImpassable(struct ObjectEvent *objectEvent, s16 x, s16 y, enum Direction direction)
 {
-    // This can rarely happen with a sub-frame perfect a press when going down sideways stairs and trying to surf
-    assertf(direction > DIR_NONE && direction < CARDINAL_DIRECTION_COUNT, "Tried to check if metatile is directionally impassable on a diagonal movement")
-    {
-        return TRUE;
-    }
-
     if (gOppositeDirectionBlockedMetatileFuncs[direction - 1](objectEvent->currentMetatileBehavior)
         || gDirectionBlockedMetatileFuncs[direction - 1](MapGridGetMetatileBehaviorAt(x, y)))
         return TRUE;
@@ -10042,9 +10048,9 @@ void ScriptFaceEachOther(struct ScriptContext *ctx)
     u32 localIdTwo = VarGet(ScriptReadHalfword(ctx));
     struct ObjectEvent *objectOne = &gObjectEvents[GetObjectEventIdByLocalId(localIdOne)];
     struct ObjectEvent *objectTwo = &gObjectEvents[GetObjectEventIdByLocalId(localIdTwo)];
-    
+
     Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
-    
+
     ObjectEventsTurnToEachOther(objectOne, objectTwo);
 }
 
@@ -11762,7 +11768,7 @@ bool8 MovementType_OverworldWildEncounter_WanderAround_Step2(struct ObjectEvent 
 {
     if (!ObjectEventExecSingleMovementAction(objectEvent, sprite))
         return FALSE;
-    
+
     SetMovementDelay(sprite, sMovementDelaysOWE[Random() % ARRAY_COUNT(sMovementDelaysOWE)]);
     sprite->sTypeFuncId = 3;
     return TRUE;
@@ -11777,13 +11783,13 @@ bool8 MovementType_OverworldWildEncounter_WanderAround_Step3(struct ObjectEvent 
         sprite->sTypeFuncId = 4;
         return TRUE;
     }
-    
+
     if (OW_MON_WANDER_WALK == TRUE && IS_OW_MON_OBJ(objectEvent))
         UpdateMonMoveInPlace(objectEvent, sprite);
 
     if (CanAwareOWESeePlayer(objectEvent))
         sprite->sTypeFuncId = 7;
-    
+
     return FALSE;
 }
 
@@ -11839,7 +11845,7 @@ bool8 MovementType_OverworldWildEncounter_Common_Step9(struct ObjectEvent *objec
 {
     if (ObjectEventExecSingleMovementAction(objectEvent, sprite))
         sprite->sTypeFuncId = 10;
-    
+
     return TRUE;
 }
 
@@ -11947,7 +11953,7 @@ bool8 MovementType_OverworldWildEncounter_FleePlayer_Step11(struct ObjectEvent *
         enum Direction newDirection = DirectionOfOWEToPlayerFromCollision(objectEvent);
         if (newDirection != objectEvent->movementDirection)
             newDirection = GetOppositeDirection(newDirection);
-        
+
         movementActionId = GetOWEWalkMovementActionInDirectionWithSpeed(newDirection, OWE_GetActiveSpeedFromSpecies(speciesId));
         if (CheckRestrictedOWEMovement(objectEvent, newDirection))
         {

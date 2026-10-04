@@ -32,6 +32,7 @@ enum PokemonSummaryScreenMode
     SUMMARY_MODE_SELECT_MOVE,
     SUMMARY_MODE_RELEARNER_BATTLE, // returning from move relearner initiated from battle moves page
     SUMMARY_MODE_RELEARNER_CONTEST, // returning from move relearner initiated from contest moves page
+    SUMMARY_MODE_BXPY,
     SUMMARY_MODE_DELETE_BATTLE, // reopening summary screen battle move page after deleting a move
     SUMMARY_MODE_DELETE_CONTEST, // reopening summary screen contest move page after deleting a move
     SUMMARY_MODE_STAT_EDITOR, // returning from stat editor initiated from skills page
@@ -58,6 +59,9 @@ enum PokemonSummarySkillsMode
     SUMMARY_SKILLS_MODE_IVS,
     SUMMARY_SKILLS_MODE_EVS,
 };
+#define MOVE_SELECTOR_SPRITES_COUNT 10
+#define TYPE_ICON_SPRITE_COUNT (MAX_MON_MOVES + 1)
+
 
 void ShowPokemonSummaryScreen(u8 mode, void *mons, u8 monIndex, u8 maxMonIndex, void (*callback)(void));
 void ShowSelectMovePokemonSummaryScreen(struct Pokemon *mons, u8 monIndex, void (*callback)(void), u16 newMove);
