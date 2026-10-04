@@ -2019,7 +2019,7 @@ void TryPutLotteryWinnerReportOnAir(void)
     }
 }
 
-void TryPutBattleSeminarOnAir(enum Species foeSpecies, enum Species species, u8 moveIndex, const u16 *movePtr, enum Move betterMove)
+void TryPutBattleSeminarOnAir(enum Species foeSpecies, enum Species species, enum MoveSlot moveIndex, const u16 *movePtr, enum Move betterMove)
 {
     TVShow *show;
     u8 i;
@@ -2594,6 +2594,9 @@ void ConvertIntToDecimalString(u8 varIdx, int value)
 size_t CountDigits(int value)
 {
     u32 count = 0;
+
+    if (value == 0)
+        return 1;
 
     while (value > 0)
     {
