@@ -5033,7 +5033,7 @@ static void SetBoxMonIconObjMode(u8 boxPosition, u8 objMode)
 
 static void CreatePartyMonsSprites(bool8 visible)
 {
-    u16 i, count;
+    u16 i;
     enum Species species = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_SPECIES);
     bool32 isEgg = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_IS_EGG);
     u32 personality = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_PERSONALITY);
@@ -5044,7 +5044,7 @@ static void CreatePartyMonsSprites(bool8 visible)
         sStorage->partySprites[0] = NULL;
     }
     sStorage->partySprites[0] = CreateMonIconSprite(species, personality, 40, 16, 1, 12, isEgg);
-    count = 1;
+    u16 UNUSED count = 1;
     for (i = 1; i < PARTY_SIZE; i++)
     {
         if (sStorage->partySprites[i] != NULL)

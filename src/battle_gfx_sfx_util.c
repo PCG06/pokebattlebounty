@@ -722,8 +722,6 @@ bool8 BattleLoadAllHealthBoxesGfx(u8 state)
     }
     // end bwBattleUI
 
-    bool8 retVal = FALSE;
-
     if (state == 1)
     {
         LoadSpritePalette(&sSpritePalettes_HealthBoxHealthBar[0]);
