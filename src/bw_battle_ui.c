@@ -747,7 +747,7 @@ void Task_BattleUIBounceLastBallIcon(u8 taskId)
         if (sprite->sLBI_Moving) return;
         tLBI_Y2 = sprite->sLBI_Y2;
         DestroyLastUsedBallGfx(sprite);
-        // fallthrough
+        [[fallthrough]];
     case LBI_STATE_CREATE:
         gBattleStruct->ballSpriteIds[0] = AddItemIconSprite(102, 102, gBallToDisplay);
         sprite = &gSprites[gBattleStruct->ballSpriteIds[0]];
@@ -755,7 +755,7 @@ void Task_BattleUIBounceLastBallIcon(u8 taskId)
         sprite->sLBI_Y2 = tLBI_Y2;
         sprite->y2 = tLBI_Y2 - 2; // bounced up
         sprite->callback = SpriteCallbackDummy;
-        // fallthrough
+        [[fallthrough]];
     case LBI_STATE_BOUNCE_DOWN:
         if (sprite->sLBI_Moving) return;
         sprite->sLBI_Bounce = FALSE;

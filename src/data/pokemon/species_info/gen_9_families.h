@@ -6561,8 +6561,8 @@ const struct SpeciesInfo gSpeciesInfoGen9[] =
             SHADOW_SIZE_S,
             TRACKS_NONE,
             sAnimTable_Following,
-            gOverworldPalette_GimmighoulChest,
-            gShinyOverworldPalette_GimmighoulChest
+            gOverworldPalette_Gimmighoul,
+            gShinyOverworldPalette_Gimmighoul
         )
         .teachableLearnset = sGimmighoulTeachableLearnset,
         .formSpeciesIdTable = sGimmighoulFormSpeciesIdTable,
@@ -6619,6 +6619,15 @@ const struct SpeciesInfo gSpeciesInfoGen9[] =
         .pokemonJumpType = PKMN_JUMP_TYPE_FAST,
         SHADOW(-1, -4, SHADOW_SIZE_S)
         FOOTPRINT(GimmighoulRoaming)
+        OVERWORLD(
+            sPicTable_GimmighoulRoaming,
+            SIZE_32x32,
+            SHADOW_SIZE_S,
+            TRACKS_NONE,
+            sAnimTable_Following,
+            gOverworldPalette_Gimmighoul,
+            gShinyOverworldPalette_Gimmighoul
+        )
         .teachableLearnset = sGimmighoulTeachableLearnset,
         .formSpeciesIdTable = sGimmighoulFormSpeciesIdTable,
         .evolutions = EVOLUTION({EVO_LEVEL, 0, SPECIES_GHOLDENGO, CONDITIONS({IF_BAG_ITEM_COUNT, ITEM_GIMMIGHOUL_COIN, 999})}),
@@ -8270,6 +8279,7 @@ const struct SpeciesInfo gSpeciesInfoGen9[] =
         .pokemonJumpType = PKMN_JUMP_TYPE_NONE,
         SHADOW(-4, 8, SHADOW_SIZE_L)
         FOOTPRINT(TerapagosTerastal)
+    #if OW_BATTLE_ONLY_FORMS
         OVERWORLD(
             sPicTable_TerapagosTerastal,
             SIZE_32x32,
@@ -8279,6 +8289,7 @@ const struct SpeciesInfo gSpeciesInfoGen9[] =
             gOverworldPalette_TerapagosTerastal,
             gShinyOverworldPalette_TerapagosTerastal
         )
+    #endif
         .isRestrictedLegendary = TRUE,
         .isFrontierBanned = TRUE,
         .perfectIVCount = LEGENDARY_PERFECT_IV_COUNT,
@@ -8338,6 +8349,17 @@ const struct SpeciesInfo gSpeciesInfoGen9[] =
         .pokemonJumpType = PKMN_JUMP_TYPE_NONE,
         SHADOW(0, 12, SHADOW_SIZE_L)
         FOOTPRINT(TerapagosStellar)
+    #if OW_BATTLE_ONLY_FORMS
+        OVERWORLD(
+            sPicTable_TerapagosStellar,
+            SIZE_64x64,
+            SHADOW_SIZE_M,
+            TRACKS_FOOT,
+            sAnimTable_Following,
+            gOverworldPalette_TerapagosStellar,
+            gShinyOverworldPalette_TerapagosStellar
+        )
+    #endif //OW_BATTLE_ONLY_FORMS
         .isRestrictedLegendary = TRUE,
         .isTeraForm = TRUE,
         .isFrontierBanned = TRUE,

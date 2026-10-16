@@ -2773,7 +2773,7 @@ static void Task_ReleaseMon(u8 taskId)
         PrintMessage(MSG_RELEASE_POKE);
         ShowYesNoWindow(1);
         sStorage->state++;
-        // fallthrough
+        [[fallthrough]];
     case 1:
         switch (Menu_ProcessInputNoWrapClearOnChoose())
         {
@@ -3335,6 +3335,7 @@ static void Task_HandleBoxOptions(u8 taskId)
         if (IsMenuLoading())
             return;
         sStorage->state++;
+        [[fallthrough]];
     case 2:
         switch (HandleMenuInput())
         {
@@ -5559,6 +5560,7 @@ static bool8 ScrollToBox(void)
     {
     case 0:
         sStorage->scrollState++;
+        [[fallthrough]];
     case 1:
         if (!WaitForWallpaperGfxLoad())
             return TRUE;
@@ -6930,7 +6932,7 @@ static void TryRefreshDisplayMon(void)
                 SetDisplayMonData(&gParties[B_TRAINER_PLAYER][sCursorPosition], MODE_PARTY);
                 break;
             }
-            // fallthrough
+            [[fallthrough]];
         case CURSOR_AREA_BOX_TITLE:
             SetDisplayMonData(NULL, MODE_MOVE);
             break;
@@ -9194,6 +9196,7 @@ static void SpriteCB_ItemIcon_ToHand(struct Sprite *sprite)
         sprite->data[4] = 16;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] -= sprite->data[3];
         sprite->data[2] -= sprite->data[4];
@@ -9224,6 +9227,7 @@ static void SpriteCB_ItemIcon_ToMon(struct Sprite *sprite)
         sprite->data[4] = 16;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] += sprite->data[3];
         sprite->data[2] += sprite->data[4];
@@ -9249,6 +9253,7 @@ static void SpriteCB_ItemIcon_SwapToHand(struct Sprite *sprite)
         sprite->data[4] = sStorage->cursorSprite->y + sStorage->cursorSprite->y2 + 8;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         if (++sprite->data[5] > 16)
         {
@@ -9298,6 +9303,7 @@ static void SpriteCB_ItemIcon_SwapToMon(struct Sprite *sprite)
         }
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         if (++sprite->data[5] > 16)
         {

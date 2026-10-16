@@ -817,7 +817,7 @@ static void GiveParentSharedLevelUpMoves(struct Pokemon *egg, enum Move *fatherM
     {
         if (sharedMoves[i] == MOVE_NONE)
             break;
-        for (j = 0; teachableLearnset[j] != MOVE_UNAVAILABLE; i++)
+        for (j = 0; teachableLearnset[j] != MOVE_UNAVAILABLE; j++)
         {
             if (sharedMoves[i] == teachableLearnset[j])
             {
