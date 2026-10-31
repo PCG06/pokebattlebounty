@@ -654,6 +654,7 @@ static void CursorCb_ChangeAbility(u8);
 void TryItemHoldFormChange(struct Pokemon *mon, s8 slotId, enum BattleTrainer trainer);
 static void ShowMoveSelectWindow(u8 slot);
 static void Task_HandleWhichMoveInput(u8 taskId);
+static bool32 IsFusionMon(enum Species species);
 static void Task_HideFollowerNPCForTeleport(u8);
 static void FieldCallback_RockClimb(void);
 #if SWSH_PARTY_PC_ACCESS
@@ -8222,7 +8223,7 @@ static void DisplayPartyPokemonDataForFormChange(u8 slot)
 static void Task_TryItemUseFusionChange(u8 taskId);
 static void SpriteCB_FormChangeIconMosaic(struct Sprite *sprite);
 
-bool32 IsFusionMon(enum Species species)
+static bool32 IsFusionMon(enum Species species)
 {
     u16 i;
     const struct Fusion *itemFusion = gFusionTablePointers[species];

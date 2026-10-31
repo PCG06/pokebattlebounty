@@ -714,9 +714,9 @@ struct BattleStruct
     enum DamageCategory dynamicMoveCategory:3;
     enum Item flingItem:14;
     enum FlungItem flungItem:2;
-    enum PartyMon itemPartyIndex[MAX_BATTLERS_COUNT];
-    enum MoveSlot itemMoveIndex[MAX_BATTLERS_COUNT];
-#if SWSH_ITEM_MENU_IN_BATTLE_USE
+    u8 itemPartyIndex[MAX_BATTLERS_COUNT];
+    u8 itemMoveIndex[MAX_BATTLERS_COUNT];
+#if SWSH_BAG_IN_BATTLE_USE
     bool8 itemTargetPartner[MAX_BATTLERS_COUNT];
 #endif
     s32 aiDelayTimer; // Counts number of frames AI takes to choose an action.
