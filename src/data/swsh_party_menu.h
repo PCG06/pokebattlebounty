@@ -11,17 +11,12 @@ static const u16 sPartyMenuBg_Pal[]             = INCGFX_U16("graphics/party_men
 static const u32 sPartyMenuBg_Main_Tilemap[]    = INCGFX_U32("graphics/party_menu/swsh/bg_main.bin", ".smolTM");
 static const u32 sPartyMenuBg_Scroll_Tilemap[]  = INCGFX_U32("graphics/party_menu/swsh/bg_scroll.bin", ".smolTM");
 
-static const u32 sCursor_Gfx[]                  = INCGFX_U32("graphics/party_menu/swsh/cursor.png", ".4bpp.smol");
 static const u32 sHeldItem_Gfx[]                = INCGFX_U32("graphics/party_menu/swsh/hold_icons.png", ".4bpp");
 static const u32 sMoveTypes_Gfx[]               = INCGFX_U32("graphics/party_menu/swsh/move_types.png", ".4bpp.smol");
 static const u32 sMessageWindow_Gfx[]           = INCGFX_U32("graphics/party_menu/swsh/message_window.png", ".4bpp.smol");
-static const u32 sQuantityWindow_Gfx[]          = INCGFX_U32("graphics/party_menu/swsh/quantity_window.png", ".4bpp.smol");
 static const u32 sSelectFrame_Gfx[]             = INCGFX_U32("graphics/party_menu/swsh/select_frame.png", ".4bpp.smol");
-static const u32 sStatusIcons_Gfx[]             = INCGFX_U32("graphics/party_menu/swsh/status_icons.png", ".4bpp.smol");
 
 static const u16 sHeldItem_Pal[]                = INCGFX_U16("graphics/party_menu/swsh/hold_icons.png", ".gbapal");
-static const u16 sStatusIcons_Pal[]             = INCGFX_U16("graphics/party_menu/swsh/status_icons.png", ".gbapal");
-static const u16 sMonShadow_Pal[]               = INCGFX_U16("graphics/party_menu/swsh/shadow.pal", ".gbapal");
 
 static const u8 sButtons_Gfx[][4 * TILE_SIZE_4BPP] = {
     [BUTTON_START]  = INCGFX_U8("graphics/party_menu/swsh/button_start.png", ".4bpp"),
@@ -88,7 +83,6 @@ static const struct
     struct PartyBoxRect level;
     struct PartyBoxRect gender;
     struct PartyBoxRect hp;
-    struct PartyBoxRect maxHp;
     struct PartyBoxRect hpBar;
     struct PartyBoxRect descText;
 } sPartySlotLayout =
@@ -96,8 +90,7 @@ static const struct
     .nickname = { 32,  0, 48, 13 },
     .level    = { 80, 11, 32,  8 },
     .gender   = { 91,  0,  8,  8 },
-    .hp       = { 32, 11, 24,  8 },
-    .maxHp    = { 47, 11, 24,  8 },
+    .hp       = { 32, 11, 48,  8 },
     .hpBar    = { 32, 12, 64,  2 },
     .descText = { 32, 11, 64, 12 },
 };
@@ -113,12 +106,22 @@ static const struct
 #define PARTY_SLOT_STRIDE       24
 #define PARTY_ITEM_OFFSET_X      6
 #define PARTY_ITEM_OFFSET_Y     10
-#define PARTY_STATUS_OFFSET_X   74
+#define PARTY_STATUS_OFFSET_X   73
 #define PARTY_STATUS_OFFSET_Y    9
 #define PARTY_ICON_X            34
 #define PARTY_ICON_X_SHIFTED    26  // one tile left, to clear the enemy/partner mons
 
 #define PARTY_SLOT_Y(s)  (PARTY_SLOT_TOP + PARTY_SLOT_STRIDE * (s))
+
+// HBlank swaps PARTY_ITEM_PAL_COUNT palettes to cover all six item icons,
+// parking the rest in unused BG palettes
+// Credit: Greenphx9 and aarant/merrp icons-expansion branch
+#define PARTY_ITEM_ICON_TOP(s)          (PARTY_SLOT_Y(s) + PARTY_ITEM_OFFSET_Y - 16)
+#define PARTY_ITEM_PAL_SWAP_VCOUNT(s)   (PARTY_ITEM_ICON_TOP(s) - 8)
+
+STATIC_ASSERT(PARTY_ITEM_ICON_TOP(0) + 32 <= PARTY_ITEM_ICON_TOP(PARTY_ITEM_PAL_COUNT), PartyItemIconsShareScanlines);
+
+static const u8 sHeldItemIconParkPalNums[PARTY_ITEM_PARK_PAL_COUNT] = { 9, 10, 11 };
 
 // One slot: mon icon (x,y), held item (x,y), status (x,y) — all derived from the icon origin.
 #define PARTY_SLOT_COORDS(iconX, s)                                          \
@@ -184,315 +187,254 @@ static const struct
 static const u8 sFontColorTable[][3] =
 {
     {0,  3,  2},  // Default
-    {0,  1,  6},  // Unused
     {0, 11, 12},  // Gender symbol
     {1,  2,  3},  // Selection actions
     {1,  8,  9},  // Field moves
     {0,  1,  2},  // Button prompt text
-    {1,  4,  5},  // Unused
     {0,  5,  6},  // PP state 0 (yellow)
     {0,  7,  8},  // PP state 1 (orange)
     {0,  9, 10},  // PP state 2 (red)
     {0,  3,  4},  // PP state 3 (white)
     {0,  1,  2},  // Ability name, move names
-    {0,  3,  6},  // Item multiuse
 };
 
-#define PARTY_LABEL_WINDOW_PROMPT 7
+#define PARTY_CHAR_BASE_TILES       1024
+
+#define PARTY_TILES_BG_GFX          128
+#define PARTY_TILES_MSGBOX          14
+#define PARTY_TILES_STD_BORDER      9
+
+#define PARTY_BASE_MSGBOX           PARTY_TILES_BG_GFX
+#define PARTY_BASE_STD_BORDER       (PARTY_BASE_MSGBOX + PARTY_TILES_MSGBOX)
+
+#define WIN_PARTY_SLOT_W            14
+#define WIN_PARTY_SLOT_H            3
+#define WIN_PARTY_SLOT_TILES        (WIN_PARTY_SLOT_W * WIN_PARTY_SLOT_H)
+#define WIN_PARTY_SLOT_BASE         (PARTY_BASE_STD_BORDER + PARTY_TILES_STD_BORDER)
+#define WIN_PARTY_SLOT(s)           (WIN_PARTY_SLOT_BASE + (s) * WIN_PARTY_SLOT_TILES)
+
+#define WIN_MSG_W                   28
+#define WIN_MSG_H                   4
+#define WIN_MSG_TILES               (WIN_MSG_W * WIN_MSG_H)
+#define WIN_MSG_BASE                WIN_PARTY_SLOT(PARTY_SIZE)
+
+#define WIN_PROMPT_W                14
+#define WIN_PROMPT_H                2
+#define WIN_PROMPT_TILES            (WIN_PROMPT_W * WIN_PROMPT_H)
+#define WIN_PROMPT_BASE             (WIN_MSG_BASE + WIN_MSG_TILES)
+
+#define PARTY_SLOT_WIN(s, left)                     \
+    {                                               \
+        .bg          = 1,                           \
+        .tilemapLeft = (left),                      \
+        .tilemapTop  = 1 + (s) * WIN_PARTY_SLOT_H,  \
+        .width       = WIN_PARTY_SLOT_W,            \
+        .height      = WIN_PARTY_SLOT_H,            \
+        .paletteNum  = 3 + (s),                     \
+        .baseBlock   = WIN_PARTY_SLOT(s),           \
+    }
+
+#define PARTY_WIN_MSG                               \
+    [WIN_MSG] = {                                   \
+        .bg          = 0,                           \
+        .tilemapLeft = 1,                           \
+        .tilemapTop  = 15,                          \
+        .width       = WIN_MSG_W,                   \
+        .height      = WIN_MSG_H,                   \
+        .paletteNum  = 14,                          \
+        .baseBlock   = WIN_MSG_BASE,                \
+    }
 
 static const struct WindowTemplate sSinglePartyMenuWindowTemplate_SwSh[] =
 {
-    { // Party mon 1
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 1,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 3,
-        .baseBlock = 0x6F,
-    },
-    { // Party mon 2
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 4,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 4,
-        .baseBlock = 0x99,
-    },
-    { // Party mon 3
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 7,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 5,
-        .baseBlock = 0xC3,
-    },
-    { // Party mon 4
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 10,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 6,
-        .baseBlock = 0xED,
-    },
-    { // Party mon 5
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 13,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 7,
-        .baseBlock = 0x117,
-    },
-    { // Party mon 6
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 16,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 8,
-        .baseBlock = 0x141,
-    },
-    [WIN_MSG] = {
-        .bg = 0,
-        .tilemapLeft = 1,
-        .tilemapTop = 15,
-        .width = 28,
-        .height = 4,
-        .paletteNum = 14,
-        .baseBlock = 0x16B,
-    },
+    PARTY_SLOT_WIN(0, 2),
+    PARTY_SLOT_WIN(1, 2),
+    PARTY_SLOT_WIN(2, 2),
+    PARTY_SLOT_WIN(3, 2),
+    PARTY_SLOT_WIN(4, 2),
+    PARTY_SLOT_WIN(5, 2),
+    PARTY_WIN_MSG,
     [PARTY_LABEL_WINDOW_PROMPT] = {
         .bg = 1,
         .tilemapLeft = 16,
         .tilemapTop = 18,
-        .width = 14,
-        .height = 2,
+        .width = WIN_PROMPT_W,
+        .height = WIN_PROMPT_H,
         .paletteNum = 0,
-        .baseBlock = 0x1F0,
+        .baseBlock = WIN_PROMPT_BASE,
     },
     DUMMY_WIN_TEMPLATE
 };
 
 static const struct WindowTemplate sDoublePartyMenuWindowTemplate_SwSh[] =
 {
-    { // Party mon 1
-        .bg = 1,
-        .tilemapLeft = 1,
-        .tilemapTop = 1,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 3,
-        .baseBlock = 0x6F,
-    },
-    { // Party mon 2
-        .bg = 1,
-        .tilemapLeft = 1,
-        .tilemapTop = 4,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 4,
-        .baseBlock = 0x99,
-    },
-    { // Party mon 3
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 7,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 5,
-        .baseBlock = 0xC3,
-    },
-    { // Party mon 4
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 10,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 6,
-        .baseBlock = 0xED,
-    },
-    { // Party mon 5
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 13,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 7,
-        .baseBlock = 0x117,
-    },
-    { // Party mon 6
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 16,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 8,
-        .baseBlock = 0x141,
-    },
-    [WIN_MSG] = {
-        .bg = 0,
-        .tilemapLeft = 1,
-        .tilemapTop = 15,
-        .width = 28,
-        .height = 4,
-        .paletteNum = 14,
-        .baseBlock = 0x16B,
-    },
+    PARTY_SLOT_WIN(0, 1),
+    PARTY_SLOT_WIN(1, 1),
+    PARTY_SLOT_WIN(2, 2),
+    PARTY_SLOT_WIN(3, 2),
+    PARTY_SLOT_WIN(4, 2),
+    PARTY_SLOT_WIN(5, 2),
+    PARTY_WIN_MSG,
     DUMMY_WIN_TEMPLATE
 };
 
+// party slots 0 and 3 are the leading mons
 static const struct WindowTemplate sMultiPartyMenuWindowTemplate_SwSh[] =
 {
-    { // Party mon 1 (player lead)
-        .bg = 1,
-        .tilemapLeft = 1,
-        .tilemapTop = 1,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 3,
-        .baseBlock = 0x6F,
-    },
-    { // Party mon 2
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 4,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 4,
-        .baseBlock = 0x99,
-    },
-    { // Party mon 3
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 7,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 5,
-        .baseBlock = 0xC3,
-    },
-    { // Party mon 4 (partner lead)
-        .bg = 1,
-        .tilemapLeft = 1,
-        .tilemapTop = 10,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 6,
-        .baseBlock = 0xED,
-    },
-    { // Party mon 5
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 13,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 7,
-        .baseBlock = 0x117,
-    },
-    { // Party mon 6
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 16,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 8,
-        .baseBlock = 0x141,
-    },
-    [WIN_MSG] = {
-        .bg = 0,
-        .tilemapLeft = 1,
-        .tilemapTop = 15,
-        .width = 28,
-        .height = 4,
-        .paletteNum = 14,
-        .baseBlock = 0x16B,
-    },
+    PARTY_SLOT_WIN(0, 1),
+    PARTY_SLOT_WIN(1, 2),
+    PARTY_SLOT_WIN(2, 2),
+    PARTY_SLOT_WIN(3, 1),
+    PARTY_SLOT_WIN(4, 2),
+    PARTY_SLOT_WIN(5, 2),
+    PARTY_WIN_MSG,
     DUMMY_WIN_TEMPLATE
 };
 
 static const struct WindowTemplate sShowcaseMultiPartyMenuWindowTemplate_SwSh[] =
 {
-    { // Party mon 1 (player lead)
-        .bg = 1,
-        .tilemapLeft = 1,
-        .tilemapTop = 1,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 3,
-        .baseBlock = 0x6F,
-    },
-    { // Party mon 2
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 4,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 4,
-        .baseBlock = 0x99,
-    },
-    { // Party mon 3
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 7,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 5,
-        .baseBlock = 0xC3,
-    },
-    { // Party mon 4 (partner lead)
-        .bg = 1,
-        .tilemapLeft = 1,
-        .tilemapTop = 10,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 6,
-        .baseBlock = 0xED,
-    },
-    { // Party mon 5
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 13,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 7,
-        .baseBlock = 0x117,
-    },
-    { // Party mon 6
-        .bg = 1,
-        .tilemapLeft = 2,
-        .tilemapTop = 16,
-        .width = 14,
-        .height = 3,
-        .paletteNum = 8,
-        .baseBlock = 0x141,
-    },
+    PARTY_SLOT_WIN(0, 1),
+    PARTY_SLOT_WIN(1, 2),
+    PARTY_SLOT_WIN(2, 2),
+    PARTY_SLOT_WIN(3, 1),
+    PARTY_SLOT_WIN(4, 2),
+    PARTY_SLOT_WIN(5, 2),
     DUMMY_WIN_TEMPLATE
 };
 
-static const struct WindowTemplate sDefaultPartyMsgWindowTemplate =
+// mont note: only one of these show at a time
+#define WIN_POPUP_BASE              (WIN_PROMPT_BASE + WIN_PROMPT_TILES)
+#define WIN_POPUP_TILES             168
+
+// WIN_ACTIONS_W/_H/_TILES handled in swsh_party_menu.c with MAX_PARTY_MENU_ACTIONS
+#define WIN_ITEM_GIVE_TAKE_W        6
+#define WIN_ITEM_GIVE_TAKE_H        8
+#define WIN_ITEM_GIVE_TAKE_TILES    (WIN_ITEM_GIVE_TAKE_W * WIN_ITEM_GIVE_TAKE_H)
+
+#define WIN_MAIL_READ_TAKE_W        8
+#define WIN_MAIL_READ_TAKE_H        6
+#define WIN_MAIL_READ_TAKE_TILES    (WIN_MAIL_READ_TAKE_W * WIN_MAIL_READ_TAKE_H)
+
+#define WIN_MOVE_SELECT_W           10
+#define WIN_MOVE_SELECT_H           8
+#define WIN_MOVE_SELECT_TILES       (WIN_MOVE_SELECT_W * WIN_MOVE_SELECT_H)
+
+#define WIN_CATALOG_W               12
+#define WIN_CATALOG_H               14
+#define WIN_CATALOG_TILES           (WIN_CATALOG_W * WIN_CATALOG_H)
+
+#define WIN_ZYGARDE_CUBE_W          11
+#define WIN_ZYGARDE_CUBE_H          6
+#define WIN_ZYGARDE_CUBE_TILES      (WIN_ZYGARDE_CUBE_W * WIN_ZYGARDE_CUBE_H)
+
+#define WIN_LEVEL_UP_STATS_W        10
+#define WIN_LEVEL_UP_STATS_H        11
+#define WIN_LEVEL_UP_STATS_TILES    (WIN_LEVEL_UP_STATS_W * WIN_LEVEL_UP_STATS_H)
+
+#define WIN_OAK_W                   27
+#define WIN_OAK_H                   4
+#define WIN_OAK_TILES               (WIN_OAK_W * WIN_OAK_H)
+
+#define WIN_YESNO_W                 5
+#define WIN_YESNO_H                 4
+#define WIN_YESNO_TILES             (WIN_YESNO_W * WIN_YESNO_H)
+#define WIN_YESNO_BASE              (WIN_POPUP_BASE + WIN_POPUP_TILES)
+
+// mont note: the commented names are for tracking equivalent vanilla party_menu.c win templates
+static const struct WindowTemplate sPartyMenuWindowTemplates[] =
 {
-    .bg = 0,
-    .tilemapLeft = 1,
-    .tilemapTop = 17,
-    .width = 21,
-    .height = 2,
-    .paletteNum = 15,
-    .baseBlock = 0x1FD,
+    [PARTYWIN_ACTIONS] = { // see DisplaySelectionWindow
+        .bg = 0,
+        .tilemapLeft = 19,
+        .tilemapTop = PARTY_ACTIONS_BOTTOM_ROW - WIN_ACTIONS_H,
+        .width = WIN_ACTIONS_W,
+        .height = WIN_ACTIONS_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_ITEM] = { // sItemGiveTakeWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 23,
+        .tilemapTop = 11,
+        .width = WIN_ITEM_GIVE_TAKE_W,
+        .height = WIN_ITEM_GIVE_TAKE_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_MAIL] = { // sMailReadTakeWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 21,
+        .tilemapTop = 13,
+        .width = WIN_MAIL_READ_TAKE_W,
+        .height = WIN_MAIL_READ_TAKE_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_MOVES] = { // sMoveSelectWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 19,
+        .tilemapTop = 11,
+        .width = WIN_MOVE_SELECT_W,
+        .height = WIN_MOVE_SELECT_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_CATALOG] = { // sCatalogSelectWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 17,
+        .tilemapTop = 5,
+        .width = WIN_CATALOG_W,
+        .height = WIN_CATALOG_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_ZYGARDE_CUBE] = { // sZygardeCubeSelectWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 18,
+        .tilemapTop = 13,
+        .width = WIN_ZYGARDE_CUBE_W,
+        .height = WIN_ZYGARDE_CUBE_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_LEVEL_UP_STATS] = { // sLevelUpStatsWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 19,
+        .tilemapTop = 1,
+        .width = WIN_LEVEL_UP_STATS_W,
+        .height = WIN_LEVEL_UP_STATS_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_OAK_VOICEOVER] = { // sWindowTemplate_FirstBattleOakVoiceover
+        .bg = 0,
+        .tilemapLeft = 2,
+        .tilemapTop = 15,
+        .width = WIN_OAK_W,
+        .height = WIN_OAK_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_POPUP_BASE,
+    },
+    [PARTYWIN_YESNO] = { // sPartyMenuYesNoWindowTemplate
+        .bg = 0,
+        .tilemapLeft = 21,
+        .tilemapTop = 9,
+        .width = WIN_YESNO_W,
+        .height = WIN_YESNO_H,
+        .paletteNum = 14,
+        .baseBlock = WIN_YESNO_BASE,
+    },
 };
 
-static const struct WindowTemplate sWindowTemplate_FirstBattleOakVoiceover =
-{
-    .bg = 0,
-    .tilemapLeft = 2,
-    .tilemapTop = 15,
-    .width = 27,
-    .height = 4,
-    .paletteNum = 14,
-    .baseBlock = 0x1DF,
-};
+STATIC_ASSERT(ARRAY_COUNT(sPartyMenuWindowTemplates) == PARTYWIN_COUNT, PartyWindowTemplateCount);
+STATIC_ASSERT(WIN_ACTIONS_TILES <= WIN_POPUP_TILES, PartyPopupActions);
+STATIC_ASSERT(WIN_ITEM_GIVE_TAKE_TILES <= WIN_POPUP_TILES, PartyPopupItemGiveTake);
+STATIC_ASSERT(WIN_MAIL_READ_TAKE_TILES <= WIN_POPUP_TILES, PartyPopupMailReadTake);
+STATIC_ASSERT(WIN_MOVE_SELECT_TILES <= WIN_POPUP_TILES, PartyPopupMoveSelect);
+STATIC_ASSERT(WIN_CATALOG_TILES <= WIN_POPUP_TILES, PartyPopupCatalog);
+STATIC_ASSERT(WIN_ZYGARDE_CUBE_TILES <= WIN_POPUP_TILES, PartyPopupZygardeCube);
+STATIC_ASSERT(WIN_LEVEL_UP_STATS_TILES <= WIN_POPUP_TILES, PartyPopupLevelUpStats);
+STATIC_ASSERT(WIN_OAK_TILES <= WIN_POPUP_TILES, PartyPopupOak);
 
 // static const struct WindowTemplate sDoWhatWithMonMsgWindowTemplate =
 // {
@@ -538,188 +480,52 @@ static const struct WindowTemplate sWindowTemplate_FirstBattleOakVoiceover =
 //     .baseBlock = 0x299,
 // };
 
-static const struct WindowTemplate sAlreadyHoldingOneMsgWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 1,
-    .tilemapTop = 15,
-    .width = 20,
-    .height = 4,
-    .paletteNum = 15,
-    .baseBlock = 0x22D,
-};
+#define WIN_IN_BATTLE_MOVE_W        14
+#define WIN_IN_BATTLE_MOVE_H        2
+#define WIN_IN_BATTLE_MOVE_TILES    (WIN_IN_BATTLE_MOVE_W * WIN_IN_BATTLE_MOVE_H)
+#define WIN_IN_BATTLE_MOVE_BASE     (WIN_YESNO_BASE + WIN_YESNO_TILES)
+#define WIN_IN_BATTLE_MOVE(m)       (WIN_IN_BATTLE_MOVE_BASE + (m) * WIN_IN_BATTLE_MOVE_TILES)
 
-static const struct WindowTemplate sOrderWhichApplianceMsgWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 1,
-    .tilemapTop = 15,
-    .width = 14,
-    .height = 4,
-    .paletteNum = 15,
-    .baseBlock = 0x22D,
-};
-
-static const struct WindowTemplate sItemGiveTakeWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 23,
-    .tilemapTop = 11,
-    .width = 6,
-    .height = 8,
-    .paletteNum = 14,
-    .baseBlock = 0x39D,
-};
-
-static const struct WindowTemplate sMailReadTakeWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 21,
-    .tilemapTop = 13,
-    .width = 8,
-    .height = 6,
-    .paletteNum = 14,
-    .baseBlock = 0x39D,
-};
-
-static const struct WindowTemplate sMoveSelectWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 19,
-    .tilemapTop = 11,
-    .width = 10,
-    .height = 8,
-    .paletteNum = 14,
-    .baseBlock = 0x283,
-};
-
-static const struct WindowTemplate sCatalogSelectWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 17,
-    .tilemapTop = 5,
-    .width = 12,
-    .height = 14,
-    .paletteNum = 14,
-    .baseBlock = 0x283,
-};
-
-static const struct WindowTemplate sZygardeCubeSelectWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 18,
-    .tilemapTop = 13,
-    .width = 11,
-    .height = 6,
-    .paletteNum = 14,
-    .baseBlock = 0x283,
-};
-
-static const struct WindowTemplate sPartyMenuYesNoWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 21,
-    .tilemapTop = 9,
-    .width = 5,
-    .height = 4,
-    .paletteNum = 14,
-    .baseBlock = 0x283,
-};
-
-static const struct WindowTemplate sLevelUpStatsWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 19,
-    .tilemapTop = 1,
-    .width = 10,
-    .height = 11,
-    .paletteNum = 14,
-    .baseBlock = 0x283,
-};
-
-static const struct WindowTemplate sGiveHowManyItemsWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 24,
-    .tilemapTop = 11,
-    .width = 4,
-    .height = 2,
-    .paletteNum = 1,
-    .baseBlock = 0x283,
-};
+#define PARTY_IN_BATTLE_MOVE_WIN(m)                     \
+    {                                                   \
+        .bg          = 1,                               \
+        .tilemapLeft = 16,                              \
+        .tilemapTop  = 2 + (m) * WIN_IN_BATTLE_MOVE_H,  \
+        .width       = WIN_IN_BATTLE_MOVE_W,            \
+        .height      = WIN_IN_BATTLE_MOVE_H,            \
+        .paletteNum  = 1,                               \
+        .baseBlock   = WIN_IN_BATTLE_MOVE(m),           \
+    }
 
 static const struct WindowTemplate sMoveInfoWindowTemplate_SwSh[] =
 {
-    { // Move slot 1
-        .bg = 1,
-        .tilemapLeft = 16,
-        .tilemapTop = 2,
-        .width = 14,
-        .height = 2,
-        .paletteNum = 1,
-        .baseBlock = 0x331,
-    },
-    { // Move slot 2
-        .bg = 1,
-        .tilemapLeft = 16,
-        .tilemapTop = 4,
-        .width = 14,
-        .height = 2,
-        .paletteNum = 1,
-        .baseBlock = 0x34D,
-    },
-    { // Move slot 3
-        .bg = 1,
-        .tilemapLeft = 16,
-        .tilemapTop = 6,
-        .width = 14,
-        .height = 2,
-        .paletteNum = 1,
-        .baseBlock = 0x369,
-    },
-    { // Move slot 4
-        .bg = 1,
-        .tilemapLeft = 16,
-        .tilemapTop = 8,
-        .width = 14,
-        .height = 2,
-        .paletteNum = 1,
-        .baseBlock = 0x385,
-    },
+    PARTY_IN_BATTLE_MOVE_WIN(0),
+    PARTY_IN_BATTLE_MOVE_WIN(1),
+    PARTY_IN_BATTLE_MOVE_WIN(2),
+    PARTY_IN_BATTLE_MOVE_WIN(3),
 };
+
+STATIC_ASSERT(ARRAY_COUNT(sMoveInfoWindowTemplate_SwSh) == MAX_MON_MOVES, PartyMoveInfoWindowCount);
+
+#define WIN_IN_BATTLE_ABILITY_W         13
+#define WIN_IN_BATTLE_ABILITY_H         4
+#define WIN_IN_BATTLE_ABILITY_TILES     (WIN_IN_BATTLE_ABILITY_W * WIN_IN_BATTLE_ABILITY_H)
+#define WIN_IN_BATTLE_ABILITY_BASE      WIN_IN_BATTLE_MOVE(MAX_MON_MOVES)
 
 static const struct WindowTemplate sAbilityInfoWindowTemplate =
 {
     .bg = 1,
     .tilemapLeft = 17,
     .tilemapTop = 11,
-    .width = 13,
-    .height = 4,
+    .width = WIN_IN_BATTLE_ABILITY_W,
+    .height = WIN_IN_BATTLE_ABILITY_H,
     .paletteNum = 1,
-    .baseBlock = 0x3A7,
+    .baseBlock = WIN_IN_BATTLE_ABILITY_BASE,
 };
 
-static const struct WindowTemplate sUnusedWindowTemplate1 =
-{
-    .bg = 0,
-    .tilemapLeft = 2,
-    .tilemapTop = 15,
-    .width = 27,
-    .height = 4,
-    .paletteNum = 14,
-    .baseBlock = 0x1DF,
-};
+#define PARTY_TILES_END                 (WIN_IN_BATTLE_ABILITY_BASE + WIN_IN_BATTLE_ABILITY_TILES)
 
-static const struct WindowTemplate sUnusedWindowTemplate2 =
-{
-    .bg = 0,
-    .tilemapLeft = 0,
-    .tilemapTop = 13,
-    .width = 18,
-    .height = 3,
-    .paletteNum = 12,
-    .baseBlock = 0x39D,
-};
+STATIC_ASSERT(PARTY_TILES_END <= PARTY_CHAR_BASE_TILES, PartyMenuCharBaseOverflow);
 
 // Plain tilemaps for party menu slots.
 static const u8 sSlotTilemap_Main_SwSh[]  = INCBIN_U8("graphics/party_menu/swsh/slot.bin");
@@ -935,6 +741,8 @@ static const u8 sPartyMenuActionCounts[] =
     [ACTIONS_ZYGARDE_CUBE]  = ARRAY_COUNT(sPartyMenuAction_ZygardeCube),
 };
 
+STATIC_ASSERT(ARRAY_COUNT(sPartyMenuAction_RotomCatalog) <= MAX_PARTY_MENU_ACTIONS, PartyStaticActionsOverflow);
+
 static const u8 *const sUnionRoomTradeMessages[] =
 {
     [UR_TRADE_MSG_NOT_MON_PARTNER_WANTS - 1]       = gText_NotPkmnOtherTrainerWants,
@@ -1018,31 +826,16 @@ static const struct OamData sOamData_Cursor =
 
 static const struct CompressedSpriteSheet sSpriteSheet_Cursor =
 {
-    .data = sCursor_Gfx,
-    .size = (16 * 16 * 3) / 2,
+    .data = gCursorSwSh_Gfx,
+    .size = (16 * 16) / 2,
     .tag = TAG_CURSOR
-};
-
-static const union AnimCmd sAnim_Cursor[] =
-{
-    ANIMCMD_FRAME(0, 8),
-    ANIMCMD_FRAME(4, 8),
-    ANIMCMD_FRAME(8, 8),
-    ANIMCMD_FRAME(4, 8),
-    ANIMCMD_JUMP(0)
-};
-
-static const union AnimCmd *const sAnims_Cursor[] =
-{
-    sAnim_Cursor,
 };
 
 static const struct SpriteTemplate sSpriteTemplate_Cursor =
 {
     .tileTag = TAG_CURSOR,
-    .paletteTag = TAG_HELD_ITEM,
+    .paletteTag = TAG_SWSH_UI_PAL,
     .oam = &sOamData_Cursor,
-    .anims = sAnims_Cursor,
 };
 
 static const struct OamData sOamData_SelectFrame =
@@ -1155,156 +948,18 @@ static const struct SpriteTemplate sSpriteTemplate_MessageWindow =
     .anims = sSpriteAnimTable_MessageWindow,
 };
 
-static const struct OamData sOamData_QuantityWindow =
-{
-    .y = 0,
-    .affineMode = ST_OAM_AFFINE_OFF,
-    .objMode = ST_OAM_OBJ_NORMAL,
-    .mosaic = FALSE,
-    .bpp = ST_OAM_4BPP,
-    .size = SPRITE_SIZE(32x32),
-    .x = 0,
-    .matrixNum = 0,
-    .shape = SPRITE_SHAPE(32x32),
-    .tileNum = 0,
-    .priority = 0,
-    .paletteNum = 0,
-    .affineParam = 0,
-};
-
-static const union AnimCmd sSpriteAnim_QuantityWindow_0[] = {
-    ANIMCMD_FRAME(0, 0, FALSE, FALSE),
-    ANIMCMD_END
-};
-static const union AnimCmd sSpriteAnim_QuantityWindow_1[] = {
-    ANIMCMD_FRAME(16, 0, FALSE, FALSE),
-    ANIMCMD_END
-};
-
-static const union AnimCmd *const sSpriteAnimTable_QuantityWindow[] = {
-    sSpriteAnim_QuantityWindow_0,
-    sSpriteAnim_QuantityWindow_1,
-};
-
-static const u8 sQuantityWindowAnims[QUANTITY_WINDOW_SPRITES_COUNT] = {0, 1};
-
-static const struct CompressedSpriteSheet sSpriteSheet_QuantityWindow =
-{
-    .data = sQuantityWindow_Gfx,
-    .size = (32 * 32 * 2) / 2,
-    .tag = TAG_QUANTITY_WINDOW,
-};
-
-static const struct SpriteTemplate sSpriteTemplate_QuantityWindow =
-{
-    .tileTag = TAG_QUANTITY_WINDOW,
-    .paletteTag = TAG_HELD_ITEM,
-    .oam = &sOamData_QuantityWindow,
-    .anims = sSpriteAnimTable_QuantityWindow,
-};
-
 static const struct SpritePalette sSpritePal_PartyMonShadow =
 {
-    .data = sMonShadow_Pal,
+    .data = gMonShadowSwSh_Pal,
     .tag = TAG_MON_SHADOW
-};
-
-static const struct OamData sOamData_StatusCondition =
-{
-    .y = 0,
-    .affineMode = ST_OAM_AFFINE_OFF,
-    .objMode = ST_OAM_OBJ_NORMAL,
-    .mosaic = FALSE,
-    .bpp = ST_OAM_4BPP,
-    .shape = SPRITE_SHAPE(32x8),
-    .x = 0,
-    .matrixNum = 0,
-    .size = SPRITE_SIZE(32x8),
-    .tileNum = 0,
-    .priority = 1,
-    .paletteNum = 0,
-    .affineParam = 0
-};
-
-static const union AnimCmd sSpriteAnim_StatusPoison[] =
-{
-    ANIMCMD_FRAME(0, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusParalyzed[] =
-{
-    ANIMCMD_FRAME(4, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusSleep[] =
-{
-    ANIMCMD_FRAME(8, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusFrozen[] =
-{
-    ANIMCMD_FRAME(12, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusBurn[] =
-{
-    ANIMCMD_FRAME(16, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusPokerus[] =
-{
-    ANIMCMD_FRAME(20, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusFaint[] =
-{
-    ANIMCMD_FRAME(24, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd sSpriteAnim_StatusFrostbite[] =
-{
-    ANIMCMD_FRAME(28, 0),
-    ANIMCMD_END
-};
-
-static const union AnimCmd *const sSpriteTemplate_StatusCondition[] =
-{
-    sSpriteAnim_StatusPoison,
-    sSpriteAnim_StatusParalyzed,
-    sSpriteAnim_StatusSleep,
-    sSpriteAnim_StatusFrozen,
-    sSpriteAnim_StatusBurn,
-    sSpriteAnim_StatusPokerus,
-    sSpriteAnim_StatusFaint,
-    sSpriteAnim_StatusFrostbite
-};
-
-static const struct CompressedSpriteSheet sSpriteSheet_StatusIcons =
-{
-    .data = sStatusIcons_Gfx,
-    .size = 0x400,
-    .tag = TAG_STATUS_ICONS
-};
-
-static const struct SpritePalette sSpritePalette_StatusIcons =
-{
-    .data = sStatusIcons_Pal,
-    .tag = TAG_HELD_ITEM
 };
 
 const struct SpriteTemplate gSpriteTemplate_StatusIcons =
 {
-    .tileTag = TAG_STATUS_ICONS,
-    .paletteTag = TAG_HELD_ITEM,
-    .oam = &sOamData_StatusCondition,
-    .anims = sSpriteTemplate_StatusCondition,
+    .tileTag = TAG_SWSH_STATUS_ICONS,
+    .paletteTag = TAG_SWSH_UI_PAL,
+    .oam = &gOamData_StatusIconsSwSh,
+    .anims = gSpriteAnimTable_StatusIconsSwSh,
 };
 
 static const struct OamData sOamData_MoveTypes =

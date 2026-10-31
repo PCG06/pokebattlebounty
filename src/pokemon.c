@@ -3235,7 +3235,7 @@ bool8 ExecuteTableBasedItemEffect(struct Pokemon *mon, enum Item item, enum Part
     if ((!retVal || friendshipOnly) && !ShouldSkipFriendshipChange() && friendshipChange == 0)      \
     {                                                                                                   \
         friendshipChange = itemEffect[itemEffectParam];                                                 \
-        friendship = GetMonData(mon, MON_DATA_FRIENDSHIP);                                              \
+        friendship = GetMonData(mon, MON_DATA_FRIENDSHIP);                                        \
         friendship += CalculateFriendshipBonuses(mon,friendshipChange,holdEffect);                      \
         if (friendship < 0)                                                                             \
             friendship = 0;                                                                             \
@@ -3272,7 +3272,7 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, enum PartyMon p
     bool32 friendshipOnly = FALSE;
     enum Item heldItem;
     u8 effectFlags;
-    s16 evChange;
+    s8 evChange;
     u16 evCount;
     u8 levelBefore;
     bool8 didLevelUp = FALSE;
@@ -3324,7 +3324,7 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, enum PartyMon p
 
                 if (param == 0) // Rare Candy
                 {
-                    dataUnsigned = gExperienceTables[gSpeciesInfo[GetMonData(mon, MON_DATA_SPECIES, NULL)].growthRate][GetMonData(mon, MON_DATA_LEVEL, NULL) + 1];
+                    dataUnsigned = gExperienceTables[gSpeciesInfo[GetMonData(mon, MON_DATA_SPECIES)].growthRate][GetMonData(mon, MON_DATA_LEVEL) + 1];
                 }
                 else if (param - 1 < ARRAY_COUNT(sExpCandyExperienceTable)) // EXP Candies
                 {
@@ -3402,8 +3402,7 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, enum PartyMon p
                         evCount = GetMonEVCount(mon);
                         temp2 = itemEffect[itemEffectParam];
                         dataSigned = GetMonData(mon, sGetMonDataEVConstants[temp1]);
-                        s8 evDelta = (s8)itemEffect[itemEffectParam];
-                        s16 evChange = evDelta;
+                        evChange = temp2;
 
                         if (evChange > 0) // Increasing EV (HP or Atk)
                         {
@@ -3598,8 +3597,7 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, enum PartyMon p
                         evCount = GetMonEVCount(mon);
                         temp2 = itemEffect[itemEffectParam];
                         dataSigned = GetMonData(mon, sGetMonDataEVConstants[temp1 + 2]);
-                        s8 evDelta = (s8)itemEffect[itemEffectParam];
-                        evChange = evDelta;
+                        evChange = temp2;
                         if (evChange > 0) // Increasing EV
                         {
                             // Check if the total EV limit is reached
@@ -3685,20 +3683,20 @@ bool8 PokemonUseItemEffects(struct Pokemon *mon, enum Item item, enum PartyMon p
                         // how much friendship the Pokémon already has.
                         // In general, Pokémon with lower friendship receive more,
                         // and Pokémon with higher friendship receive less.
-                    if (GetMonData(mon, MON_DATA_FRIENDSHIP) < 100)
-                        UPDATE_FRIENDSHIP_FROM_ITEM();
+                        if (GetMonData(mon, MON_DATA_FRIENDSHIP) < 100)
+                            UPDATE_FRIENDSHIP_FROM_ITEM();
                         itemEffectParam++;
                         break;
 
                     case 6: // ITEM5_FRIENDSHIP_MID
-                    if (GetMonData(mon, MON_DATA_FRIENDSHIP) >= 100 && GetMonData(mon, MON_DATA_FRIENDSHIP) < 200)
-                        UPDATE_FRIENDSHIP_FROM_ITEM();
+                        if (GetMonData(mon, MON_DATA_FRIENDSHIP) >= 100 && GetMonData(mon, MON_DATA_FRIENDSHIP) < 200)
+                            UPDATE_FRIENDSHIP_FROM_ITEM();
                         itemEffectParam++;
                         break;
 
                     case 7: // ITEM5_FRIENDSHIP_HIGH
-                    if (GetMonData(mon, MON_DATA_FRIENDSHIP) >= 200)
-                        UPDATE_FRIENDSHIP_FROM_ITEM();
+                        if (GetMonData(mon, MON_DATA_FRIENDSHIP) >= 200)
+                            UPDATE_FRIENDSHIP_FROM_ITEM();
                         itemEffectParam++;
                         break;
                     }

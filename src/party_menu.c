@@ -6298,7 +6298,7 @@ void ItemUseCB_EvolutionStone(u8 taskId, TaskFunc task)
 static void Task_TryItemUseFusionChange(u8 taskId);
 static void SpriteCB_FormChangeIconMosaic(struct Sprite *sprite);
 
-static bool32 IsFusionMon(enum Species species)
+bool32 IsFusionMon(enum Species species)
 {
     u16 i;
     const struct Fusion *itemFusion = gFusionTablePointers[species];

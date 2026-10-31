@@ -1752,7 +1752,6 @@ static const u16 sBagRotomFormChangeMoves[] = {
 
 extern void DeleteMove(struct Pokemon *mon, enum Move move);
 extern bool32 DoesMonHaveAnyMoves(struct Pokemon *mon);
-extern u8 IsFusionMon(enum Species species);
 #endif // SWSH_ITEM_MENU_IN_BAG_USE
 
 // Matching the enum in item_menu_icons.c to reserve palette slots.
