@@ -55,7 +55,6 @@ static const u32 sSwShStorage_BG1_Tilemap[]   = INCGFX_U32("graphics/pokemon_sto
 static const u32 sSwShStorage_BG2_Tilemap[]   = INCGFX_U32("graphics/pokemon_storage/swsh/bg2.bin", ".smolTM");
 static const u32 sMonInfo_Gfx[]               = INCGFX_U32("graphics/pokemon_storage/swsh/mon_info.png", ".4bpp.smol");
 static const u32 sMonInfo_Tilemap[]           = INCGFX_U32("graphics/pokemon_storage/swsh/mon_info.bin", ".smolTM");
-static const u16 sTextWindows_Pal[]           = INCGFX_U16("graphics/pokemon_storage/swsh/text_windows.pal", ".gbapal");
 
 static const u32 sBoxTitleFrame_Gfx[]         = INCGFX_U32("graphics/pokemon_storage/swsh/box_title_frame.png", ".4bpp");
 static const u32 sBoxTitleArrow_Gfx[]         = INCGFX_U32("graphics/pokemon_storage/swsh/box_title_arrow.png", ".4bpp.smol");
@@ -72,8 +71,6 @@ static const u32 sMarkingsMenu_Gfx[]          = INCGFX_U32("graphics/pokemon_sto
 static const u32 sMessageWindow_Gfx[]         = INCGFX_U32("graphics/pokemon_storage/swsh/message_window.png", ".4bpp.smol");
 static const u32 sShinyIcon_Gfx[]             = INCGFX_U32("graphics/pokemon_storage/swsh/shiny_icon.png", ".4bpp.smol");
 static const u32 sStatLabels_Gfx[]            = INCGFX_U32("graphics/pokemon_storage/swsh/stat_labels.png", ".4bpp.smol");
-static const ALIGNED(4) u8 sTypeIcons_Gfx[]   = INCGFX_U8("graphics/pokemon_storage/swsh/type_icons.png", ".4bpp");
-static const u16 sTypeIcons_Pal[]             = INCGFX_U16("graphics/pokemon_storage/swsh/type_icons.png", ".gbapal");
 
 // ============================================================================
 // Graphics - Wallpapers
@@ -282,6 +279,20 @@ static const struct StorageMessage sMessages[] =
 // Window Templates
 // ============================================================================
 
+#define PAL_STORAGE_MAIN            0   // tiles.png bank 0 - BG1/BG2 art, and sMonInfo_Gfx
+#define PAL_STORAGE_TEXT            1   // tiles.png bank 1 - custom swsh text palette
+#define PAL_STORAGE_WALLPAPER       2   // wallpaper
+#define PAL_STORAGE_FRAME           14  // std window border
+#define PAL_STORAGE_STD_MENU        15  // gStandardMenuPalette - options menu, yes/no, jump list
+
+#define STORAGE_CHAR_BASE_TILES     1024
+
+#define STORAGE_TILES_MON_INFO_GFX  48  // sMonInfo_Gfx
+#define STORAGE_TILES_STD_BORDER    9
+
+#define STORAGE_BASE_MON_INFO_GFX   0
+#define STORAGE_BASE_STD_BORDER     (STORAGE_BASE_MON_INFO_GFX + STORAGE_TILES_MON_INFO_GFX)
+
 static const struct WindowTemplate sWindowTemplate_MainMenu =
 {
     .bg = 0,
@@ -293,27 +304,59 @@ static const struct WindowTemplate sWindowTemplate_MainMenu =
     .baseBlock = 0x1,
 };
 
-static const struct WindowTemplate sYesNoWindowTemplate =
-{
-    .bg = 0,
-    .tilemapLeft = 24,
-    .tilemapTop = 11,
-    .width = 5,
-    .height = 4,
-    .paletteNum = 15,
-    .baseBlock = 0x5C,
-};
+// ----------------------------------------------------------------------------
+// Message window and mon info panel - see sWindowTemplates
+// ----------------------------------------------------------------------------
 
-static const struct WindowTemplate sWindowTemplate_MultiMove =
-{
-    .bg = 0,
-    .tilemapLeft = 10,
-    .tilemapTop = 3,
-    .width = 19,
-    .height = 16,
-    .paletteNum = 9,
-    .baseBlock = 0x1,
-};
+#define WIN_MESSAGE_W                   20
+#define WIN_MESSAGE_H                   2
+#define WIN_MESSAGE_TILES               (WIN_MESSAGE_W * WIN_MESSAGE_H)
+#define WIN_MESSAGE_BASE                (STORAGE_BASE_STD_BORDER + STORAGE_TILES_STD_BORDER)
+
+#define WIN_PANEL_BASE                  (WIN_MESSAGE_BASE + WIN_MESSAGE_TILES)
+
+#define WIN_MON_INFO_NICKNAME_W         8
+#define WIN_MON_INFO_NICKNAME_H         2
+#define WIN_MON_INFO_NICKNAME_TILES     (WIN_MON_INFO_NICKNAME_W * WIN_MON_INFO_NICKNAME_H)
+#define WIN_MON_INFO_NICKNAME_BASE      WIN_PANEL_BASE
+
+#define WIN_MON_INFO_LEVEL_W            4
+#define WIN_MON_INFO_LEVEL_H            2
+#define WIN_MON_INFO_LEVEL_TILES        (WIN_MON_INFO_LEVEL_W * WIN_MON_INFO_LEVEL_H)
+#define WIN_MON_INFO_LEVEL_BASE         (WIN_MON_INFO_NICKNAME_BASE + WIN_MON_INFO_NICKNAME_TILES)
+
+#define WIN_MON_INFO_STATS_COL1_W       3
+#define WIN_MON_INFO_STATS_COL1_H       6
+#define WIN_MON_INFO_STATS_COL1_TILES   (WIN_MON_INFO_STATS_COL1_W * WIN_MON_INFO_STATS_COL1_H)
+#define WIN_MON_INFO_STATS_COL1_BASE    (WIN_MON_INFO_LEVEL_BASE + WIN_MON_INFO_LEVEL_TILES)
+
+#define WIN_MON_INFO_STATS_COL2_W       3
+#define WIN_MON_INFO_STATS_COL2_H       6
+#define WIN_MON_INFO_STATS_COL2_TILES   (WIN_MON_INFO_STATS_COL2_W * WIN_MON_INFO_STATS_COL2_H)
+#define WIN_MON_INFO_STATS_COL2_BASE    (WIN_MON_INFO_STATS_COL1_BASE + WIN_MON_INFO_STATS_COL1_TILES)
+
+#define WIN_MON_INFO_ABILITY_W          9
+#define WIN_MON_INFO_ABILITY_H          2
+#define WIN_MON_INFO_ABILITY_TILES      (WIN_MON_INFO_ABILITY_W * WIN_MON_INFO_ABILITY_H)
+#define WIN_MON_INFO_ABILITY_BASE       (WIN_MON_INFO_STATS_COL2_BASE + WIN_MON_INFO_STATS_COL2_TILES)
+
+#define WIN_MON_INFO_ITEM_W             9
+#define WIN_MON_INFO_ITEM_H             2
+#define WIN_MON_INFO_ITEM_TILES         (WIN_MON_INFO_ITEM_W * WIN_MON_INFO_ITEM_H)
+#define WIN_MON_INFO_ITEM_BASE          (WIN_MON_INFO_ABILITY_BASE + WIN_MON_INFO_ABILITY_TILES)
+
+#define WIN_MON_INFO_TILES              (WIN_MON_INFO_ITEM_BASE + WIN_MON_INFO_ITEM_TILES - WIN_PANEL_BASE)
+
+#define MON_INFO_WIN(name, left, top)                   \
+    {                                                   \
+        .bg          = 0,                               \
+        .tilemapLeft = (left),                          \
+        .tilemapTop  = (top),                           \
+        .width       = WIN_MON_INFO_##name##_W,         \
+        .height      = WIN_MON_INFO_##name##_H,         \
+        .paletteNum  = PAL_STORAGE_TEXT,                \
+        .baseBlock   = WIN_MON_INFO_##name##_BASE,      \
+    }
 
 static const struct WindowTemplate sWindowTemplates[] =
 {
@@ -321,137 +364,115 @@ static const struct WindowTemplate sWindowTemplates[] =
         .bg = 0,
         .tilemapLeft = 9,
         .tilemapTop = 17,
-        .width = 20,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 44,
+        .width = WIN_MESSAGE_W,
+        .height = WIN_MESSAGE_H,
+        .paletteNum = PAL_STORAGE_TEXT,
+        .baseBlock = WIN_MESSAGE_BASE,
     },
-    [WIN_ITEM_DESC] = {
-        .bg = 0,
-        .tilemapLeft = 0,
-        .tilemapTop = 13,
-        .width = 21,
-        .height = 7,
-        .paletteNum = 15,
-        .baseBlock = 44,
-    },
-    [WIN_MON_INFO_NICKNAME_LEFT] = {
-        .bg = 0,
-        .tilemapLeft = 0,
-        .tilemapTop = 23,
-        .width = 8,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 202
-    },
-    [WIN_MON_INFO_LEVEL_LEFT] = {
-        .bg = 0,
-        .tilemapLeft = 9,
-        .tilemapTop = 23,
-        .width = 4,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 218
-    },
-    [WIN_MON_INFO_STATS_COL1_LEFT] = {
-        .bg = 0,
-        .tilemapLeft = 3,
-        .tilemapTop = 27,
-        .width = 3,
-        .height = 6,
-        .paletteNum = 15,
-        .baseBlock = 226
-    },
-    [WIN_MON_INFO_STATS_COL2_LEFT] = {
-        .bg = 0,
-        .tilemapLeft = 10,
-        .tilemapTop = 27,
-        .width = 3,
-        .height = 6,
-        .paletteNum = 15,
-        .baseBlock = 244
-    },
-    [WIN_MON_INFO_ABILITY_LEFT] = {
-        .bg = 0,
-        .tilemapLeft = 4,
-        .tilemapTop = 34,
-        .width = 9,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 262
-    },
-    [WIN_MON_INFO_ITEM_LEFT] = {
-        .bg = 0,
-        .tilemapLeft = 4,
-        .tilemapTop = 36,
-        .width = 9,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 280
-    },
-    [WIN_MON_INFO_NICKNAME_RIGHT] = {
-        .bg = 0,
-        .tilemapLeft = 17,
-        .tilemapTop = 43,
-        .width = 8,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 202
-    },
-    [WIN_MON_INFO_LEVEL_RIGHT] = {
-        .bg = 0,
-        .tilemapLeft = 26,
-        .tilemapTop = 43,
-        .width = 4,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 218
-    },
-    [WIN_MON_INFO_STATS_COL1_RIGHT] = {
-        .bg = 0,
-        .tilemapLeft = 20,
-        .tilemapTop = 47,
-        .width = 3,
-        .height = 6,
-        .paletteNum = 15,
-        .baseBlock = 226
-    },
-    [WIN_MON_INFO_STATS_COL2_RIGHT] = {
-        .bg = 0,
-        .tilemapLeft = 27,
-        .tilemapTop = 47,
-        .width = 3,
-        .height = 6,
-        .paletteNum = 15,
-        .baseBlock = 244
-    },
-    [WIN_MON_INFO_ABILITY_RIGHT] = {
-        .bg = 0,
-        .tilemapLeft = 21,
-        .tilemapTop = 54,
-        .width = 9,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 262
-    },
-    [WIN_MON_INFO_ITEM_RIGHT] = {
-        .bg = 0,
-        .tilemapLeft = 21,
-        .tilemapTop = 56,
-        .width = 9,
-        .height = 2,
-        .paletteNum = 15,
-        .baseBlock = 280
-    },
+    [WIN_MON_INFO_NICKNAME_LEFT]     = MON_INFO_WIN(NICKNAME,   0, 23),
+    [WIN_MON_INFO_LEVEL_LEFT]        = MON_INFO_WIN(LEVEL,      9, 23),
+    [WIN_MON_INFO_STATS_COL1_LEFT]   = MON_INFO_WIN(STATS_COL1, 3, 27),
+    [WIN_MON_INFO_STATS_COL2_LEFT]   = MON_INFO_WIN(STATS_COL2, 10, 27),
+    [WIN_MON_INFO_ABILITY_LEFT]      = MON_INFO_WIN(ABILITY,    4, 34),
+    [WIN_MON_INFO_ITEM_LEFT]         = MON_INFO_WIN(ITEM,       4, 36),
+    [WIN_MON_INFO_NICKNAME_RIGHT]    = MON_INFO_WIN(NICKNAME,   17, 43),
+    [WIN_MON_INFO_LEVEL_RIGHT]       = MON_INFO_WIN(LEVEL,      26, 43),
+    [WIN_MON_INFO_STATS_COL1_RIGHT]  = MON_INFO_WIN(STATS_COL1, 20, 47),
+    [WIN_MON_INFO_STATS_COL2_RIGHT]  = MON_INFO_WIN(STATS_COL2, 27, 47),
+    [WIN_MON_INFO_ABILITY_RIGHT]     = MON_INFO_WIN(ABILITY,    21, 54),
+    [WIN_MON_INFO_ITEM_RIGHT]        = MON_INFO_WIN(ITEM,       21, 56),
     DUMMY_WIN_TEMPLATE
 };
 
-static const u8 sTextColors[][3] =
+STATIC_ASSERT(ARRAY_COUNT(sWindowTemplates) == WIN_COUNT + 1, StorageWindowTemplateCount);
+
+// ----------------------------------------------------------------------------
+// Options menu - shares the panel block and AddMenu clears before opening
+// ----------------------------------------------------------------------------
+
+#define STORAGE_MENU_ROW_H          2
+#define STORAGE_MENU_TOP_MIN        2
+#define STORAGE_MENU_BOTTOM_MAX     19
+#define STORAGE_MENU_JUMP_ROWS      5
+
+#define WIN_MENU_W                  28
+#define WIN_MENU_MAX_ROWS           ((STORAGE_MENU_BOTTOM_MAX - STORAGE_MENU_TOP_MIN) / STORAGE_MENU_ROW_H)
+#define WIN_MENU_H                  (WIN_MENU_MAX_ROWS * STORAGE_MENU_ROW_H)
+#define WIN_MENU_TILES              (WIN_MENU_W * WIN_MENU_H)
+#define WIN_MENU_BASE               WIN_PANEL_BASE
+
+#define WIN_PANEL_TILES             max(WIN_MON_INFO_TILES, WIN_MENU_TILES)
+
+STATIC_ASSERT(STORAGE_MENU_JUMP_ROWS <= WIN_MENU_MAX_ROWS, StorageMenuJumpRows);
+
+static const struct WindowTemplate sWindowTemplate_Menu =
 {
-    {1, 2, 3}, // Standard menus, mon info (stats, ability, item)
-    {4, 2, 5}, // Mon info (nickname and level) (grey BG)
-    {0, 4, 7}, // Choose box menu - actually uses PALTAG_MISC_3 and not bg pal 15
-    {0, 1, 6}, // Main message window
+    .bg = 0,
+    .paletteNum = PAL_STORAGE_STD_MENU,
+    .baseBlock = WIN_MENU_BASE,
+};
+
+// ----------------------------------------------------------------------------
+// Yes/No
+// ----------------------------------------------------------------------------
+
+#define WIN_YESNO_W                 5
+#define WIN_YESNO_H                 4
+#define WIN_YESNO_TILES             (WIN_YESNO_W * WIN_YESNO_H)
+#define WIN_YESNO_BASE              (WIN_PANEL_BASE + WIN_PANEL_TILES)
+
+static const struct WindowTemplate sYesNoWindowTemplate =
+{
+    .bg = 0,
+    .tilemapLeft = 24,
+    .tilemapTop = 11,
+    .width = WIN_YESNO_W,
+    .height = WIN_YESNO_H,
+    .paletteNum = PAL_STORAGE_STD_MENU,
+    .baseBlock = WIN_YESNO_BASE,
+};
+
+#define STORAGE_TILES_END           (WIN_YESNO_BASE + WIN_YESNO_TILES)
+
+STATIC_ASSERT(STORAGE_TILES_END <= STORAGE_CHAR_BASE_TILES, StorageCharBaseOverflow);
+
+// ----------------------------------------------------------------------------
+// Multi-move
+// ----------------------------------------------------------------------------
+
+#define WIN_MULTI_MOVE_W            19
+#define WIN_MULTI_MOVE_H            16
+#define WIN_MULTI_MOVE_BASE         1
+#define WIN_MULTI_MOVE_END          ((WIN_MULTI_MOVE_BASE + WIN_MULTI_MOVE_W * WIN_MULTI_MOVE_H) * 2)
+
+STATIC_ASSERT(WIN_MULTI_MOVE_END <= STORAGE_CHAR_BASE_TILES, StorageMultiMoveOverflow);
+
+static const struct WindowTemplate sWindowTemplate_MultiMove =
+{
+    .bg = 0,
+    .tilemapLeft = 10,
+    .tilemapTop = 3,
+    .width = WIN_MULTI_MOVE_W,
+    .height = WIN_MULTI_MOVE_H,
+    .paletteNum = 9,
+    .baseBlock = WIN_MULTI_MOVE_BASE,
+};
+
+enum {
+    COLORID_PC_MAIN_MENU,   // overworld PC main menu
+    COLORID_MON_INFO_NAME,  // nickname and level, on the grey panel
+    COLORID_MON_INFO,       // stats, ability, held item
+    COLORID_CHOOSE_BOX,     // uses PALTAG_MISC_3
+    COLORID_MESSAGE,
+};
+
+static const u8 sFontColorTable[][3] = {
+                              // bgColor, textColor, shadowColor
+    [COLORID_PC_MAIN_MENU]  = {1, 2, 3},
+    [COLORID_MON_INFO_NAME] = {4, 2, 5},
+    [COLORID_MON_INFO]      = {1, 2, 3},
+    [COLORID_CHOOSE_BOX]    = {0, 4, 7},
+    [COLORID_MESSAGE]       = {0, 1, 6},
 };
 
 
@@ -736,19 +757,6 @@ static const struct SpriteTemplate sSpriteTemplate_BoxTitleArrow =
     .anims = sSpriteAnimTable_BoxTitleArrow,
     .callback = SpriteCB_Arrow,
 };
-
-// ============================================================================
-// Box Title Sprites
-// ============================================================================
-
-static const u16 sUnusedColor = RGB(26, 29, 8);
-
-#define BOX_TITLE_SHADOW_HOVER  RGB(12, 12, 12)
-#define BOX_TITLE_TEXT_HOVER    RGB_WHITE
-#define BOX_TITLE_FRAME_HOVER   RGB_BLACK
-#define BOX_TITLE_SHADOW_MAIN   RGB(26, 26, 25)
-#define BOX_TITLE_TEXT_MAIN     RGB_BLACK
-#define BOX_TITLE_FRAME_MAIN    RGB_WHITE
 
 // ============================================================================
 // Cursor Sprites
@@ -1038,15 +1046,6 @@ static const struct OamData sOamData_TypeIcons =
     .priority = 0,
     .paletteNum = 0,
     .affineParam = 0,
-};
-
-// Type icons now use DMA copy instead of animations to save VRAM (only loads 2 slots instead of all 21 types)
-// Uncompressed sprite sheet (only 2 slots loaded to save VRAM)
-static const struct SpriteSheet sSpriteSheet_TypeIcons =
-{
-    .data = sTypeIcons_Gfx,
-    .size = 2 * 0x100, // Only load 2 type icon slots (saves 4.75 KB VRAM)
-    .tag = GFXTAG_TYPE_ICON,
 };
 
 static const struct SpriteTemplate sSpriteTemplate_TypeIcons =
