@@ -746,6 +746,14 @@ static void Task_MoveRelearner_HandleInput(u8 taskId)
     case LIST_CANCEL:
         PlaySE(SE_SELECT);
         RemoveScrollArrows();
+
+        if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        {
+            gTasks[taskId].func = Task_MoveRelearner_Quit;
+            BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
+            return;
+        }
+
         gTasks[taskId].func = Task_MoveRelearner_Giveup_Prompt;
         if (gRelearnMode == RELEARN_MODE_SCRIPT)
             StringExpandPlaceholders(gStringVar4, gText_MoveRelearnerGiveUp);
@@ -1264,31 +1272,49 @@ static bool32 HasRelearnerTeachableMoves(struct BoxPokemon *boxMon)
 
 static bool32 IsLevelUpMoveRelearnerActive(void)
 {
-    return FALSE;
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        return FALSE;
+
+    return TRUE;
 }
 
 static bool32 IsEggMoveRelearnerActive(void)
 {
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        return FALSE;
+
     return (FlagGet(P_FLAG_EGG_MOVES) || P_ENABLE_MOVE_RELEARNERS);
 }
 
 static bool32 IsTMMoveRelearnerActive(void)
 {
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        return FALSE;
+
     return (P_TM_MOVES_RELEARNER || P_ENABLE_MOVE_RELEARNERS);
 }
 
 static bool32 IsTutorMoveRelearnerActive(void)
 {
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        return FALSE;
+
     return (FlagGet(P_FLAG_TUTOR_MOVES) || P_ENABLE_MOVE_RELEARNERS);
 }
 
 static bool32 IsTeachableMoveRelearnerActive(void)
 {
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        return TRUE;
+
     return P_TEACHABLE_MOVES_RELEARNER;
 }
 
 static bool32 IsEventMoveRelearnerActive(void)
 {
     // TODO: Add an ingame task to unlock event moves
+    if (gRelearnMode == RELEARN_MODE_STAT_EDITOR)
+        return TRUE;
+
     return P_EVENT_MOVES_RELEARNER;
 }

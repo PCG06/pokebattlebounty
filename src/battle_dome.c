@@ -3941,7 +3941,7 @@ static bool32 IsDomeLuckyMove(enum Move move)
     case EFFECT_REFLECT_DAMAGE:
         if (GetMoveReflectDamage_DamageCategories(move) != (1u << DAMAGE_CATEGORY_PHYSICAL)) // if not Counter
             return FALSE;
-        // fallthrough
+        [[fallthrough]];
     case EFFECT_OHKO:
     case EFFECT_METRONOME:
     case EFFECT_MIRROR_MOVE:
@@ -4019,10 +4019,10 @@ static bool32 IsDomeRareMove(enum Move move)
     {
         if (!IsSpeciesEnabled(i))
             continue;
-        const struct LevelUpMove *learnset = GetSpeciesLevelUpLearnset(i);
-        for (j = 0; learnset[j].move != LEVEL_UP_MOVE_END; j++)
+        const u16 *learnset = GetSpeciesTeachableLearnset(i);
+        for (j = 0; learnset[j] != LEVEL_UP_MOVE_END; j++)
         {
-            if (learnset[j].move == move)
+            if (learnset[j] == move)
             {
                 species++;
                 break;
@@ -4042,10 +4042,7 @@ static bool32 IsDomeComboMove(enum Move move)
     // Weather moves
     case EFFECT_WEATHER:
     // Terrain moves
-    case EFFECT_GRASSY_TERRAIN:
-    case EFFECT_ELECTRIC_TERRAIN:
-    case EFFECT_MISTY_TERRAIN:
-    case EFFECT_PSYCHIC_TERRAIN:
+    case EFFECT_TERRAIN:
     // Moves dependent on weather
     case EFFECT_SYNTHESIS:
     case EFFECT_MORNING_SUN:

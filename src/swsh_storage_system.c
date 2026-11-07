@@ -36,6 +36,8 @@
 #include "sound.h"
 #include "string_util.h"
 #include "strings.h"
+#include "swsh_graphics.h"
+#include "swsh_utils.h"
 #include "text.h"
 #include "text_window.h"
 #include "trig.h"
@@ -215,6 +217,11 @@ enum {
     CURSOR_ANIM_MAIN,
 };
 
+enum {
+    BOX_TITLE_PAL_MAIN,
+    BOX_TITLE_PAL_HOVER,
+};
+
 // Special box ids for the choose box menu
 #define BOXID_NONE_CHOSEN 200
 #define BOXID_CANCELED    201
@@ -244,7 +251,6 @@ enum {
     GFXTAG_TYPE_ICON,
     GFXTAG_SHINY_ICON,
     GFXTAG_STAT_LABELS,
-    GFXTAG_BOX_TITLE,
     GFXTAG_BOX_TITLE_FRAME,
     GFXTAG_BOX_TITLE_ARROW,
     GFXTAG_ITEM_ICON_0,
@@ -343,7 +349,6 @@ enum {
 // Window IDs for sWindowTemplates
 enum {
     WIN_MESSAGE,
-    WIN_ITEM_DESC,
     WIN_MON_INFO_NICKNAME_LEFT,
     WIN_MON_INFO_LEVEL_LEFT,
     WIN_MON_INFO_STATS_COL1_LEFT,
@@ -356,6 +361,7 @@ enum {
     WIN_MON_INFO_STATS_COL2_RIGHT,
     WIN_MON_INFO_ABILITY_RIGHT,
     WIN_MON_INFO_ITEM_RIGHT,
+    WIN_COUNT,
 };
 
 struct StorageMenu
@@ -370,13 +376,14 @@ struct ChooseBoxMenu
     struct Sprite *hoverSprite;
     s8 savedCursorArea;
     s8 savedCursorPosition;
+    u8 chooseBoxGridTimer;
 #else
     struct Sprite *boxNameSprites[2];
     struct Sprite *arrowSprites[2];
     u8 ALIGNED(4) boxNameTiles[512];
-#endif
     struct Sprite *monCountSprite;
     u8 ALIGNED(4) monCountTiles[256];
+#endif
     bool32 loadedPalette;
     u16 tileTag;
     u16 paletteTag;
@@ -440,15 +447,10 @@ struct PokemonStorageSystemData
     s16 newCurrBoxId;
     s16 scrollSpeed;
     u16 scrollTimer;
-    u8 ALIGNED(2) boxTitleTiles[1024];
-    u8 boxTitleCycleId;
     u8 wallpaperLoadBoxId;
     s8 wallpaperLoadDir;
-    u16 boxTitlePal[16];
-    u16 boxTitlePalOffset;
-    u16 boxTitleAltPalOffset;
-    struct Sprite *curBoxTitleSprites[2];
-    struct Sprite *nextBoxTitleSprites[2];
+    u8 boxTitlePalNums[2];
+    u8 boxTitleTextBuffer;
     struct Sprite *boxTitleFrameSprites[4];
     struct Sprite *arrowSprites[2];
     u32 wallpaperPalBits;
@@ -540,12 +542,13 @@ struct PokemonStorageSystemData
     u8 inBoxMovingMode;
     u16 multiMoveWindowId;
     struct ItemIcon itemIcons[MAX_ITEM_ICONS];
-    u16 movingItemId;
+    enum Item movingItemId;
     struct Sprite *genderIconSprite;
     struct Sprite *typeIconSprites[2];
     struct Sprite *shinyIconSprite;
     struct Sprite *statLabelSprites[2];
     u16 *typeIconTilesPtr[2];
+    u8 *typeIconsGfx;
     u8 ALIGNED(4) tileBuffer[MON_PIC_SIZE * MAX_MON_PIC_FRAMES];
     u8 ALIGNED(4) itemIconBuffer[0x800];
     u8 wallpaperBgTilemapBuffer[0x800];
@@ -557,6 +560,7 @@ struct PokemonStorageSystemData
     u8 monInfoTilemapId;
     u8 displayMonInfoLoadState;
     u8 graphicsLoadState;
+    u8 messageWindowSpriteIds[6]; // SwSh sprite-rendered message window
 };
 
 static void SpriteCB_Arrow(struct Sprite *);
@@ -571,7 +575,7 @@ EWRAM_DATA static struct PokemonStorageSystemData *sStorage = NULL;
 EWRAM_DATA static u8 sCurrentBoxOption = 0;
 EWRAM_DATA static u8 sWhichToReshow = 0;
 EWRAM_DATA static u8 sLastUsedBox = 0;
-EWRAM_DATA static u16 sMovingItemId = 0;
+EWRAM_DATA static enum Item sMovingItemId = ITEM_NONE;
 EWRAM_DATA static struct Pokemon sSavedMovingMon = {0};
 EWRAM_DATA static s8 sCursorArea = 0;
 EWRAM_DATA static s8 sCursorPosition = 0;
@@ -582,7 +586,6 @@ EWRAM_DATA static u8 sMovingMonOrigBoxPos = 0;
 EWRAM_DATA static u8 sCursorMode = 0;
 EWRAM_DATA static bool8 sJustOpenedBag = 0;
 EWRAM_DATA static bool8 sRefreshDisplayMonGfx = FALSE;
-EWRAM_DATA static u8 sMessageWindowSpriteIds[6] = {0};
 EWRAM_DATA static struct MarkingsMenuSwSh *sMarkMenu = NULL;
 
 // Main tasks
@@ -677,7 +680,7 @@ static bool8 IsMonBeingMoved(void);
 static void TryRefreshDisplayMon(void);
 static void ReshowDisplayMon(void);
 static void SetDisplayMonData(void *, u8);
-static u16 GetSpeciesAtCursorPosition(void);
+static enum Species GetSpeciesAtCursorPosition(void);
 
 // Moving multiple Pokémon at once
 static void MultiMove_Free(void);
@@ -729,7 +732,7 @@ static void MoveHeldItemWithPartyMenu(void);
 static bool8 IsItemIconAnimActive(void);
 static bool8 IsMovingItem(void);
 static const u8 *GetMovingItemName(void);
-static u16 GetMovingItemId(void);
+static enum Item GetMovingItemId(void);
 static void SetItemIconCallback(u8, u8, u8, u8);
 static void SpriteCB_ItemIcon_SetPosToCursor(struct Sprite *);
 static void SpriteCB_ItemIcon_WaitAnim(struct Sprite *);
@@ -826,7 +829,6 @@ static void CreateMarkingComboSprite(void);
 static void UpdateMarkingComboSprite(void);
 static void ClearBottomWindow(void);
 static void UpdateGenderIconSprite(u8);
-static void UpdateTypeIconTiles(u8, void *);
 static void SpriteCB_TypeIcon(struct Sprite *);
 static void UpdateTypeIconsSprite(void);
 static void UpdateStatLabelsSprites(void);
@@ -948,7 +950,7 @@ static void Task_PCMainMenu(u8 taskId)
         LoadMessageBoxAndBorderGfx();
         DrawDialogueFrame(0, FALSE);
         FillWindowPixelBuffer(0, PIXEL_FILL(1));
-        AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], TEXT_SKIP_DRAW, sMainMenuTexts[task->tSelectedOption].desc);
+        AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], TEXT_SKIP_DRAW, sMainMenuTexts[task->tSelectedOption].desc);
         CopyWindowToVram(0, COPYWIN_FULL);
         CopyWindowToVram(task->tWindowId, COPYWIN_FULL);
         task->tState++;
@@ -972,7 +974,7 @@ static void Task_PCMainMenu(u8 taskId)
             {
                 task->tSelectedOption = task->tNextOption;
                 FillWindowPixelBuffer(0, PIXEL_FILL(1));
-                AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], 0, sMainMenuTexts[task->tSelectedOption].desc);
+                AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], 0, sMainMenuTexts[task->tSelectedOption].desc);
             }
             break;
         case MENU_B_PRESSED:
@@ -988,14 +990,14 @@ static void Task_PCMainMenu(u8 taskId)
             {
                 // Can't withdraw
                 FillWindowPixelBuffer(0, PIXEL_FILL(1));
-                AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], 0, gText_PartyFull);
+                AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], 0, gText_PartyFull);
                 task->tState = STATE_ERROR_MSG;
             }
             else if (task->tInput == OPTION_DEPOSIT && CountPartyMons() == 1)
             {
                 // Can't deposit
                 FillWindowPixelBuffer(0, PIXEL_FILL(1));
-                AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], 0, gText_JustOnePkmn);
+                AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], 0, gText_JustOnePkmn);
                 task->tState = STATE_ERROR_MSG;
             }
             else
@@ -1013,7 +1015,7 @@ static void Task_PCMainMenu(u8 taskId)
         if (JOY_NEW(A_BUTTON | B_BUTTON))
         {
             FillWindowPixelBuffer(0, PIXEL_FILL(1));
-            AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], 0, sMainMenuTexts[task->tSelectedOption].desc);
+            AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], 0, sMainMenuTexts[task->tSelectedOption].desc);
             task->tState = STATE_HANDLE_INPUT;
         }
         else if (JOY_NEW(DPAD_UP))
@@ -1023,7 +1025,7 @@ static void Task_PCMainMenu(u8 taskId)
             Menu_MoveCursor(-1);
             task->tSelectedOption = Menu_GetCursorPos();
             FillWindowPixelBuffer(0, PIXEL_FILL(1));
-            AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], 0, sMainMenuTexts[task->tSelectedOption].desc);
+            AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], 0, sMainMenuTexts[task->tSelectedOption].desc);
             task->tState = STATE_HANDLE_INPUT;
         }
         else if (JOY_NEW(DPAD_DOWN))
@@ -1033,7 +1035,7 @@ static void Task_PCMainMenu(u8 taskId)
             Menu_MoveCursor(1);
             task->tSelectedOption = Menu_GetCursorPos();
             FillWindowPixelBuffer(0, PIXEL_FILL(1));
-            AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sTextColors[0], 0, sMainMenuTexts[task->tSelectedOption].desc);
+            AddTextPrinterParameterized4(0, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_PC_MAIN_MENU], 0, sMainMenuTexts[task->tSelectedOption].desc);
             task->tState = STATE_HANDLE_INPUT;
         }
         break;
@@ -1175,7 +1177,7 @@ static void SpriteCB_HeldMonInChooseBoxGrid(struct Sprite *sprite)
 
 static void LoadChooseBoxGfx(struct ChooseBoxMenu *menu, u16 tileTag, u16 palTag, bool32 loadPal)
 {
-    LoadCompressedSpriteSheet(&sSpriteSheet_ChooseBoxGrid_Hover);
+    LoadSpriteSheet(&sSpriteSheet_ChooseBoxGrid_Hover);
     sChooseBoxMenu = menu;
     menu->tileTag = tileTag;
     menu->paletteTag = palTag;
@@ -1185,51 +1187,39 @@ static void LoadChooseBoxGfx(struct ChooseBoxMenu *menu, u16 tileTag, u16 palTag
 static void ChooseBox_PrintInfo(void)
 {
     u8 numBoxMonsText[16];
-    struct WindowTemplate template;
-    struct SpriteSheet spriteSheet;
-    u8 windowId;
     u8 numInBox = CountMonsInBox(sChooseBoxMenu->curBox);
-    u32 winTileData;
-    s16 x;
-    u8 spriteId;
-    u8 col = sChooseBoxMenu->curBox % 5;
-    u8 row = sChooseBoxMenu->curBox / 5;
+    u32 spriteId;
+    s16 xOffset;
+    union TextColor color = {
+        .background = sFontColorTable[COLORID_CHOOSE_BOX][0],
+        .foreground = sFontColorTable[COLORID_CHOOSE_BOX][1],
+        .shadow = sFontColorTable[COLORID_CHOOSE_BOX][2],
+    };
 
-    if (sChooseBoxMenu->monCountSprite)
-    {
-        DestroySprite(sChooseBoxMenu->monCountSprite);
-        sChooseBoxMenu->monCountSprite = NULL;
-    }
+    if (sChooseBoxMenu->hoverSprite == NULL)
+        return;
 
-    UpdateBoxTitle(sChooseBoxMenu->curBox);
-    UpdateBoxTitlePalette();
+    ConvertIntToDecimalStringN(numBoxMonsText, numInBox, STR_CONV_MODE_LEFT_ALIGN, 2);
+    xOffset = 16 - GetStringWidth(FONT_NORMAL, numBoxMonsText, 0) / 2;
+    if (xOffset < 0)
+        xOffset = 0;
 
-    memset(&template, 0, sizeof(template));
-    template.width = 2;
-    template.height = 2;
+    spriteId = sChooseBoxMenu->hoverSprite - gSprites;
+    FillSpriteRectSprite(spriteId, 8, 14, 16, 10);
+    AddSpriteTextPrinterParameterized6(spriteId, FONT_NORMAL, xOffset, 11, 0, 0, color, 0, numBoxMonsText);
+}
 
-    windowId = AddWindow(&template);
-    FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
-    ConvertIntToDecimalStringN(numBoxMonsText, numInBox, STR_CONV_MODE_RIGHT_ALIGN, 2);
-    AddTextPrinterParameterized3(windowId, FONT_NORMAL, 0, 1, sTextColors[2], TEXT_SKIP_DRAW, numBoxMonsText);
+static void SpriteCB_ChooseBoxGridHover(struct Sprite *sprite)
+{
+    if (sChooseBoxMenu == NULL || sChooseBoxMenu->chooseBoxGridTimer == 0)
+        return;
 
-    winTileData = GetWindowAttribute(windowId, WINDOW_TILE_DATA);
-    CpuCopy32((void *)winTileData, sChooseBoxMenu->monCountTiles, 0x100);
-    RemoveWindow(windowId);
-
-    FreeSpriteTilesByTag(GFXTAG_CHOOSE_BOX_MON_COUNT);
-    spriteSheet = (struct SpriteSheet){sChooseBoxMenu->monCountTiles, 0x100, GFXTAG_CHOOSE_BOX_MON_COUNT};
-    LoadSpriteSheet(&spriteSheet);
-    x = 90 + col * 32;
-    if (numInBox < 10)
-        x -= 3;
-    spriteId = CreateSprite(&sSpriteTemplate_ChooseBoxGrid_MonCount, x, 66 + row * 32, 2);
-    if (spriteId != MAX_SPRITES)
-    {
-        sChooseBoxMenu->monCountSprite = &gSprites[spriteId];
-        sChooseBoxMenu->monCountSprite->oam.priority = 1;
-        sChooseBoxMenu->monCountSprite->subpriority = 2;
-    }
+    // Reprint only once the hidden state has reached OAM, so the old
+    // on-screen sprite never shows the new count
+    if (--sChooseBoxMenu->chooseBoxGridTimer == 2)
+        ChooseBox_PrintInfo();
+    else if (sChooseBoxMenu->chooseBoxGridTimer == 0)
+        sprite->invisible = FALSE;
 }
 
 static u8 ChooseBoxGrid_GetRowLength(u8 row)
@@ -1246,8 +1236,23 @@ static void ChooseBoxGrid_UpdateHover(void)
 
     if (sChooseBoxMenu->hoverSprite)
     {
-        sChooseBoxMenu->hoverSprite->x = 88 + col * 32;
-        sChooseBoxMenu->hoverSprite->y = 64 + row * 32;
+        struct Sprite *sprite = sChooseBoxMenu->hoverSprite;
+        s16 x = 88 + col * 32;
+        s16 y = 64 + row * 32;
+
+        if (sprite->x == x && sprite->y == y)
+        {
+            sChooseBoxMenu->chooseBoxGridTimer = 0;
+            sprite->invisible = FALSE;
+            ChooseBox_PrintInfo();
+        }
+        else
+        {
+            sprite->x = x;
+            sprite->y = y;
+            sprite->invisible = TRUE;
+            sChooseBoxMenu->chooseBoxGridTimer = 4;
+        }
     }
 
     if (sStorage->cursorSprite)
@@ -1257,7 +1262,7 @@ static void ChooseBoxGrid_UpdateHover(void)
         sStorage->cursorFlipTimer = 0;
         SetCursorPosition(CURSOR_AREA_IN_CHOOSE_BOX, sChooseBoxMenu->curBox);
     }
-    ChooseBox_PrintInfo();
+    UpdateBoxTitle(sChooseBoxMenu->curBox);
 }
 
 static void ChooseBoxGrid_MoveCursor(s8 dcol, s8 drow)
@@ -1318,12 +1323,17 @@ static void ChooseBox_CreateSprites(u8 curBox)
 
     col = curBox % 5;
     row = curBox / 5;
-    spriteId = CreateSprite(&sSpriteTemplate_ChooseBoxGrid_Hover, 88 + col * 32, 64 + row * 32, 3);
+    spriteId = CreateSpriteUnchecked(&sSpriteTemplate_ChooseBoxGrid_Hover, 88 + col * 32, 64 + row * 32, 3);
     if (spriteId != MAX_SPRITES)
     {
+        const u32 *hoverSrc = sChooseBoxGrid_Hover_Gfx;
+
         sChooseBoxMenu->hoverSprite = &gSprites[spriteId];
         sChooseBoxMenu->hoverSprite->oam.priority = 1;
         sChooseBoxMenu->hoverSprite->subpriority = 3;
+        sChooseBoxMenu->hoverSprite->callback = SpriteCB_ChooseBoxGridHover;
+        sChooseBoxMenu->chooseBoxGridTimer = 0;
+        SetupSpritesForTextPrinting(&spriteId, &hoverSrc, 1, 1);
     }
     else
     {
@@ -1379,11 +1389,6 @@ static void ChooseBox_DestroySprites(void)
         DestroySprite(sChooseBoxMenu->hoverSprite);
         sChooseBoxMenu->hoverSprite = NULL;
     }
-    if (sChooseBoxMenu->monCountSprite)
-    {
-        DestroySprite(sChooseBoxMenu->monCountSprite);
-        sChooseBoxMenu->monCountSprite = NULL;
-    }
     for (tx = 0; tx < IN_BOX_COUNT; tx++)
     {
         if (sStorage->boxMonsSprites[tx])
@@ -1415,7 +1420,6 @@ static void ChooseBox_DestroySprites(void)
             sStorage->itemIcons[id].sprite->subpriority = 9;
     }
     UpdateBoxTitle(StorageGetCurrentBox());
-    UpdateBoxTitlePalette();
 }
 
 static u8 HandleChooseBoxInput(void)
@@ -1457,7 +1461,6 @@ static void FreeChooseBox(void)
     if (sChooseBoxMenu->loadedPalette)
         FreeSpritePaletteByTag(sChooseBoxMenu->paletteTag);
     FreeSpriteTilesByTag(sChooseBoxMenu->tileTag);
-    FreeSpriteTilesByTag(GFXTAG_CHOOSE_BOX_MON_COUNT);
     sChooseBoxMenu = NULL;
 }
 
@@ -1505,7 +1508,7 @@ static void ChooseBox_PrintInfo(void)
     windowId = AddWindow(&template);
     FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
     center = GetStringCenterAlignXOffset(FONT_NORMAL, boxName, 64);
-    AddTextPrinterParameterized3(windowId, FONT_NORMAL, center, 1, sTextColors[2], TEXT_SKIP_DRAW, boxName);
+    AddTextPrinterParameterized3(windowId, FONT_NORMAL, center, 1, sFontColorTable[COLORID_CHOOSE_BOX], TEXT_SKIP_DRAW, boxName);
     tileData1 = (u8 *)GetWindowAttribute(windowId, WINDOW_TILE_DATA);
     tileData2 = tileData1 + template.width * TILE_SIZE_4BPP;
     for (i = 0; i < 2; i++)
@@ -1520,7 +1523,7 @@ static void ChooseBox_PrintInfo(void)
     LoadSpriteSheet(&spriteSheet);
     for (i = 0; i < 2; i++)
     {
-        spriteId = CreateSprite(&sSpriteTemplate_ChooseBoxMenu_BoxName, 132 + i * 32, 98, 0);
+        spriteId = CreateSpriteUnchecked(&sSpriteTemplate_ChooseBoxMenu_BoxName, 132 + i * 32, 98, 0);
         if (spriteId != MAX_SPRITES)
         {
             sChooseBoxMenu->boxNameSprites[i] = &gSprites[spriteId];
@@ -1536,20 +1539,20 @@ static void ChooseBox_PrintInfo(void)
     ConvertIntToDecimalStringN(numBoxMonsText, numInBox, STR_CONV_MODE_RIGHT_ALIGN, 2);
     StringAppend(numBoxMonsText, sText_OutOf30);
     center = GetStringCenterAlignXOffset(FONT_NORMAL, numBoxMonsText, 32);
-    AddTextPrinterParameterized3(windowId, FONT_NORMAL, center, 1, sTextColors[2], TEXT_SKIP_DRAW, numBoxMonsText);
+    AddTextPrinterParameterized3(windowId, FONT_NORMAL, center, 1, sFontColorTable[COLORID_CHOOSE_BOX], TEXT_SKIP_DRAW, numBoxMonsText);
     CpuCopy32((void *)GetWindowAttribute(windowId, WINDOW_TILE_DATA), sChooseBoxMenu->monCountTiles, 0x100);
     RemoveWindow(windowId);
 
     FreeSpriteTilesByTag(GFXTAG_CHOOSE_BOX_MON_COUNT);
     spriteSheet = (struct SpriteSheet){sChooseBoxMenu->monCountTiles, 0x100, GFXTAG_CHOOSE_BOX_MON_COUNT};
     LoadSpriteSheet(&spriteSheet);
-    spriteId = CreateSprite(&sSpriteTemplate_ChooseBoxMenu_MonCount, 148, 72, 0);
+    spriteId = CreateSpriteUnchecked(&sSpriteTemplate_ChooseBoxMenu_MonCount, 148, 72, 0);
     sChooseBoxMenu->monCountSprite = (spriteId != MAX_SPRITES) ? &gSprites[spriteId] : NULL;
 }
 
 static struct Sprite *CreateChooseBoxArrows(u16 x, u16 y, u8 animId, u8 priority, u8 subpriority)
 {
-    u8 spriteId = CreateSprite(&sSpriteTemplate_BoxTitleArrow, x, y, subpriority);
+    u8 spriteId = CreateSpriteUnchecked(&sSpriteTemplate_BoxTitleArrow, x, y, subpriority);
     if (spriteId == MAX_SPRITES)
         return NULL;
 
@@ -1842,7 +1845,7 @@ static void Task_InitPokeStorage(u8 taskId)
         SetGpuReg(REG_OFFSET_DISPCNT, 0);
         CpuFill32(0, (void *)VRAM, VRAM_SIZE);
         ResetForPokeStorage();
-        memset(sMessageWindowSpriteIds, MAX_SPRITES, sizeof(sMessageWindowSpriteIds));
+        memset(sStorage->messageWindowSpriteIds, MAX_SPRITES, sizeof(sStorage->messageWindowSpriteIds));
         if (sStorage->isReopening)
         {
             switch (sWhichToReshow)
@@ -2588,6 +2591,8 @@ static void Task_DepositMon(u8 taskId)
         }
         else
         {
+            sStorage->inMenuInteraction = TRUE;
+            UpdateMonInfoTilemap();
             LoadChooseBoxGfx(&sStorage->chooseBoxMenu, GFXTAG_CHOOSE_BOX_GRID_HOVER, PALTAG_MISC_3, FALSE);
             ChooseBox_CreateSprites(StorageGetCurrentBox());
             sStorage->state++;
@@ -2710,6 +2715,8 @@ static void Task_DepositMon(u8 taskId)
         if (!DoMonPlaceChange())
         {
             SetMovingMonPriority(1);
+            sStorage->inMenuInteraction = TRUE;
+            UpdateMonInfoTilemap();
             LoadChooseBoxGfx(&sStorage->chooseBoxMenu, GFXTAG_CHOOSE_BOX_GRID_HOVER, PALTAG_MISC_3, FALSE);
             ChooseBox_CreateSprites(StorageGetCurrentBox());
             sStorage->state++;
@@ -2769,7 +2776,7 @@ static void Task_ReleaseMon(u8 taskId)
         PrintMessage(MSG_RELEASE_POKE);
         ShowYesNoWindow(1);
         sStorage->state++;
-        // fallthrough
+        [[fallthrough]];
     case 1:
         switch (Menu_ProcessInputNoWrapClearOnChoose())
         {
@@ -2908,7 +2915,7 @@ static void OpenMonMarkingsMenu_SwSh(u8 markings, s16 x, s16 y)
 
     for (i = 0; i < 3; i++)
     {
-        spriteId = CreateSprite(&sSpriteTemplate_MarkingsMenu_Window, x + i * 32, y, 3);
+        spriteId = CreateSpriteUnchecked(&sSpriteTemplate_MarkingsMenu_Window, x + i * 32, y, 3);
         if (spriteId != MAX_SPRITES)
         {
             sMarkMenu->windowSprites[i] = &gSprites[spriteId];
@@ -2922,7 +2929,7 @@ static void OpenMonMarkingsMenu_SwSh(u8 markings, s16 x, s16 y)
 
     for (i = 0; i < NUM_MON_MARKINGS; i++)
     {
-        spriteId = CreateSprite(&sSpriteTemplate_MarkingsMenu_Marks, 108 + i * 24, 80, 2);
+        spriteId = CreateSpriteUnchecked(&sSpriteTemplate_MarkingsMenu_Marks, 108 + i * 24, 80, 2);
         if (spriteId != MAX_SPRITES)
         {
             sMarkMenu->markingSprites[i] = &gSprites[spriteId];
@@ -2934,7 +2941,7 @@ static void OpenMonMarkingsMenu_SwSh(u8 markings, s16 x, s16 y)
         }
     }
 
-    spriteId = CreateSprite(&sSpriteTemplate_MarkingsMenu_Cursor, 96, 80, 1);
+    spriteId = CreateSpriteUnchecked(&sSpriteTemplate_MarkingsMenu_Cursor, 96, 80, 1);
     if (spriteId != MAX_SPRITES)
     {
         sMarkMenu->cursorSprite = &gSprites[spriteId];
@@ -2971,7 +2978,7 @@ static bool8 HandleMonMarkingsMenuInput_SwSh(void)
     {
         PlaySE(SE_SELECT);
         sMarkMenu->markingsArray[sMarkMenu->cursorPos] = !sMarkMenu->markingsArray[sMarkMenu->cursorPos];
-        StartSpriteAnim(sMarkMenu->markingSprites[sMarkMenu->cursorPos], 
+        StartSpriteAnim(sMarkMenu->markingSprites[sMarkMenu->cursorPos],
                        sMarkMenu->cursorPos * 2 + sMarkMenu->markingsArray[sMarkMenu->cursorPos]);
         return TRUE;
     }
@@ -2982,7 +2989,7 @@ static bool8 HandleMonMarkingsMenuInput_SwSh(void)
         sMarkMenu->markings = 0;
         for (i = 0; i < NUM_MON_MARKINGS; i++)
             sMarkMenu->markings |= sMarkMenu->markingsArray[i] << i;
-        
+
         return FALSE;
     }
 
@@ -3331,6 +3338,7 @@ static void Task_HandleBoxOptions(u8 taskId)
         if (IsMenuLoading())
             return;
         sStorage->state++;
+        [[fallthrough]];
     case 2:
         switch (HandleMenuInput())
         {
@@ -3435,6 +3443,8 @@ static void Task_JumpBox(u8 taskId)
     case 0:
         {
             u8 curBox = StorageGetCurrentBox();
+            sStorage->inMenuInteraction = TRUE;
+            UpdateMonInfoTilemap();
             LoadChooseBoxGfx(&sStorage->chooseBoxMenu, GFXTAG_CHOOSE_BOX_GRID_HOVER, PALTAG_MISC_3, FALSE);
             ChooseBox_CreateSprites(curBox);
         }
@@ -3608,7 +3618,7 @@ static void Task_OnBPressed(u8 taskId)
             gPartiesCount[B_TRAINER_PLAYER] = CalculatePlayerPartyCount();
             if (sStorage->boxOption == OPTION_SELECT_MON)
             {
-                gSpecialVar_0x8004  = PARTY_NOTHING_CHOSEN;
+                gSpecialVar_0x8004  = PARTY_MON_CANCEL;
                 gSpecialVar_Result  = FALSE;
             }
             sStorage->screenChangeType = SCREEN_CHANGE_EXIT_BOX;
@@ -3686,6 +3696,7 @@ static void GiveChosenBagItem(void)
 static void FreePokeStorageData(void)
 {
     MultiMove_Free();
+    FREE_AND_SET_NULL(sStorage->typeIconsGfx);
     FREE_AND_SET_NULL(sStorage);
     FreeAllWindowBuffers();
 }
@@ -3706,7 +3717,7 @@ static void SetScrollingBackground(void)
     SetGpuReg(REG_OFFSET_BG3CNT, BGCNT_PRIORITY(3) | BGCNT_CHARBASE(3) | BGCNT_16COLOR | BGCNT_SCREENBASE(31));
     DecompressAndLoadBgGfxUsingHeap(3, sSwShWallpapers[wallpaperId].tiles, 0, 0, 0);
     DecompressDataWithHeaderVram(sSwShWallpapers[wallpaperId].tilemap, (void *)BG_SCREEN_ADDR(31));
-    LoadPalette(sSwShWallpapers[wallpaperId].palettes, BG_PLTT_ID(1), PLTT_SIZE_4BPP);
+    LoadPalette(sSwShWallpapers[wallpaperId].palettes, BG_PLTT_ID(PAL_STORAGE_WALLPAPER), PLTT_SIZE_4BPP);
 }
 
 static void ScrollBackground(void)
@@ -3751,21 +3762,31 @@ static bool8 InitPalettesAndSprites(void)
     switch (sStorage->graphicsLoadState)
     {
     case 0:
-        LoadPalette(sSwShStorage_Pal, BG_PLTT_ID(0), sizeof(sSwShStorage_Pal));
+        LoadPalette(sSwShStorage_Pal, BG_PLTT_ID(PAL_STORAGE_MAIN), 2 * PLTT_SIZE_4BPP);
         sStorage->graphicsLoadState++;
         break;
     case 1:
-        LoadPalette(sTextWindows_Pal, BG_PLTT_ID(15), sizeof(sTextWindows_Pal));
+        LoadPalette(gStandardMenuPalette, BG_PLTT_ID(PAL_STORAGE_STD_MENU), PLTT_SIZE_4BPP);
         sStorage->graphicsLoadState++;
         break;
     case 2:
-        LoadPalette(sTypeIcons_Pal, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
+        LoadPalette(gMoveTypesSwSh_Pal, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
         sStorage->graphicsLoadState++;
         break;
     case 3:
-        LoadSpriteSheet(&sSpriteSheet_TypeIcons);
+    {
+        sStorage->typeIconsGfx = LoadMoveTypeIconCache();
+
+        struct SpriteSheet sheet = {
+            .data = sStorage->typeIconsGfx,
+            .size = 2 * MOVE_TYPE_ICON_SIZE,
+            .tag = GFXTAG_TYPE_ICON,
+        };
+
+        LoadSpriteSheet(&sheet);
         sStorage->graphicsLoadState++;
         break;
+    }
     case 4:
         LoadCompressedSpriteSheet(&sSpriteSheet_StatLabels);
         sStorage->graphicsLoadState++;
@@ -3787,7 +3808,7 @@ static bool8 InitPalettesAndSprites(void)
         sStorage->graphicsLoadState++;
         break;
     case 9:
-        LoadCompressedSpriteSheet(&sSpriteSheet_BoxTitleFrame);
+        LoadSpriteSheet(&sSpriteSheet_BoxTitleFrame);
         sStorage->graphicsLoadState++;
         break;
     case 10:
@@ -3930,19 +3951,13 @@ static void UpdateShinyIconSprite(void)
     }
 }
 
-static void UpdateTypeIconTiles(u8 typeId, void *dest)
-{
-    u32 offset = (typeId + 1) * 0x100; // +1 to skip placeholder tiles at start of graphics
-    RequestDma3Copy(&sTypeIcons_Gfx[offset], dest, 0x100, 0x10);
-}
-
 static void SpriteCB_TypeIcon(struct Sprite *sprite)
 {
     if (sprite->data[0] != 0xFF)
     {
         u8 typeId = sprite->data[0];
         u8 index = sprite->data[1];
-        UpdateTypeIconTiles(typeId, sStorage->typeIconTilesPtr[index]);
+        CopyMoveTypeIconTiles(sStorage->typeIconsGfx, typeId, sStorage->typeIconTilesPtr[index]);
         sprite->data[0] = 0xFF;
     }
 }
@@ -3977,7 +3992,7 @@ static void UpdateTypeIconsSprite(void)
 
     spriteX1 = 20 + (136 * sStorage->monInfoTilemapId);
     spriteX2 = 56 + (136 * sStorage->monInfoTilemapId);
-    spriteY = 48;
+    spriteY = 50;
 
     if (sStorage->typeIconSprites[0] == NULL)
     {
@@ -4164,7 +4179,7 @@ static void BufferAndPrintStat(u8 windowId, u8 font, u8 xOffset, u8 y, u16 statV
 
     ConvertIntToDecimalStringN(statStr, statValue, STR_CONV_MODE_LEFT_ALIGN, 3);
     statWidth = GetStringWidth(font, statStr, 0);
-    AddTextPrinterParameterized4(windowId, font, xOffset - statWidth, y, 0, 0, sTextColors[0], 0, statStr);
+    AddTextPrinterParameterized4(windowId, font, xOffset - statWidth, y, 0, 0, sFontColorTable[COLORID_MON_INFO], 0, statStr);
 }
 
 static void PrintDisplayMonAbility(u8 font)
@@ -4192,7 +4207,7 @@ static void PrintDisplayMonAbility(u8 font)
     abilityName = gAbilitiesInfo[sStorage->displayMon.ability].name;
     fontId = GetFontIdToFit(abilityName, font, 0, windowWidthPx - 2);
 
-    AddTextPrinterParameterized4(windowId, fontId, xPos, 0, 0, 0, sTextColors[0], 0, abilityName);
+    AddTextPrinterParameterized4(windowId, fontId, xPos, 0, 0, 0, sFontColorTable[COLORID_MON_INFO], 0, abilityName);
     PutWindowTilemap(windowId);
     CopyWindowToVram(windowId, COPYWIN_FULL);
 }
@@ -4225,7 +4240,7 @@ static void PrintDisplayMonHeldItem(u8 font)
         itemName = GetItemName(sStorage->displayMon.heldItem);
     fontId = GetFontIdToFit(itemName, font, 0, windowWidthPx - 2);
 
-    AddTextPrinterParameterized4(windowId, fontId, xPos, 0, 0, 0, sTextColors[0], 0, itemName);
+    AddTextPrinterParameterized4(windowId, fontId, xPos, 0, 0, 0, sFontColorTable[COLORID_MON_INFO], 0, itemName);
     PutWindowTilemap(windowId);
     CopyWindowToVram(windowId, COPYWIN_FULL);
 }
@@ -4286,7 +4301,7 @@ static void PrintDisplayMonNickname(u8 font)
         FillWindowPixelBuffer(windowId, PIXEL_FILL(4));
 
         u8 fontId = GetFontIdToFit(sStorage->displayMon.nickname, font, 0, 58);
-        AddTextPrinterParameterized4(windowId, fontId, 6, 1, 0, 0, sTextColors[1], 0, sStorage->displayMon.nickname);
+        AddTextPrinterParameterized4(windowId, fontId, 6, 1, 0, 0, sFontColorTable[COLORID_MON_INFO_NAME], 0, sStorage->displayMon.nickname);
         PutWindowTilemap(windowId);
         CopyWindowToVram(windowId, COPYWIN_FULL);
     }
@@ -4314,8 +4329,8 @@ static void PrintDisplayMonLevel(u8 font)
         u16 totalWidth = lvWidth + numWidth;
         u16 lvStartX = 28 - totalWidth;
 
-        AddTextPrinterParameterized4(windowId, FONT_SHORT_NARROWER, lvStartX, 1, 0, 0, sTextColors[1], 0, sText_Lv);
-        AddTextPrinterParameterized4(windowId, font, lvStartX + lvWidth, 1, 0, 0, sTextColors[1], 0, levelStr);
+        AddTextPrinterParameterized4(windowId, FONT_SHORT_NARROWER, lvStartX, 1, 0, 0, sFontColorTable[COLORID_MON_INFO_NAME], 0, sText_Lv);
+        AddTextPrinterParameterized4(windowId, font, lvStartX + lvWidth, 1, 0, 0, sFontColorTable[COLORID_MON_INFO_NAME], 0, levelStr);
         PutWindowTilemap(windowId);
         CopyWindowToVram(windowId, COPYWIN_FULL);
     }
@@ -4407,8 +4422,8 @@ static void InitPokeStorageBg0(void)
 {
     SetGpuReg(REG_OFFSET_BG0CNT, BGCNT_PRIORITY(0) | BGCNT_CHARBASE(0) | BGCNT_SCREENBASE(29) | BGCNT_TXT256x512);
     SetBgTilemapBuffer(0, sStorage->infoTilemapBuffer);
-    DecompressAndLoadBgGfxUsingHeap(0, sMonInfo_Gfx, 0, 0, 0);
-    LoadUserWindowBorderGfx(WIN_MESSAGE, 192, BG_PLTT_ID(14));
+    DecompressAndLoadBgGfxUsingHeap(0, sMonInfo_Gfx, 0, STORAGE_BASE_MON_INFO_GFX, 0);
+    LoadUserWindowBorderGfx(WIN_MESSAGE, STORAGE_BASE_STD_BORDER, BG_PLTT_ID(PAL_STORAGE_FRAME));
     DecompressDataWithHeaderWram(sMonInfo_Tilemap, sStorage->infoTilemapBuffer);
     sStorage->bg0_Y = 0;
     UpdateMonInfoTilemap();
@@ -4553,7 +4568,7 @@ static void PrintMessage(u8 id)
     DynamicPlaceholderTextUtil_ExpandPlaceholders(sStorage->messageText, sMessages[id].text);
     CreateMessageWindowSprite();
     FillWindowPixelBuffer(WIN_MESSAGE, PIXEL_FILL(0));
-    AddTextPrinterParameterized4(WIN_MESSAGE, FONT_NORMAL, 0, 1, 0, 0, sTextColors[3], TEXT_SKIP_DRAW, sStorage->messageText);
+    AddTextPrinterParameterized4(WIN_MESSAGE, FONT_NORMAL, 0, 1, 0, 0, sFontColorTable[COLORID_MESSAGE], TEXT_SKIP_DRAW, sStorage->messageText);
     PutWindowTilemap(WIN_MESSAGE);
     CopyWindowToVram(WIN_MESSAGE, COPYWIN_GFX);
     ScheduleBgCopyTilemapToVram(0);
@@ -4562,7 +4577,7 @@ static void PrintMessage(u8 id)
 static void ShowYesNoWindow(s8 cursorPos)
 {
     ClearMonInfoTilemap();
-    CreateYesNoMenu(&sYesNoWindowTemplate, 192, 14, 0);
+    CreateYesNoMenu(&sYesNoWindowTemplate, STORAGE_BASE_STD_BORDER, PAL_STORAGE_FRAME, 0);
     Menu_MoveCursorNoWrapAround(cursorPos);
 }
 
@@ -4578,20 +4593,20 @@ static void CreateMessageWindowSprite(void)
 {
     u8 i;
 
-    if (sMessageWindowSpriteIds[0] != MAX_SPRITES)
+    if (sStorage->messageWindowSpriteIds[0] != MAX_SPRITES)
         return;
 
     LoadCompressedSpriteSheet(&sSpriteSheet_MessageWindow);
-    for (i = 0; i < ARRAY_COUNT(sMessageWindowSpriteIds); i++)
+    for (i = 0; i < ARRAY_COUNT(sStorage->messageWindowSpriteIds); i++)
     {
-        u8 spriteId = CreateSprite(&sSpriteTemplate_MessageWindow, 72 + i * 32, 144, 0);
+        u8 spriteId = CreateSpriteUnchecked(&sSpriteTemplate_MessageWindow, 72 + i * 32, 144, 0);
         if (spriteId != MAX_SPRITES)
         {
             StartSpriteAnim(&gSprites[spriteId], sMessageWindowAnims[i]);
             gSprites[spriteId].oam.priority = 1;
             gSprites[spriteId].subpriority = 0;
         }
-        sMessageWindowSpriteIds[i] = spriteId;
+        sStorage->messageWindowSpriteIds[i] = spriteId;
     }
 }
 
@@ -4599,12 +4614,12 @@ static void DestroyMessageWindowSprite(void)
 {
     u8 i;
 
-    for (i = 0; i < ARRAY_COUNT(sMessageWindowSpriteIds); i++)
+    for (i = 0; i < ARRAY_COUNT(sStorage->messageWindowSpriteIds); i++)
     {
-        if (sMessageWindowSpriteIds[i] != MAX_SPRITES)
+        if (sStorage->messageWindowSpriteIds[i] != MAX_SPRITES)
         {
-            DestroySprite(&gSprites[sMessageWindowSpriteIds[i]]);
-            sMessageWindowSpriteIds[i] = MAX_SPRITES;
+            DestroySprite(&gSprites[sStorage->messageWindowSpriteIds[i]]);
+            sStorage->messageWindowSpriteIds[i] = MAX_SPRITES;
         }
     }
     FreeSpriteTilesByTag(GFXTAG_MESSAGE_WINDOW);
@@ -4614,7 +4629,7 @@ static void AddWallpaperMenu(void)
 {
     u16 i;
     u8 currentPage = sStorage->listMenuScrollRow;
-    u8 itemsPerPage = 5;
+    u8 itemsPerPage = STORAGE_MENU_JUMP_ROWS;
     u8 maxPage = (MENU_COUNT - MENU_BASE - 1) / itemsPerPage;
     u8 startIdx = MENU_BASE + (currentPage * itemsPerPage);
     u8 endIdx = startIdx + itemsPerPage;
@@ -4640,15 +4655,15 @@ static void AddWallpaperMenu(void)
     sStorage->menuItems[sStorage->menuItemsCount].textId = 0;
 
     sStorage->menuWindow.width = (8 + maxWidth + 8 + 7) / 8;
-    if (sStorage->menuWindow.width > 28)
-        sStorage->menuWindow.width = 28;
+    if (sStorage->menuWindow.width > WIN_MENU_W)
+        sStorage->menuWindow.width = WIN_MENU_W;
 
-    sStorage->menuWindow.height = 10;
+    sStorage->menuWindow.height = STORAGE_MENU_JUMP_ROWS * STORAGE_MENU_ROW_H;
     sStorage->menuWindow.tilemapLeft = 29 - sStorage->menuWindow.width;
     sStorage->menuWindow.tilemapTop = 5;
     sStorage->menuWindowId = AddWindow(&sStorage->menuWindow);
     ClearMonInfoTilemap();
-    DrawStdFrameWithCustomTileAndPalette(sStorage->menuWindowId, FALSE, 192, 14);
+    DrawStdFrameWithCustomTileAndPalette(sStorage->menuWindowId, FALSE, STORAGE_BASE_STD_BORDER, PAL_STORAGE_FRAME);
 
     sStorage->listMenuTemplate.items = (struct ListMenuItem *)sStorage->menuItems;
     sStorage->listMenuTemplate.moveCursorFunc = ListMenuDefaultCursorMoveFunc;
@@ -4794,13 +4809,13 @@ static void CreateBoxMonIconAtPos(u8 boxPosition)
         s16 y = 8 * (3 * (boxPosition / IN_BOX_COLUMNS)) + 40;
         u32 personality = GetCurrentBoxMonData(boxPosition, MON_DATA_PERSONALITY);
 
-        sStorage->boxMonsSprites[boxPosition] = CreateMonIconSprite(species, personality, x, y, 2, 19 - (boxPosition % IN_BOX_COLUMNS), isEgg);
+        sStorage->boxMonsSprites[boxPosition] = CreateMonIconSprite(species, personality, x, y, 1, 19 - (boxPosition % IN_BOX_COLUMNS), isEgg);
         if (ShouldBoxmonSpriteBeTransparent(StorageGetCurrentBox(), boxPosition))
             sStorage->boxMonsSprites[boxPosition]->oam.objMode = ST_OAM_OBJ_BLEND;
     }
 }
 
-#define sDistance      data[1]
+#define sDistance      data[7]
 #define sSpeed         data[2]
 #define sScrollInDestX data[3]
 #define sDelay         data[4]
@@ -4816,6 +4831,7 @@ static void StartBoxMonIconsScrollOut(s16 speed)
         {
             sStorage->boxMonsSprites[i]->sSpeed = speed;
             sStorage->boxMonsSprites[i]->sDelay = 1;
+            sStorage->boxMonsSprites[i]->oam.priority = 2;
             sStorage->boxMonsSprites[i]->callback = SpriteCB_BoxMonIconScrollOut;
         }
     }
@@ -4839,6 +4855,7 @@ static void SpriteCB_BoxMonIconScrollIn(struct Sprite *sprite)
         sStorage->iconScrollNumIncoming--;
         sprite->x = sprite->sScrollInDestX;
         sprite->invisible = FALSE;
+        sprite->oam.priority = 1;
         sprite->callback = SpriteCallbackDummy;
     }
 }
@@ -5026,7 +5043,7 @@ static void SetBoxMonIconObjMode(u8 boxPosition, u8 objMode)
 
 static void CreatePartyMonsSprites(bool8 visible)
 {
-    u16 i, count;
+    u16 i;
     enum Species species = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_SPECIES);
     bool32 isEgg = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_IS_EGG);
     u32 personality = GetMonData(&gParties[B_TRAINER_PLAYER][0], MON_DATA_PERSONALITY);
@@ -5037,7 +5054,6 @@ static void CreatePartyMonsSprites(bool8 visible)
         sStorage->partySprites[0] = NULL;
     }
     sStorage->partySprites[0] = CreateMonIconSprite(species, personality, 40, 16, 1, 12, isEgg);
-    count = 1;
     for (i = 1; i < PARTY_SIZE; i++)
     {
         if (sStorage->partySprites[i] != NULL)
@@ -5052,7 +5068,6 @@ static void CreatePartyMonsSprites(bool8 visible)
         {
             personality = GetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_PERSONALITY);
             sStorage->partySprites[i] = CreateMonIconSprite(species, personality, 40,  24 * i + 16, 1, 12, isEgg);
-            count++;
         }
     }
 
@@ -5100,7 +5115,7 @@ static u8 GetNumPartySpritesCompacting(void)
     return sStorage->numPartyToCompact;
 }
 
-#define sPartyId   data[1]
+#define sPartyId   data[7]
 #define sMonX      data[2]
 #define sMonY      data[3]
 #define sSpeedX    data[4]
@@ -5325,24 +5340,23 @@ static void SpriteCB_HeldMon(struct Sprite *sprite)
     sprite->y = sStorage->cursorSprite->y + (sStorage->cursorSprite->y2 / 2) + 4;
 }
 
-static u16 TryLoadMonIconTiles(enum Species species, u32 personality, bool32 isEgg)
+static u32 MakeIconIdFromSpeciesAndIconType(enum Species species, enum SpeciesIconType iconType)
 {
-    u16 i, offset;
+    if (iconType == FEMALE_ICON)
+        return (species | (1 << 15));
+    if (iconType == EGG_ICON)
+        return (species | (1 << 14));
+    return species;
+}
 
-#if P_GENDER_DIFFERENCES
-    // Treat female mons as a seperate species as they may have a different icon than males
-    if (gSpeciesInfo[species].iconSpriteFemale != NULL && IsPersonalityFemale(species, personality))
-        species |= (1 << 15);
-#endif
+static u16 TryLoadMonIconTiles(enum Species species, enum SpeciesIconType iconType)
+{
+    u32 i, offset;
+    u32 iconId = MakeIconIdFromSpeciesAndIconType(species, iconType);
 
-    // Treat eggs as a seperate species as they might have unique sprites
-    if (isEgg)
-        species |= (1 << 14);
-
-    // Search icon list for this species
     for (i = 0; i < MAX_MON_ICONS; i++)
     {
-        if (sStorage->iconSpeciesList[i] == species)
+        if (sStorage->iconSpeciesList[i] == iconId)
             break;
     }
 
@@ -5362,32 +5376,22 @@ static u16 TryLoadMonIconTiles(enum Species species, u32 personality, bool32 isE
     }
 
     // Add species to icon list and load tiles
-    sStorage->iconSpeciesList[i] = species;
+    sStorage->iconSpeciesList[i] = iconId;
     sStorage->numIconsPerSpecies[i]++;
     offset = 16 * i;
     species &= SPECIES_MASK;
-    CpuCopy32(GetMonIconTilesIsEgg(species, personality, isEgg), (void *)(OBJ_VRAM0) + offset * TILE_SIZE_4BPP, 0x200);
+    RlFastUncomp(GetMonIconTilesByIconType(species, iconType), (void *)(OBJ_VRAM0) + offset * TILE_SIZE_4BPP, 0, 0x200);
 
     return offset;
 }
 
-static void RemoveSpeciesFromIconList(enum Species species)
+static void RemoveSpeciesFromIconList(enum Species species, enum SpeciesIconType iconType)
 {
-    u16 i;
-    bool8 hasFemale = FALSE;
+    u32 iconId = MakeIconIdFromSpeciesAndIconType(species, iconType);
 
-    for (i = 0; i < MAX_MON_ICONS; i++)
+    for (u32 i = 0; i < MAX_MON_ICONS; i++)
     {
-        if (sStorage->iconSpeciesList[i] == (species | 0x8000))
-        {
-            hasFemale = TRUE;
-            break;
-        }
-    }
-
-    for (i = 0; i < MAX_MON_ICONS; i++)
-    {
-        if (sStorage->iconSpeciesList[i] == species && !hasFemale)
+        if (sStorage->iconSpeciesList[i] == iconId)
         {
             if (--sStorage->numIconsPerSpecies[i] == 0)
                 sStorage->iconSpeciesList[i] = SPECIES_NONE;
@@ -5401,19 +5405,27 @@ static struct Sprite *CreateMonIconSprite(enum Species species, u32 personality,
     u16 tileNum;
     u8 spriteId;
     struct SpriteTemplate template = sSpriteTemplate_MonIcon;
+    u32 iconType = NORMAL_ICON;
 
     species = GetIconSpecies(species, personality);
     if (isEgg)
     {
         if (gSpeciesInfo[species].eggId != EGG_ID_NONE)
+        {
             template.paletteTag = PALTAG_MON_ICON_0 + gEggDatas[gSpeciesInfo[species].eggId].eggIconPalIndex;
+            iconType = EGG_ICON;
+        }
         else
+        {
+            species = SPECIES_EGG;
             template.paletteTag = PALTAG_MON_ICON_0 + gSpeciesInfo[SPECIES_EGG].iconPalIndex;
+        }
     }
 #if P_GENDER_DIFFERENCES
     else if (gSpeciesInfo[species].iconSpriteFemale != NULL && IsPersonalityFemale(species, personality))
     {
         template.paletteTag = PALTAG_MON_ICON_0 + gSpeciesInfo[species].iconPalIndexFemale;
+        iconType = FEMALE_ICON;
     }
 #endif
     else
@@ -5421,26 +5433,28 @@ static struct Sprite *CreateMonIconSprite(enum Species species, u32 personality,
         template.paletteTag = PALTAG_MON_ICON_0 + gSpeciesInfo[species].iconPalIndex;
     }
 
-    tileNum = TryLoadMonIconTiles(species, personality, isEgg);
+    tileNum = TryLoadMonIconTiles(species, iconType);
     if (tileNum == 0xFFFF)
         return NULL;
 
-    spriteId = CreateSprite(&template, x, y, subpriority);
+    spriteId = CreateSpriteUnchecked(&template, x, y, subpriority);
     if (spriteId == MAX_SPRITES)
     {
-        RemoveSpeciesFromIconList(species);
+        RemoveSpeciesFromIconList(species, iconType);
         return NULL;
     }
 
     gSprites[spriteId].oam.tileNum = tileNum;
     gSprites[spriteId].oam.priority = oamPriority;
     gSprites[spriteId].data[0] = species;
+    gSprites[spriteId].data[1] = iconType;
+
     return &gSprites[spriteId];
 }
 
 static void DestroyBoxMonIcon(struct Sprite *sprite)
 {
-    RemoveSpeciesFromIconList(sprite->data[0]);
+    RemoveSpeciesFromIconList(sprite->data[0], sprite->data[1]);
     DestroySprite(sprite);
 }
 
@@ -5528,43 +5542,10 @@ static void SetUpScrollToBox(u8 boxId)
     sStorage->scrollState = 0;
 }
 
-#define BOX_TITLE_SPRITE_X  (DISPLAY_WIDTH - 76 - 32)
-
 static void UpdateBoxTitle(u8 boxId)
 {
-    u16 i;
-    u16 colors[2];
-    struct SpriteSheet spriteSheet = {sStorage->boxTitleTiles, 0x200, GFXTAG_BOX_TITLE};
-    struct SpriteTemplate template = sSpriteTemplate_BoxTitle;
-
-    for (i = 0; i < 2; i++)
-    {
-        if (sStorage->curBoxTitleSprites[i])
-            DestroySprite(sStorage->curBoxTitleSprites[i]);
-    }
-
-    FreeSpriteTilesByTag(GFXTAG_BOX_TITLE);
+    UpdateBoxTitlePalette();
     RenderBoxTitleCentered(GetBoxNamePtr(boxId));
-    LoadSpriteSheet(&spriteSheet);
-
-    if (sCursorArea == CURSOR_AREA_BOX_TITLE)
-    {
-        colors[0] = BOX_TITLE_SHADOW_HOVER;
-        colors[1] = BOX_TITLE_TEXT_HOVER;
-    }
-    else
-    {
-        colors[0] = BOX_TITLE_SHADOW_MAIN;
-        colors[1] = BOX_TITLE_TEXT_MAIN;
-    }
-    LoadPalette(colors, sStorage->boxTitlePalOffset, PLTT_SIZEOF(2));
-
-    for (i = 0; i < 2; i++)
-    {
-        u8 spriteId = CreateSprite(&template, BOX_TITLE_SPRITE_X + i * 32, 20, 24);
-        sStorage->curBoxTitleSprites[i] = &gSprites[spriteId];
-        StartSpriteAnim(sStorage->curBoxTitleSprites[i], i);
-    }
 }
 
 static bool8 ScrollToBox(void)
@@ -5575,6 +5556,7 @@ static bool8 ScrollToBox(void)
     {
     case 0:
         sStorage->scrollState++;
+        [[fallthrough]];
     case 1:
         if (!WaitForWallpaperGfxLoad())
             return TRUE;
@@ -5723,7 +5705,7 @@ static void UpdateWallpaperGfx(u8 boxId, s8 direction)
     }
     DecompressDataWithHeaderWram(sSwShWallpapers[wallpaperId].tilemap, sStorage->wallpaperBgTilemapBuffer);
     RequestDma3Copy(sStorage->wallpaperBgTilemapBuffer, (void *)BG_SCREEN_ADDR(31), 0x800, 1);
-    LoadPalette(sSwShWallpapers[wallpaperId].palettes, BG_PLTT_ID(1), PLTT_SIZE_4BPP);
+    LoadPalette(sSwShWallpapers[wallpaperId].palettes, BG_PLTT_ID(PAL_STORAGE_WALLPAPER), PLTT_SIZE_4BPP);
 }
 
 static bool32 WaitForWallpaperGfxLoad(void)
@@ -5737,9 +5719,14 @@ static bool32 WaitForWallpaperGfxLoad(void)
 //  SECTION: Box Title
 //------------------------------------------------------------------------------
 
+#define BOX_TITLE_FRAME_SIZE ((8 * TILE_SIZE_4BPP) / sizeof(u32))
+#define BOX_TITLE_FRAME_COLOR 13
+
 static void CreateBoxTitleFrame(u8 boxId)
 {
     u8 i;
+    u8 middleIds[2];
+    const u32 *middleSrcs[2];
     struct SpriteTemplate template = sSpriteTemplate_BoxTitleFrame;
     template.paletteTag = PALTAG_MISC_1;
 
@@ -5748,103 +5735,75 @@ static void CreateBoxTitleFrame(u8 boxId)
         u8 spriteId = CreateSprite(&template, 100 + i * 32, 21, 25);
         sStorage->boxTitleFrameSprites[i] = &gSprites[spriteId];
         StartSpriteAnim(sStorage->boxTitleFrameSprites[i], sBoxTitleFrameAnims[i]);
+        SetSpriteSheetFrameTileNum(sStorage->boxTitleFrameSprites[i]);
     }
+
+    middleIds[0] = sStorage->boxTitleFrameSprites[1] - gSprites;
+    middleIds[1] = sStorage->boxTitleFrameSprites[2] - gSprites;
+    middleSrcs[0] = sBoxTitleFrame_Gfx + BOX_TITLE_FRAME_SIZE;
+    middleSrcs[1] = sBoxTitleFrame_Gfx + BOX_TITLE_FRAME_SIZE * 2;
+    SetupSpritesForTextPrinting(middleIds, middleSrcs, 2, 1);
 }
 
 static void InitBoxTitle(u8 boxId)
 {
-    u8 tagIndex;
-    u16 i;
-    struct SpriteSheet spriteSheet = {sStorage->boxTitleTiles, 0x200, GFXTAG_BOX_TITLE};
+    sStorage->boxTitlePalNums[BOX_TITLE_PAL_MAIN] = IndexOfSpritePaletteTag(PALTAG_MISC_1);
+    sStorage->boxTitlePalNums[BOX_TITLE_PAL_HOVER] = IndexOfSpritePaletteTag(PALTAG_MISC_2);
 
-    CpuCopy16(sCursor_Pal, sStorage->boxTitlePal, sizeof(sStorage->boxTitlePal));
-
-    if (sCursorArea == CURSOR_AREA_BOX_TITLE)
-    {
-        sStorage->boxTitlePal[13] = BOX_TITLE_FRAME_HOVER;
-        sStorage->boxTitlePal[14] = BOX_TITLE_SHADOW_HOVER;
-        sStorage->boxTitlePal[15] = BOX_TITLE_TEXT_HOVER;
-    }
-    else
-    {
-        sStorage->boxTitlePal[13] = BOX_TITLE_FRAME_MAIN;
-        sStorage->boxTitlePal[14] = BOX_TITLE_SHADOW_MAIN;
-        sStorage->boxTitlePal[15] = BOX_TITLE_TEXT_MAIN;
-    }
-
-    tagIndex = IndexOfSpritePaletteTag(PALTAG_MISC_1);
-    LoadPalette(sStorage->boxTitlePal, OBJ_PLTT_ID(tagIndex), 32);
     sStorage->wallpaperPalBits = 0x3f0;
+    sStorage->wallpaperPalBits |= (1 << 16) << sStorage->boxTitlePalNums[BOX_TITLE_PAL_MAIN];
+    sStorage->wallpaperPalBits |= (1 << 16) << sStorage->boxTitlePalNums[BOX_TITLE_PAL_HOVER];
 
-    sStorage->boxTitlePalOffset = OBJ_PLTT_ID(tagIndex) + 14;
-    sStorage->wallpaperPalBits |= (1 << 16) << tagIndex;
-
-    sStorage->boxTitleAltPalOffset = OBJ_PLTT_ID(tagIndex) + 14;
-    sStorage->wallpaperPalBits |= (1 << 16) << tagIndex;
-
-    RenderBoxTitleCentered(GetBoxNamePtr(boxId));
-    LoadSpriteSheet(&spriteSheet);
-
-    for (i = 0; i < 2; i++)
-    {
-        u8 spriteId = CreateSprite(&sSpriteTemplate_BoxTitle, BOX_TITLE_SPRITE_X + i * 32, 20, 23);
-        sStorage->curBoxTitleSprites[i] = &gSprites[spriteId];
-        StartSpriteAnim(sStorage->curBoxTitleSprites[i], i);
-    }
-    sStorage->boxTitleCycleId = 0;
     CreateBoxTitleFrame(boxId);
+    RenderBoxTitleCentered(GetBoxNamePtr(boxId));
 }
 
 static void UpdateBoxTitlePalette(void)
 {
-    u16 colors[3];
-    if (sCursorArea == CURSOR_AREA_BOX_TITLE)
+    u32 i;
+    u8 palNum = sStorage->boxTitlePalNums[sCursorArea == CURSOR_AREA_BOX_TITLE
+                                        ? BOX_TITLE_PAL_HOVER : BOX_TITLE_PAL_MAIN];
+
+    for (i = 0; i < ARRAY_COUNT(sStorage->boxTitleFrameSprites); i++)
     {
-        colors[0] = BOX_TITLE_FRAME_HOVER;
-        colors[1] = BOX_TITLE_SHADOW_HOVER;
-        colors[2] = BOX_TITLE_TEXT_HOVER;
-    }
-    else
-    {
-        colors[0] = BOX_TITLE_FRAME_MAIN;
-        colors[1] = BOX_TITLE_SHADOW_MAIN;
-        colors[2] = BOX_TITLE_TEXT_MAIN;
+        if (sStorage->boxTitleFrameSprites[i] != NULL)
+            sStorage->boxTitleFrameSprites[i]->oam.paletteNum = palNum;
     }
 
-    LoadPalette(&colors[0], sStorage->boxTitlePalOffset - 14 + 13, PLTT_SIZEOF(1));
-    LoadPalette(&colors[0], sStorage->boxTitleAltPalOffset - 14 + 13, PLTT_SIZEOF(1));
-    LoadPalette(&colors[1], sStorage->boxTitlePalOffset, PLTT_SIZEOF(2));
-    LoadPalette(&colors[1], sStorage->boxTitleAltPalOffset, PLTT_SIZEOF(2));
+    for (i = 0; i < ARRAY_COUNT(sStorage->arrowSprites); i++)
+    {
+        if (sStorage->arrowSprites[i] != NULL)
+            sStorage->arrowSprites[i]->oam.paletteNum = palNum;
+    }
 }
 
 static void RenderBoxTitleCentered(const u8 *boxName)
 {
-    u16 i;
-    u8 *tileData1, *tileData2;
-    u8 txtColor[3];
-    struct WindowTemplate winTemplate = {0};
-    u16 windowId;
+    u32 i;
+    u32 spriteId;
+    union TextColor color = {
+        .background = TEXT_COLOR_TRANSPARENT,
+        .foreground = TEXT_DYNAMIC_COLOR_6,
+        .shadow = TEXT_DYNAMIC_COLOR_5,
+    };
     s16 xOffset = 32 - GetStringWidth(FONT_NORMAL, boxName, 0) / 2;
 
+    if (sStorage->boxTitleFrameSprites[1] == NULL)
+        return;
     if (xOffset < 0)
         xOffset = 0;
 
-    winTemplate.width = 24;
-    winTemplate.height = 2;
-    windowId = AddWindow(&winTemplate);
-    FillWindowPixelBuffer(windowId, PIXEL_FILL(0));
-    tileData1 = (u8 *)GetWindowAttribute(windowId, WINDOW_TILE_DATA);
-    tileData2 = tileData1 + winTemplate.width * TILE_SIZE_4BPP;
-    txtColor[0] = TEXT_COLOR_TRANSPARENT;
-    txtColor[1] = TEXT_DYNAMIC_COLOR_6;
-    txtColor[2] = TEXT_DYNAMIC_COLOR_5;
-    AddTextPrinterParameterized4(windowId, FONT_NORMAL, xOffset, 1, 0, 0, txtColor, TEXT_SKIP_DRAW, boxName);
-    for (i = 0; i < 2; i++, tileData1 += 0x80, tileData2 += 0x80)
+    sStorage->boxTitleTextBuffer ^= 1;
+    for (i = 0; i < 2; i++)
     {
-        CpuCopy16(tileData1, sStorage->boxTitleTiles + i * 0x100, 0x80);
-        CpuCopy16(tileData2, sStorage->boxTitleTiles + i * 0x100 + 0x80, 0x80);
+        struct Sprite *sprite = sStorage->boxTitleFrameSprites[1 + i];
+        StartSpriteAnim(sprite, sBoxTitleMidAnims[sStorage->boxTitleTextBuffer][i]);
+        SetSpriteSheetFrameTileNum(sprite);
     }
-    RemoveWindow(windowId);
+
+    spriteId = sStorage->boxTitleFrameSprites[1] - gSprites;
+    FillSpriteRectColor(spriteId, 8, 1, 48, 14, BOX_TITLE_FRAME_COLOR);
+    AddSpriteTextPrinterParameterized6(spriteId, FONT_NORMAL, xOffset, 0, 0, 0, color, 0, boxName);
 }
 
 
@@ -5864,7 +5823,7 @@ static void CreateBoxScrollArrows(void)
 
     for (i = 0; i < 2; i++)
     {
-        u8 spriteId = CreateSprite(&sSpriteTemplate_BoxTitleArrow, 98 + i * 100, 21, 24);
+        u8 spriteId = CreateSpriteUnchecked(&sSpriteTemplate_BoxTitleArrow, 98 + i * 100, 21, 24);
         if (spriteId != MAX_SPRITES)
         {
             struct Sprite *sprite = &gSprites[spriteId];
@@ -5874,6 +5833,7 @@ static void CreateBoxScrollArrows(void)
             sStorage->arrowSprites[i] = sprite;
         }
     }
+    UpdateBoxTitlePalette();
 }
 
 static void TriggerArrowAnimation(struct Sprite *sprite)
@@ -5991,7 +5951,7 @@ static void GetCursorCoordsByPos(u8 cursorArea, u8 cursorPosition, u16 *x, u16 *
     }
 }
 
-static u16 GetSpeciesAtCursorPosition(void)
+static enum Species GetSpeciesAtCursorPosition(void)
 {
     switch (sCursorArea)
     {
@@ -6539,12 +6499,12 @@ static void SetShiftedMonData(u8 boxId, u8 position)
         BoxMonAtToMon(boxId, position, &sStorage->tempMon);
 
     SetPlacedMonData(boxId, position);
-    
+
     if (boxId == TOTAL_BOXES_COUNT)
         UpdateSpeciesSpritePSS(&gParties[B_TRAINER_PLAYER][position].box);
     else
         UpdateSpeciesSpritePSS(&gPokemonStoragePtr->boxes[boxId][position]);
-    
+
     sStorage->movingMon = sStorage->tempMon;
     SetDisplayMonData(&sStorage->movingMon, MODE_PARTY);
     sMovingMonOrigBoxId = boxId;
@@ -6947,7 +6907,7 @@ static void TryRefreshDisplayMon(void)
                 SetDisplayMonData(&gParties[B_TRAINER_PLAYER][sCursorPosition], MODE_PARTY);
                 break;
             }
-            // fallthrough
+            [[fallthrough]];
         case CURSOR_AREA_BOX_TITLE:
             SetDisplayMonData(NULL, MODE_MOVE);
             break;
@@ -7914,7 +7874,7 @@ static void CreateCursorSprites(void)
     sStorage->cursorPalNums[CURSOR_MODE_MULTI_MOVE]  = IndexOfSpritePaletteTag(PALTAG_MISC_3); // Green cursor
 
     GetCursorCoordsByPos(sCursorArea, sCursorPosition, &x, &y);
-    spriteId = CreateSprite(&sSpriteTemplate_Cursor, x, y, 2);
+    spriteId = CreateSpriteUnchecked(&sSpriteTemplate_Cursor, x, y, 2);
     if (spriteId != MAX_SPRITES)
     {
         sStorage->cursorSprite = &gSprites[spriteId];
@@ -7983,11 +7943,6 @@ static void StartCursorAnim(u8 animNum)
     StartSpriteAnim(sStorage->cursorSprite, animNum);
 }
 
-static u8 UNUSED GetMovingMonOriginalBoxId(void)
-{
-    return sMovingMonOrigBoxId;
-}
-
 static void SetCursorPriorityTo1(void)
 {
     sStorage->cursorSprite->oam.priority = 1;
@@ -8018,9 +7973,7 @@ static void InitMenu(void)
 {
     sStorage->menuItemsCount = 0;
     sStorage->menuWidth = 0;
-    sStorage->menuWindow.bg = 0;
-    sStorage->menuWindow.paletteNum = 15;
-    sStorage->menuWindow.baseBlock = 202;
+    sStorage->menuWindow = sWindowTemplate_Menu;
 }
 
 static void SetMenuText(u8 textId)
@@ -8052,11 +8005,11 @@ static void GetMenuPosition(u8 cursorArea, u8 cursorPos, u8 *outLeft, u8 *outTop
 {
     static const u8 validTopPositions[] = {2, 5, 8, 11, 14, 17};
     u8 slotRow = 0;
-    u8 menuHeight = 2 * sStorage->menuItemsCount;
-    
+    u8 menuHeight = STORAGE_MENU_ROW_H * sStorage->menuItemsCount;
+
     *outLeft = 9;
     *outTop = 2;
-    
+
     if (cursorArea == CURSOR_AREA_BOX_TITLE)
     {
         *outLeft = 19;
@@ -8071,16 +8024,16 @@ static void GetMenuPosition(u8 cursorArea, u8 cursorPos, u8 *outLeft, u8 *outTop
     {
         slotRow = (cursorPos / IN_BOX_COLUMNS) + 1;
         u8 col = cursorPos % IN_BOX_COLUMNS;
-        
+
         if (col < 3)
             *outLeft = 15 + (col * 3);
         else
             *outLeft = (u8[]){16, 19, 22}[col - 3] - sStorage->menuWindow.width + 1;
     }
-    
+
     u8 preferredTop = validTopPositions[min(slotRow, ARRAY_COUNT(validTopPositions) - 1)];
-    
-    if (preferredTop + menuHeight <= 19)
+
+    if (preferredTop + menuHeight <= STORAGE_MENU_BOTTOM_MAX)
     {
         *outTop = preferredTop;
     }
@@ -8088,7 +8041,7 @@ static void GetMenuPosition(u8 cursorArea, u8 cursorPos, u8 *outLeft, u8 *outTop
     {
         for (s8 i = ARRAY_COUNT(validTopPositions) - 1; i >= 0; i--)
         {
-            if (validTopPositions[i] + menuHeight <= 19)
+            if (validTopPositions[i] + menuHeight <= STORAGE_MENU_BOTTOM_MAX)
             {
                 *outTop = validTopPositions[i];
                 break;
@@ -8100,18 +8053,18 @@ static void GetMenuPosition(u8 cursorArea, u8 cursorPos, u8 *outLeft, u8 *outTop
 static void AddMenu(void)
 {
     u8 tilemapLeft, tilemapTop;
-    
+
     sStorage->menuWindow.width = (sStorage->menuWidth + 7) / 8 + 2;
-    if (sStorage->menuWindow.width > 28)
-        sStorage->menuWindow.width = 28;
-    sStorage->menuWindow.height = 2 * sStorage->menuItemsCount;
-    GetMenuPosition(sCursorArea, sCursorPosition, &tilemapLeft, &tilemapTop);    
+    if (sStorage->menuWindow.width > WIN_MENU_W)
+        sStorage->menuWindow.width = WIN_MENU_W;
+    sStorage->menuWindow.height = STORAGE_MENU_ROW_H * sStorage->menuItemsCount;
+    GetMenuPosition(sCursorArea, sCursorPosition, &tilemapLeft, &tilemapTop);
     sStorage->menuWindow.tilemapLeft = tilemapLeft;
     sStorage->menuWindow.tilemapTop = tilemapTop;
     sStorage->menuWindowId = AddWindow(&sStorage->menuWindow);
     ClearMonInfoTilemap();
     ClearWindowTilemap(sStorage->menuWindowId);
-    DrawStdFrameWithCustomTileAndPalette(sStorage->menuWindowId, FALSE, 192, 14);
+    DrawStdFrameWithCustomTileAndPalette(sStorage->menuWindowId, FALSE, STORAGE_BASE_STD_BORDER, PAL_STORAGE_FRAME);
     PrintMenuTable(sStorage->menuWindowId, sStorage->menuItemsCount, (void *)sStorage->menuItems);
     InitMenuInUpperLeftCornerNormal(sStorage->menuWindowId, sStorage->menuItemsCount, 0);
     ScheduleBgCopyTilemapToVram(0);
@@ -9021,7 +8974,7 @@ static const u8 *GetMovingItemName(void)
     return GetItemName(sStorage->movingItemId);
 }
 
-static u16 GetMovingItemId(void)
+static enum Item GetMovingItemId(void)
 {
     return sStorage->movingItemId;
 }
@@ -9211,6 +9164,7 @@ static void SpriteCB_ItemIcon_ToHand(struct Sprite *sprite)
         sprite->data[4] = 16;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] -= sprite->data[3];
         sprite->data[2] -= sprite->data[4];
@@ -9241,6 +9195,7 @@ static void SpriteCB_ItemIcon_ToMon(struct Sprite *sprite)
         sprite->data[4] = 16;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] += sprite->data[3];
         sprite->data[2] += sprite->data[4];
@@ -9266,6 +9221,7 @@ static void SpriteCB_ItemIcon_SwapToHand(struct Sprite *sprite)
         sprite->data[4] = sStorage->cursorSprite->y + sStorage->cursorSprite->y2 + 8;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         if (++sprite->data[5] > 16)
         {
@@ -9315,6 +9271,7 @@ static void SpriteCB_ItemIcon_SwapToMon(struct Sprite *sprite)
         }
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         if (++sprite->data[5] > 16)
         {
@@ -9362,19 +9319,6 @@ static void SpriteCB_ItemIcon_HideParty(struct Sprite *sprite)
 //------------------------------------------------------------------------------
 //  SECTION: General utility
 //------------------------------------------------------------------------------
-
-
-// Leftover from FRLG
-static void UNUSED BackupPokemonStorage(void/*struct PokemonStorage * dest*/)
-{
-    //*dest = *gPokemonStoragePtr;
-}
-
-// Leftover from FRLG
-static void UNUSED RestorePokemonStorage(void/*struct PokemonStorage * src*/)
-{
-    //*gPokemonStoragePtr = *src;
-}
 
 // Functions here are general utility functions.
 static void SetCurrentBox(u8 boxId)

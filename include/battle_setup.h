@@ -34,7 +34,7 @@ typedef union PACKED TrainerBattleParameter
         u8 continueScript:1;
         u8 facePlayer:1;
         u8 earlyRival:1;
-        u8 padding:1;
+        u8 skipFlagCheck:1;
         u8 objEventLocalIdA;
         u16 opponentA;
         u8 *introTextA;
@@ -141,6 +141,7 @@ s32 TrainerIdToRematchTableId(const struct RematchTrainer *table, u16 trainerId)
 s32 FirstBattleTrainerIdToRematchTableId(const struct RematchTrainer *table, u16 trainerId);
 u16 GetRematchTrainerIdFromTable(const struct RematchTrainer *table, u16 firstBattleTrainerId);
 u8 GetRivalBattleFlags(void);
+void BattleSetup_StartBXPYBattle(u32 battleType);
 
 void CreateNPCTrainerPartyFromTrainer(struct Pokemon *party, const struct Trainer *trainer);
 

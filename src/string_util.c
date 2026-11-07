@@ -124,7 +124,7 @@ u16 StringLength(const u8 *str)
 
 u16 StringLineLength(const u8 *str)
 {
-    u16 i = 0, length = 0;
+    u16 length = 0;
 
     while (str[length] != EOS)
     {
@@ -135,7 +135,6 @@ u16 StringLineLength(const u8 *str)
         case CHAR_NEWLINE:
             return length;
         default:
-            i++;
             length++;
             break;
         }
@@ -377,8 +376,10 @@ u8 *StringExpandPlaceholders(u8 *dest, const u8 *src)
             case EXT_CTRL_CODE_COLOR_HIGHLIGHT_SHADOW:
             case EXT_CTRL_CODE_TEXT_COLORS:
                 *dest++ = *src++;
+                [[fallthrough]];
             case EXT_CTRL_CODE_PLAY_BGM:
                 *dest++ = *src++;
+                [[fallthrough]];
             default:
                 *dest++ = *src++;
             }

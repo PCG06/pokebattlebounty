@@ -20,6 +20,8 @@
 #include "constants/party_menu.h"
 #include "constants/songs.h"
 
+#include "sound.h"
+
 #define VALID_MON 0
 #define INVALID_MON 1
 
@@ -183,7 +185,7 @@ void PickPartyMon(struct ScriptContext *ctx)
             return;
         }
     }
-    gSpecialVar_0x8004 = PARTY_NOTHING_CHOSEN;
+    gSpecialVar_0x8004 = PARTY_MON_CANCEL;
 }
 
 enum LearnMoveState
@@ -275,7 +277,7 @@ s32 LearnMove(const struct MoveLearnUI *ui, u8 taskId)
         if (GiveMoveToBoxMon(boxmon, move) != MON_HAS_MAX_MOVES)
             return LEARNED_MOVE_1;
         else
-            return ASK_REPLACEMENT_1;
+            return WANT_REPLACE_2;
     case ASK_REPLACEMENT_1:
         GetBoxMonNickname(boxmon, gStringVar1);
         StringCopy(gStringVar2, GetMoveName(move));
@@ -288,10 +290,10 @@ s32 LearnMove(const struct MoveLearnUI *ui, u8 taskId)
         switch (ui->waitConfirmation())
         {
         case 0: // Yes
-            return WANT_REPLACE_1;
+            return WANT_REPLACE_2;
         case 1: // No
         case MENU_B_PRESSED:
-            return REFUSE_REPLACE_1;
+            return DID_NOT_LEARN_1;
         }
         return state;
     case REFUSE_REPLACE_1:
@@ -308,7 +310,7 @@ s32 LearnMove(const struct MoveLearnUI *ui, u8 taskId)
             return DID_NOT_LEARN_1;
         case 1: // No
         case MENU_B_PRESSED:
-            return WANT_REPLACE_1;
+            return WANT_REPLACE_2;
         }
         return state;
     case WANT_REPLACE_1:
@@ -319,9 +321,9 @@ s32 LearnMove(const struct MoveLearnUI *ui, u8 taskId)
         return WANT_REPLACE_3;
     case WANT_REPLACE_3:
         if (GetMoveSlotToReplace() == MAX_MON_MOVES)
-            return REFUSE_REPLACE_1;
+            return DID_NOT_LEARN_1;
         else
-            return FORGOT_MOVE_1;
+            return REPLACE_MOVE_1;
     case LEARNED_MOVE_1:
         GetBoxMonNickname(boxmon, gStringVar1);
         StringCopy(gStringVar2, GetMoveName(move));
@@ -352,15 +354,14 @@ s32 LearnMove(const struct MoveLearnUI *ui, u8 taskId)
         return LEARN_MOVE_END;
     }
     case DID_NOT_LEARN_1:
-        GetBoxMonNickname(boxmon, gStringVar1);
-        StringCopy(gStringVar2, GetMoveName(move));
         gSpecialVar_Result = FALSE;
-        ui->printMessage(gText_MoveNotLearned);
         return LEARN_MOVE_END;
     default:
         errorf("Unknown LearnMove state %d\nEnding move learning ...", state);
+        [[fallthrough]];
     case LEARN_MOVE_END:
-        ui->endTask(taskId);
+        if (IsFanfareTaskInactive())
+            ui->endTask(taskId);
         return LEARN_MOVE_END;
     }
 }

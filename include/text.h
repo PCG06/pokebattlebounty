@@ -14,6 +14,8 @@ STATIC_ASSERT(   TEXT_SPEED_SLOW_MODIFIER    <= 31
 // loaded at once but not copied to vram yet.
 #define TEXT_SKIP_DRAW 0xFF
 
+#define KEYPAD_ICON_HEIGHT 12
+
 enum {
     FONT_SMALL,
     FONT_NORMAL,
@@ -29,6 +31,11 @@ enum {
     FONT_SMALL_NARROWER,
     FONT_SHORT_NARROW,
     FONT_SHORT_NARROWER,
+    // start bwBattleUI
+    FONT_OUTLINED,
+    FONT_OUTLINED_NARROW,
+    FONT_BATTLE_UI_ELEMENTS, // contains unique number glyph for double battle and status icons
+    // end bwBattleUI
 };
 
 #define FONT_MALE FONT_NORMAL
@@ -110,17 +117,22 @@ struct TextPrinterTemplate
     };
 };
 
+typedef void (*TextPrinterCallback)(struct TextPrinterTemplate *printerTemplate, u16 renderCmd);
+
 struct TextPrinter
 {
     struct TextPrinterTemplate printerTemplate;
 
-    void (*callback)(struct TextPrinterTemplate *, u16);
+    TextPrinterCallback callback;
 
     u16 utilityCounter:13;
     u16 downArrowYPosIdx:2;
     bool16 hasFontIdBeenSet:1;
     u8 autoScrollDelay;
-    u8 fontId:4;
+    // Start bwBattleUI
+    //u8 fontId:4;
+    u8 unused:4;
+    // End bwBattleUI
     bool8 hasPrintBeenSpedUp:1;
     u8 japanese:1;
     u8 active:1;
@@ -132,7 +144,11 @@ struct TextPrinter
     u8 minLetterSpacing;
 
     u8 textSpeed;
-    u8 padding[3];
+    // Start bwBattleUI
+    //u8 padding[3];
+    u8 fontId;      // expanded for new battle-related fonts.
+    u8 padding[2];
+    // End bwBattleUI
 
     struct TextPrinter *nextPrinter;
 
@@ -180,13 +196,13 @@ struct TextGlyph
 };
 
 extern TextFlags gTextFlags;
-extern u8 gDisableTextPrinters;
+extern bool8 gDisableTextPrinters;
 extern struct TextGlyph gCurGlyph;
 
 void DeactivateAllTextPrinters(void);
 void DeactivateSingleTextPrinter(u32 id, enum TextPrinterType type);
-u16 AddTextPrinterParameterized(u8 windowId, u8 fontId, const u8 *str, u8 x, u8 y, u8 speed, void (*callback)(struct TextPrinterTemplate *, u16));
-u16 AddSpriteTextPrinterParameterized(u8 spriteId, u8 fontId, const u8 *str, u8 x, u8 y, u8 speed, void (*callback)(struct TextPrinterTemplate *, u16));
+u16 AddTextPrinterParameterized(u8 windowId, u8 fontId, const u8 *str, u8 x, u8 y, u8 speed, TextPrinterCallback callback);
+u16 AddSpriteTextPrinterParameterized(u8 spriteId, u8 fontId, const u8 *str, u8 x, u8 y, u8 speed, TextPrinterCallback callback);
 void AddSpriteTextPrinterParameterized3(u8 spriteId, u8 fontId, u8 left, u8 top, const u8 *color, s8 speed, const u8 *str);
 void AddSpriteTextPrinterParameterized4(u8 spriteId, u8 fontId, u8 left, u8 top, u8 letterSpacing, u8 lineSpacing, const u8 *color, s8 speed, const u8 *str);
 void AddSpriteTextPrinterParameterized6(u8 spriteId, u8 fontId, u8 left, u8 top, u8 letterSpacing, u8 lineSpacing, const union TextColor color, s8 speed, const u8 *str);

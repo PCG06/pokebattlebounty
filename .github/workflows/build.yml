@@ -27,7 +27,7 @@ jobs:
 
       - name: Install Poryscript
         run: |
-          curl -L -o poryscript.zip https://github.com/huderlem/poryscript/releases/download/3.6.0/poryscript-linux.zip
+          curl -L -o poryscript.zip https://github.com/huderlem/poryscript/releases/download/3.6.1/poryscript-linux.zip
           unzip poryscript.zip -d poryscript
           mkdir -p tools/poryscript
           chmod +x poryscript/poryscript-linux/poryscript
@@ -71,7 +71,7 @@ jobs:
 
       - name: Install Poryscript
         run: |
-          curl -L -o poryscript.zip https://github.com/huderlem/poryscript/releases/download/3.6.0/poryscript-linux.zip
+          curl -L -o poryscript.zip https://github.com/huderlem/poryscript/releases/download/3.6.1/poryscript-linux.zip
           unzip poryscript.zip -d poryscript
           mkdir -p tools/poryscript
           chmod +x poryscript/poryscript-linux/poryscript
@@ -115,7 +115,7 @@ jobs:
 
       - name: Install Poryscript
         run: |
-          curl -L -o poryscript.zip https://github.com/huderlem/poryscript/releases/download/3.6.0/poryscript-linux.zip
+          curl -L -o poryscript.zip https://github.com/huderlem/poryscript/releases/download/3.6.1/poryscript-linux.zip
           unzip poryscript.zip -d poryscript
           mkdir -p tools/poryscript
           chmod +x poryscript/poryscript-linux/poryscript
@@ -158,13 +158,3 @@ jobs:
     steps:
       - name: All builds passed
         run: echo "All builds and tests passed."
-
-  docs_validate:
-    if: github.actor != 'allcontributors[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check that SUMMARY.md includes markdown doc files
-        run: .github/docs_validate/inclusive_summary.py

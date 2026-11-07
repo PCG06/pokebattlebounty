@@ -7,6 +7,7 @@
 #include "random.h"
 #include "string_util.h"
 #include "trainer_pools.h"
+#include "trainer_util.h"
 #include "constants/item.h"
 #include "constants/abilities.h"
 #include "constants/trainers.h"
@@ -86,7 +87,20 @@ TEST("CreateNPCTrainerPartyForTrainer generates customized Pokémon")
 
     EXPECT_EQ(GetMonData(&testParty[0], MON_DATA_DYNAMAX_LEVEL), 5);
     EXPECT_EQ(GetMonData(&testParty[1], MON_DATA_DYNAMAX_LEVEL), 10);
+    EXPECT_EQ(GetMonData(&testParty[2], MON_DATA_DYNAMAX_LEVEL), BLOCK_AI_DYNAMAX);
 
+    EXPECT_EQ(GetMonData(&testParty[0], MON_DATA_TERA_TYPE), TYPE_MYSTERY);
+    EXPECT_EQ(GetMonData(&testParty[2], MON_DATA_TERA_TYPE), TYPE_WATER);
+
+    Free(testParty);
+}
+
+TEST("CreateNPCTrainerPartyForTrainer doesn't set mystery tera type when Smart Tera AI flag is set")
+{
+    struct Pokemon *testParty = Alloc(6 * sizeof(struct Pokemon));
+    u32 currTrainer = 15;
+    CreateNPCTrainerPartyFromTrainer(testParty, GetTrainerStructFromId(currTrainer));
+    EXPECT_EQ(GetMonData(&testParty[0], MON_DATA_TERA_TYPE), TYPE_PSYCHIC);
     Free(testParty);
 }
 
@@ -99,18 +113,20 @@ TEST("CreateNPCTrainerPartyForTrainer generates different personalities for diff
     Free(testParty);
 }
 
-TEST("ModifyPersonalityForNature can set any nature")
+TEST("ModifyPersonalityForNature can set any nature without affecting gender value")
 {
-    u32 personality = 0, nature = 0, j = 0, k = 0;
+    u32 personality = 0, nature = 0, j = 0, k = 0, gender = 0;
     for (j = 0; j < 64; j++)
     {
         for (k = 0; k < NUM_NATURES; k++)
         {
-            PARAMETRIZE { personality = Random32(); nature = k; }
+            u32 rand = (Random32() & 0xFFFFDF00) + 0x1000;
+            PARAMETRIZE { personality = rand; nature = k; gender = rand & 0xFF;}
         }
     }
     ModifyPersonalityForNature(&personality, nature);
     EXPECT_EQ(GetNatureFromPersonality(personality), nature);
+    EXPECT_EQ(personality & 0xFF, gender);
 }
 
 TEST("Trainer Class Balls apply to the entire party")

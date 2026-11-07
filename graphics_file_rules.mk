@@ -63,6 +63,20 @@ $(UNUSEDGFXDIR)/redyellowgreen_frame.bin: $(UNUSEDGFXDIR)/red_frame.bin \
 $(BATINTGFXDIR)/ability_pop_up.4bpp: %.4bpp: %.png
 	$(GFX) $< $@ -mwidth 8 -mheight 4
 
+# start bwBattleUI
+
+$(BATINTGFXDIR)/bw/cursor.4bpp: %.4bpp: %.png
+	$(GFX) $< $@ -mwidth 2 -mheight 2
+
+$(BATINTGFXDIR)/bw/textbox.gbapal: $(BATINTGFXDIR)/bw/textbox_0.gbapal \
+                                   $(BATINTGFXDIR)/bw/textbox_1.gbapal
+	@cat $^ >$@
+
+$(BATINTGFXDIR)/bw/ability_pop_up.4bpp: %.4bpp: %.png
+	$(GFX) $< $@ -mwidth 8 -mheight 4
+
+# end bwBattleUI
+
 $(JPCONTESTGFXDIR)/composite_1.4bpp: $(JPCONTESTGFXDIR)/frame_1.4bpp \
                                      $(JPCONTESTGFXDIR)/floor.4bpp \
                                      $(JPCONTESTGFXDIR)/frame_2.4bpp \
@@ -101,6 +115,9 @@ $(TYPESGFXDIR)/move_types.4bpp: $(types:%=$(TYPESGFXDIR)/%.4bpp) $(contest_types
 $(TYPESGFXDIR)/move_types.gbapal: $(TYPESGFXDIR)/move_types_1.gbapal \
                                   $(TYPESGFXDIR)/move_types_2.gbapal \
                                   $(TYPESGFXDIR)/move_types_3.gbapal
+	@cat $^ >$@
+
+$(TYPESGFXDIR)/tera/move_types.4bpp: $(types:%=$(TYPESGFXDIR)/tera/%.4bpp)
 	@cat $^ >$@
 
 $(ROULETTEGFXDIR)/roulette_tilt.4bpp: $(ROULETTEGFXDIR)/shroomish.4bpp \

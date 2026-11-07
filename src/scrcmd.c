@@ -62,8 +62,10 @@
 #include "window.h"
 #include "list_menu.h"
 #include "malloc.h"
+#include "bxpy.h"
 #include "battle.h"
 #include "quests.h"
+#include "constants/comparison_operators.h"
 #include "constants/event_objects.h"
 #include "constants/map_types.h"
 #include "constants/party_menu.h"
@@ -89,15 +91,15 @@ extern const u8 *gStdScripts_End[];
 static void CloseBrailleWindow(void);
 static void DynamicMultichoiceSortList(struct ListMenuItem *items, u32 count);
 
-static const u8 sScriptConditionTable[6][3] =
+static const u8 sScriptConditionTable[COMPARISON_OPERATORS_COUNT][3] =
 {
-//  <  =  >
-    {1, 0, 0}, // <
-    {0, 1, 0}, // =
-    {0, 0, 1}, // >
-    {1, 1, 0}, // <=
-    {0, 1, 1}, // >=
-    {1, 0, 1}, // !=
+//                              <  =  >
+    [LESS_THAN] =              {1, 0, 0},
+    [EQUAL] =                  {0, 1, 0},
+    [GREATER_THAN] =           {0, 0, 1},
+    [LESS_THAN_OR_EQUAL] =     {1, 1, 0},
+    [GREATER_THAN_OR_EQUAL] =  {0, 1, 1},
+    [NOT_EQUAL] =              {1, 0, 1},
 };
 
 
@@ -210,7 +212,7 @@ bool8 ScrCmd_call(struct ScriptContext *ctx)
 
 bool8 ScrCmd_goto_if(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     const u8 *ptr = (const u8 *)ScriptReadWord(ctx);
 
     Script_RequestEffects(SCREFF_V1);
@@ -222,7 +224,7 @@ bool8 ScrCmd_goto_if(struct ScriptContext *ctx)
 
 bool8 ScrCmd_call_if(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     const u8 *ptr = (const u8 *)ScriptReadWord(ctx);
 
     Script_RequestEffects(SCREFF_V1);
@@ -265,7 +267,7 @@ bool8 ScrCmd_vcall(struct ScriptContext *ctx)
 
 bool8 ScrCmd_vgoto_if(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     const u8 *ptr = (const u8 *)(ScriptReadWord(ctx) - sAddressOffset);
 
     Script_RequestEffects(SCREFF_V1);
@@ -277,7 +279,7 @@ bool8 ScrCmd_vgoto_if(struct ScriptContext *ctx)
 
 bool8 ScrCmd_vcall_if(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     const u8 *ptr = (const u8 *)(ScriptReadWord(ctx) - sAddressOffset);
 
     Script_RequestEffects(SCREFF_V1);
@@ -313,7 +315,7 @@ bool8 ScrCmd_callstd(struct ScriptContext *ctx)
 
 bool8 ScrCmd_gotostd_if(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     u8 index = ScriptReadByte(ctx);
 
     Script_RequestEffects(SCREFF_V1);
@@ -329,7 +331,7 @@ bool8 ScrCmd_gotostd_if(struct ScriptContext *ctx)
 
 bool8 ScrCmd_callstd_if(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     u8 index = ScriptReadByte(ctx);
 
     Script_RequestEffects(SCREFF_V1);
@@ -2304,7 +2306,7 @@ bool8 ScrCmd_checkfieldmove(struct ScriptContext *ctx)
         return FALSE;
 
     move = FieldMove_GetMoveId(fieldMove);
-    for (u32 i = 0; i < PARTY_SIZE; i++)
+    for (enum PartyMon i = PARTY_MON_0; i < PARTY_MON_NONE; i++)
     {
         enum Species species = GetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_SPECIES);
         if (!species)
@@ -2372,14 +2374,9 @@ bool8 ScrCmd_hidemoneybox(struct ScriptContext *ctx)
 
 bool8 ScrCmd_updatemoneybox(struct ScriptContext *ctx)
 {
-    u8 ignore = ScriptReadByte(ctx);
+    Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
 
-    if (!ignore)
-    {
-        Script_RequestEffects(SCREFF_V1 | SCREFF_HARDWARE);
-
-        ChangeAmountInMoneyBox(GetMoney(&gSaveBlock1Ptr->money));
-    }
+    ChangeAmountInMoneyBox(GetMoney(&gSaveBlock1Ptr->money));
     return FALSE;
 }
 
@@ -2413,7 +2410,7 @@ bool8 ScrCmd_updatecoinsbox(struct ScriptContext *ctx)
 bool8 ScrCmd_trainerbattle(struct ScriptContext *ctx)
 {
     Script_RequestEffects(SCREFF_V1 | SCREFF_TRAINERBATTLE);
-    
+
     ConfigureTrainerBattle(ctx);
     return FALSE;
 }
@@ -2727,7 +2724,7 @@ void NativeFunc_SetMetatileInRange(struct ScriptContext *ctx)
     bool8 hasCollision = ScriptReadByte(ctx);
     u8 elevation = ScriptReadByte(ctx);
     u32 temp;
-    
+
     if (xmin > xmax)
         SWAP(xmin, xmax, temp);
 
@@ -3115,7 +3112,7 @@ bool8 ScrCmd_checkobjectat(struct ScriptContext *ctx)
 
 bool8 Scrcmd_getsetpokedexflag(struct ScriptContext *ctx)
 {
-    enum NationalDexOrder speciesId = SpeciesToNationalPokedexNum(VarGet(ScriptReadHalfword(ctx)));
+    enum NationalDexOrder natDexNum = SpeciesToNationalPokedexNum(VarGet(ScriptReadHalfword(ctx)));
     u32 desiredFlag = VarGet(ScriptReadHalfword(ctx));
 
     if (desiredFlag == FLAG_SET_CAUGHT || desiredFlag == FLAG_SET_SEEN)
@@ -3123,10 +3120,10 @@ bool8 Scrcmd_getsetpokedexflag(struct ScriptContext *ctx)
     else
         Script_RequestEffects(SCREFF_V1);
 
-    gSpecialVar_Result = GetSetPokedexFlag(speciesId, desiredFlag);
+    gSpecialVar_Result = GetSetPokedexFlag(natDexNum, desiredFlag);
 
     if (desiredFlag == FLAG_SET_CAUGHT)
-        GetSetPokedexFlag(speciesId, FLAG_SET_SEEN);
+        GetSetPokedexFlag(natDexNum, FLAG_SET_SEEN);
 
     return FALSE;
 }
@@ -3266,7 +3263,7 @@ bool8 ScrCmd_fwdweekday(struct ScriptContext *ctx)
     return FALSE;
 }
 
-static bool32 EventEvolution(u32 partyIndex)
+static bool32 EventEvolution(enum PartyMon partyIndex)
 {
     bool32 canStopEvo = gSpecialVar_0x8000;
     enum Species targetSpecies = GetEvolutionTargetSpecies(&gParties[B_TRAINER_PLAYER][partyIndex], EVO_MODE_SCRIPT_TRIGGER, gSpecialVar_0x8005, NULL, &canStopEvo, CHECK_EVO);
@@ -3288,7 +3285,7 @@ static void TriggerMultipleEvolutions_Repeatable(void)
         gSpecialVar_0x8006++;
 
     gCB2_AfterEvolution = TriggerMultipleEvolutions_Repeatable;
-    for (u32 i = 0; i < gPartiesCount[B_TRAINER_PLAYER]; i++)
+    for (enum PartyMon i = PARTY_MON_0; i < gPartiesCount[B_TRAINER_PLAYER]; i++)
     {
         if (!(gTriedEvolving & (1u << i)))
         {
@@ -3312,23 +3309,23 @@ void Script_TriggerMultipleEvolutions(struct ScriptContext *ctx)
 void Script_TriggerUniqueEvolution(struct ScriptContext *ctx)
 {
     ctx->waitAfterCallNative = TRUE;
-    if (gSpecialVar_0x8004 == PARTY_NOTHING_CHOSEN)
+    if (gSpecialVar_0x8004 == PARTY_MON_CANCEL)
     {
         gSpecialVar_Result = EVO_EVENT_IMPOSSIBLE;
         return;
     }
-    assertf(gSpecialVar_0x8004 <= PARTY_SIZE, "TriggerEvolution script called with invalid partyIndex %d", gSpecialVar_0x8004)
+    assertf(gSpecialVar_0x8004 < PARTY_MON_NONE, "TriggerEvolution script called with invalid partyIndex %d", gSpecialVar_0x8004)
     {
         gSpecialVar_Result = EVO_EVENT_IMPOSSIBLE;
         return;
     }
     gCB2_AfterEvolution = CB2_ReturnToFieldContinueScript;
-    EventEvolution(gSpecialVar_0x8004);
+    EventEvolution((enum PartyMon)gSpecialVar_0x8004);
 }
 
 void Script_EndTrainerCanSeeIf(struct ScriptContext *ctx)
 {
-    u8 condition = ScriptReadByte(ctx);
+    enum ComparisonOperators condition = ScriptReadByte(ctx);
     if (ctx->breakOnTrainerBattle && sScriptConditionTable[condition][ctx->comparisonResult] == 1)
         StopScript(ctx);
 }
@@ -3381,6 +3378,39 @@ bool8 ScrCmd_getbraillestringwidth(struct ScriptContext * ctx)
         msg = (u8 *)ctx->data[0];
 
     gSpecialVar_0x8004 = GetStringWidth(FONT_BRAILLE, msg, -1);
+    return FALSE;
+}
+
+bool8 ScrCmd_bringxpicky(struct ScriptContext *ctx)
+{
+    enum BXPYBattleTypes battleType = ScriptReadHalfword(ctx);
+    u32 bringSize = ScriptReadHalfword(ctx);
+    u32 pickSize = ScriptReadHalfword(ctx);
+    u32 trainerA = VarGet(ScriptReadHalfword(ctx));
+    const u8 *loseTextA = (const u8 *)ScriptReadWord(ctx);
+    u32 trainerB = VarGet(ScriptReadHalfword(ctx));
+    const u8 *loseTextB = (const u8 *)ScriptReadWord(ctx);
+    u32 partner = VarGet(ScriptReadHalfword(ctx));
+
+    Script_RequestEffects(SCREFF_V1 | SCREFF_SAVE);
+
+    BXPY_Init(battleType, bringSize, pickSize, trainerA, loseTextA, trainerB, loseTextB, partner);
+    return FALSE;
+}
+
+bool8 ScrCmd_signmsg(struct ScriptContext *ctx)
+{
+    Script_RequestEffects(SCREFF_V1);
+
+    gMsgIsSignPost = TRUE;
+    return FALSE;
+}
+
+bool8 ScrCmd_normalmsg(struct ScriptContext *ctx)
+{
+    Script_RequestEffects(SCREFF_V1);
+
+    gMsgIsSignPost = FALSE;
     return FALSE;
 }
 
@@ -3443,7 +3473,7 @@ bool8 ScrCmd_questmenu(struct ScriptContext *ctx)
             QuestMenu_CopyQuestName(gStringVar1, questId);
         break;
     }
-    
+
     return TRUE;
 }
 

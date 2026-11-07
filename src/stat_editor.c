@@ -3,20 +3,13 @@
 #include "battle_factory.h"
 #include "battle_tent.h"
 #include "bg.h"
-#include "data.h"
+#include "daycare.h"
 #include "decompress.h"
 #include "event_data.h"
 #include "field_effect.h"
 #include "gpu_regs.h"
 #include "graphics.h"
-#include "item.h"
-#include "item_menu.h"
-#include "item_menu_icons.h"
-#include "list_menu.h"
-#include "item_icon.h"
-#include "item_use.h"
 #include "international_string_util.h"
-#include "main.h"
 #include "malloc.h"
 #include "menu.h"
 #include "menu_helpers.h"
@@ -24,20 +17,17 @@
 #include "overworld.h"
 #include "palette.h"
 #include "party_menu.h"
-#include "pokedex.h"
 #include "pokemon.h"
-#include "pokemon_icon.h"
+#include "pokemon_storage_system.h"
 #include "pokemon_summary_screen.h"
 #include "scanline_effect.h"
-#include "script.h"
 #include "sound.h"
 #include "stat_editor.h"
 #include "string_util.h"
-#include "strings.h"
 #include "task.h"
-#include "text_window.h"
 #include "trainer_pokemon_sprites.h"
 #include "tv.h"
+#include "constants/party_menu.h"
 #include "constants/rgb.h"
 #include "constants/songs.h"
 
@@ -52,7 +42,7 @@ struct StatEditorResources
     u8 panel;
     u8 panelInputMode;
     u8 leftRow;
-    u8 partyId;
+    u8 monIndex;
     u8 typeSpriteId;
     u8 natureUpSpriteId;
     u8 natureDownSpriteId;
@@ -83,7 +73,7 @@ struct StatEditorResources
 #define LEFT_ROW_COUNT    3
 
 #define RIGHT_PANEL_ROW_HP_TYPE 6
-#define RIGHT_PANEL_ROW_COUNT   7
+#define RIGHT_PANEL_ROW_COUNT   ((P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_NONE) ? 6 : 7)
 
 #define PANEL_INPUT_SELECT 0
 #define PANEL_INPUT_EDIT   1
@@ -147,6 +137,7 @@ enum WindowIds
 //==========EWRAM==========//
 static EWRAM_DATA struct StatEditorResources *sStatEditorDataPtr = NULL;
 static EWRAM_DATA u8 *sBg1TilemapBuffer = NULL;
+static EWRAM_DATA u16 sBg3TilemapBuffer[0x400] = {0};
 
 //==========STATIC=DEFINES==========//
 static void StatEditor_RunSetup(void);
@@ -158,13 +149,15 @@ static void StatEditor_InitWindows(void);
 static void PrintTitleToWindowMainState(void);
 static void Task_StatEditorWaitFadeIn(u8 taskId);
 static void Task_StatEditorMain(u8 taskId);
-static void CreateMonSprite(u32 dexNum);
+static void CreateMonSprite(enum Species species);
 static void DestroyMonSprite(void);
-static void PlayMonCry(struct Pokemon *mon);
+static void PlayMonCry(void);
 static void RunMonAnimTimer(void);
 static void PrintMonStats(void);
-static struct Pokemon *GetCurrentPartyMon(void);
-static bool32 HasAnyRelearnableMoves(void);
+static bool32 IsEditingBoxMon(void);
+static struct BoxPokemon *GetCurrentBoxMon(void);
+static void UpdateMoveRelearnerState(void);
+static void SetMonPosVars(void);
 static void SelectorCallback(struct Sprite *sprite);
 static u8 CreateSelectors(void);
 static void DestroySelectors(void);
@@ -190,7 +183,13 @@ static const struct BgTemplate sStatEditorBgTemplates[] =
         .charBaseIndex = 0,
         .mapBaseIndex = 26,
         .priority = 0
-    }
+    },
+    {
+        .bg = 3,
+        .charBaseIndex = 3,
+        .mapBaseIndex = 31,
+        .priority = 3,
+    },
 };
 
 static const struct WindowTemplate sMenuWindowTemplates[] =
@@ -202,7 +201,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 0,  // position from top (per 8 pixels)
         .width = 16,      // width (per 8 pixels)
         .height = 2,      // height (per 8 pixels)
-        .paletteNum = 15, // palette index to use for text
+        .paletteNum = 2, // palette index to use for text
         .baseBlock = 1,   // tile start in VRAM
     },
     [WINDOW_STATS_HEADER] =
@@ -212,7 +211,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 1,
         .width = 12,
         .height = 2,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32,
     },
     [WINDOW_STATS_PANEL] = 
@@ -222,7 +221,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 3,
         .width = 16,
         .height = 14,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24,
     },
     [WINDOW_NICKNAME] = 
@@ -232,7 +231,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 12,
         .width = 10,
         .height = 3,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24 + 224,
     },
     [WINDOW_ABILITIES] = 
@@ -242,7 +241,7 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 15,
         .width = 14,
         .height = 2,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24 + 224 + 36,
     },
     [WINDOW_NATURES] = 
@@ -252,30 +251,32 @@ static const struct WindowTemplate sMenuWindowTemplates[] =
         .tilemapTop = 17,
         .width = 14,
         .height = 2,
-        .paletteNum = 15,
+        .paletteNum = 2,
         .baseBlock = 1 + 32 + 24 + 224 + 36 + 28,
     },
     DUMMY_WIN_TEMPLATE
 };
 
-static const u32 sStatEditorBgTiles[]   = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
-static const u32 sStatEditorBgTilemap[] = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
-static const u16 sStatEditorBgPalette[] = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
-static const u32 sLeftArrowGfx[]        = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
-static const u32 sRightArrowGfx[]       = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
-static const u32 sNatureArrowsGfx[]     = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
-static const u16 sMiscPalette[]         = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
-static const u8 sA_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
-static const u8 sB_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
-static const u8 sLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
-static const u8 sStart_ButtonGfx[]      = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
-static const u8 sDPad_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
-static const u8 sDPadLR_ButtonGfx[]       = INCGFX_U8("graphics/stat_editor/dpad_lr_button.png", ".4bpp");
-static const u16 sMonShadowPalette[]    = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
-static const u32 sMoveTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/move_types.png", ".4bpp.smol");
-static const u16 sMoveTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/move_types.png", ".gbapal");
-static const u32 sTeraTypesGfx[]        = INCGFX_U32("graphics/summary_screen/swsh/tera_types.png", ".4bpp.smol");
-static const u16 sTeraTypesPalette[]    = INCGFX_U16("graphics/summary_screen/swsh/tera_types.png", ".gbapal");
+static const u32 sStatEditorBgTiles[]       = INCGFX_U32("graphics/stat_editor/background_tileset.png", ".4bpp.smol");
+static const u32 sStatEditorBgTilemap[]     = INCGFX_U32("graphics/stat_editor/background_tileset.bin", ".smolTM");
+static const u32 sStatEditorScrollTilemap[] = INCGFX_U32("graphics/stat_editor/scroll_bg.bin", ".smolTM");
+static const u16 sStatEditorBgPalette[]     = INCGFX_U16("graphics/stat_editor/background_pal.pal", ".gbapal");
+static const u32 sLeftArrowGfx[]            = INCGFX_U32("graphics/stat_editor/left_arrow.png", ".4bpp.smol");
+static const u32 sRightArrowGfx[]           = INCGFX_U32("graphics/stat_editor/right_arrow.png", ".4bpp.smol");
+static const u32 sNatureArrowsGfx[]         = INCGFX_U32("graphics/stat_editor/nature_arrows.png", ".4bpp.smol");
+static const u16 sMiscPalette[]             = INCGFX_U16("graphics/stat_editor/misc.pal", ".gbapal");
+static const u16 sTextPalette[]             = INCGFX_U16("graphics/stat_editor/text.pal", ".gbapal");
+static const u8 sA_ButtonGfx[]              = INCGFX_U8("graphics/stat_editor/a_button.png", ".4bpp");
+static const u8 sB_ButtonGfx[]              = INCGFX_U8("graphics/stat_editor/b_button.png", ".4bpp");
+static const u8 sLR_ButtonGfx[]             = INCGFX_U8("graphics/stat_editor/lr_button.png", ".4bpp");
+static const u8 sStart_ButtonGfx[]          = INCGFX_U8("graphics/stat_editor/start_button.png", ".4bpp");
+static const u8 sDPad_ButtonGfx[]           = INCGFX_U8("graphics/stat_editor/dpad_button.png", ".4bpp");
+static const u8 sDPadLR_ButtonGfx[]         = INCGFX_U8("graphics/stat_editor/dpad_lr_button.png", ".4bpp");
+static const u16 sMonShadowPalette[]        = INCGFX_U16("graphics/stat_editor/shadow.pal", ".gbapal");
+static const u32 sMoveTypesGfx[]            = INCGFX_U32("graphics/stat_editor/move_types.png", ".4bpp.smol");
+static const u16 sMoveTypesPalette[]        = INCGFX_U16("graphics/stat_editor/move_types.png", ".gbapal");
+static const u32 sTeraTypesGfx[]            = INCGFX_U32("graphics/stat_editor/tera_types.png", ".4bpp.smol");
+static const u16 sTeraTypesPalette[]        = INCGFX_U16("graphics/stat_editor/tera_types.png", ".gbapal");
 
 static const struct SpritePalette sSpritePal_MonShadow =
 {
@@ -569,16 +570,14 @@ enum FontColors
 {
     FONT_BLACK,
     FONT_WHITE,
-    FONT_RED,
-    FONT_BLUE,
+    FONT_WHITE_BLACK
 };
 
 static const u8 sMenuWindowFontColors[][3] =
 {
-    [FONT_BLACK] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_DARK_GRAY,  TEXT_COLOR_LIGHT_GRAY},
-    [FONT_WHITE] = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_WHITE,      TEXT_COLOR_DARK_GRAY},
-    [FONT_RED]   = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_DARK_GRAY},
-    [FONT_BLUE]  = {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_BLUE, TEXT_COLOR_DARK_GRAY},
+    [FONT_BLACK]       = {0, 1, 2},
+    [FONT_WHITE]       = {0, 3, 4},
+    [FONT_WHITE_BLACK] = {0, 3, 1}
 };
 
 static const struct OamData sOamData_Selector =
@@ -821,17 +820,20 @@ static const u8 sGenderColors[2][3] =
     {TEXT_COLOR_TRANSPARENT, TEXT_COLOR_LIGHT_RED,  TEXT_COLOR_RED}
 };
 
-static const u8 sText_MenuStat[]                = _("Stat");
-static const u8 sText_MenuEV[]                  = _("EVs");
-static const u8 sText_MenuIV[]                  = _("IVs");
-static const u8 sText_MenuLRButtonParty[]       = _("Party");
-static const u8 sText_MenuStartButtonMoves[]    = _("Moves");
-static const u8 sText_MenuABButtonSave[]        = _("Save");
-static const u8 sText_MenuDPadChangeStat[]      = _("Stat");
-static const u8 sText_MenuDPadChangeAbility[]   = _("Ability");
-static const u8 sText_MenuDPadChangeNature[]    = _("Nature");
-static const u8 sText_MenuDPadChangeHPType[]    = _("HP Type");
-static const u8 sText_MenuDPadChangeTeraType[]  = _("Tera Type");
+static const u8 sText_MenuStat[]               = _("Stat");
+static const u8 sText_MenuEV[]                 = _("EVs");
+static const u8 sText_MenuIV[]                 = _("IVs");
+static const u8 sText_MenuAbility[]            = _("Ability");
+static const u8 sText_MenuNature[]             = _("Nature");
+static const u8 sText_MenuLRButtonParty[]      = _("Party");
+static const u8 sText_MenuLRButtonBox[]        = _("Box");
+static const u8 sText_MenuStartButtonMoves[]   = _("Moves");
+static const u8 sText_MenuABButtonSave[]       = _("Save");
+static const u8 sText_MenuDPadChangeStat[]     = _("Stat");
+static const u8 sText_MenuDPadChangeAbility[]  = _("Ability");
+static const u8 sText_MenuDPadChangeNature[]   = _("Nature");
+static const u8 sText_MenuDPadChangeHPType[]   = _("HP Type");
+static const u8 sText_MenuDPadChangeTeraType[] = _("Tera Type");
 
 // Begin Generic UI Initialization Code
 
@@ -857,7 +859,10 @@ void StatEditor_Init(MainCallback callback)
     sStatEditorDataPtr->savedCallback         = callback;
     sStatEditorDataPtr->leftSelectorSpriteId  = 0xFF;
     sStatEditorDataPtr->rightSelectorSpriteId = 0xFF;
-    sStatEditorDataPtr->partyId               = gSpecialVar_0x8004;
+    if (IsEditingBoxMon())
+        sStatEditorDataPtr->monIndex          = gSpecialVar_MonBoxPos;
+    else
+        sStatEditorDataPtr->monIndex          = gSpecialVar_0x8004;
     sStatEditorDataPtr->panel                 = PANEL_LEFT;
     sStatEditorDataPtr->leftRow               = LEFT_ROW_NICKNAME;
     sStatEditorDataPtr->rightPanelColumn      = RIGHT_PANEL_EVS;
@@ -893,6 +898,11 @@ static void StatEditor_VBlankCB(void)
     LoadOam();
     ProcessSpriteCopyRequests();
     TransferPlttBuffer();
+    if (P_STAT_EDITOR_SCROLLING_BG)
+    {
+        ChangeBgX(3, 64, BG_COORD_ADD);
+        ChangeBgY(3, 64, BG_COORD_ADD);
+    }
     if (P_STAT_EDITOR_MON_IDLE_ANIMS && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
         RunMonAnimTimer();
     if (sStatEditorDataPtr->panelInputMode == PANEL_INPUT_EDIT)
@@ -937,8 +947,8 @@ static bool8 StatEditor_DoGfxSetup(void)
             gMain.state++;
         break;
     case 4:
-        sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
-        sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
+        sStatEditorDataPtr->speciesID = GetBoxMonData(GetCurrentBoxMon(), MON_DATA_SPECIES_OR_EGG);
+        UpdateMoveRelearnerState();
         LoadCompressedSpriteSheet(&sSpriteSheet_LeftArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_RightArrow);
         LoadCompressedSpriteSheet(&sSpriteSheet_NatureArrows);
@@ -983,12 +993,6 @@ static bool8 StatEditor_DoGfxSetup(void)
     return FALSE;
 }
 
-#define try_free(ptr) ({        \
-    void ** ptr__ = (void **)&(ptr);   \
-    if (*ptr__ != NULL)                \
-        Free(*ptr__);                  \
-})
-
 static void StatEditor_FreeResources(void)
 {
     DestroySelectors();
@@ -1000,14 +1004,14 @@ static void StatEditor_FreeResources(void)
     FreeSpriteTilesByTag(TAG_MOVE_TYPES);
     FreeSpriteTilesByTag(TAG_TERA_TYPES);
     StopCryAndClearCrySongs();
-    if (P_STAT_EDITOR_MON_SHADOWS)
+    if (P_STAT_EDITOR_BG_BLEND || P_STAT_EDITOR_MON_SHADOWS)
     {
         // Clear alpha blending used for the mon shadow
         SetGpuReg(REG_OFFSET_BLDCNT, 0);
         SetGpuReg(REG_OFFSET_BLDALPHA, 0);
     }
-    try_free(sStatEditorDataPtr);
-    try_free(sBg1TilemapBuffer);
+    TRY_FREE_AND_SET_NULL(sStatEditorDataPtr);
+    TRY_FREE_AND_SET_NULL(sBg1TilemapBuffer);
     FreeAllWindowBuffers();
 }
 
@@ -1023,7 +1027,7 @@ static void Task_StatEditorWaitFadeAndBail(u8 taskId)
 
 static void StatEditor_FadeAndBail(void)
 {
-    gLastViewedMonIndex = sStatEditorDataPtr->partyId;
+    gLastViewedMonIndex = sStatEditorDataPtr->monIndex;
     BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
     CreateTask(Task_StatEditorWaitFadeAndBail, 0);
     SetVBlankCallback(StatEditor_VBlankCB);
@@ -1041,15 +1045,21 @@ static bool8 StatEditor_InitBgs(void)
     memset(sBg1TilemapBuffer, 0, 0x800);
     ResetBgsAndClearDma3BusyFlags(0);
     InitBgsFromTemplates(0, sStatEditorBgTemplates, NELEMS(sStatEditorBgTemplates));
+    SetBgTilemapBuffer(3, sBg3TilemapBuffer);
     SetBgTilemapBuffer(1, sBg1TilemapBuffer);
+    ScheduleBgCopyTilemapToVram(3);
     ScheduleBgCopyTilemapToVram(1);
     SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_ON | DISPCNT_OBJ_1D_MAP);
-    if (P_STAT_EDITOR_MON_SHADOWS)
+    if (P_STAT_EDITOR_BG_BLEND || P_STAT_EDITOR_MON_SHADOWS)
     {
-        // Blend the shadow sprite (OBJ, ST_OAM_OBJ_BLEND) against bg 2, which sits behind the mon sprite
-        SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND);
+        if (P_STAT_EDITOR_BG_BLEND)
+            SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG3 | BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND | BLDCNT_TGT1_BG2 | BLDCNT_TGT1_BG1);
+        else
+            SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_BG3 | BLDCNT_TGT2_BG2 | BLDCNT_EFFECT_BLEND);
+
         SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(14, 6));
     }
+    ShowBg(3);
     ShowBg(0);
     ShowBg(1);
     ShowBg(2);
@@ -1073,10 +1083,15 @@ static bool8 StatEditor_LoadGraphics(void)
         }
         break;
     case 2:
-        LoadPalette(sStatEditorBgPalette, 0, 32);
+        DecompressDataWithHeaderWram(sStatEditorScrollTilemap, sBg3TilemapBuffer);
         sStatEditorDataPtr->gfxLoadState++;
         break;
     case 3:
+        LoadPalette(sStatEditorBgPalette, 0, PLTT_SIZE_4BPP);
+        LoadPalette(sTextPalette, BG_PLTT_ID(2), PLTT_SIZE_4BPP);
+        sStatEditorDataPtr->gfxLoadState++;
+        break;
+    case 4:
         if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
             LoadPalette(sMoveTypesPalette, OBJ_PLTT_ID(13), 3 * PLTT_SIZE_4BPP);
         else if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_TERASTAL)
@@ -1124,16 +1139,50 @@ static void PrintTextOnWindowWithFont(u8 windowId, const u8 *string, u8 x, u8 y,
 
 static void PrintTextOnWindow(u8 windowId, const u8 *string, u8 x, u8 y, u8 lineSpacing, u8 colorId)
 {
-    PrintTextOnWindowWithFont(windowId, string, x, y, lineSpacing, colorId, FONT_NORMAL);
+    PrintTextOnWindowWithFont(windowId, string, x, y, lineSpacing, colorId, FONT_SHORT_NARROW);
 }
 
 //
 //       Stat Editor Code
 //  End of UI setup code, beginning of stat editor specific code
 //
-static struct Pokemon *GetCurrentPartyMon(void)
+static bool32 IsEditingBoxMon(void)
 {
-    return &gParties[B_TRAINER_PLAYER][sStatEditorDataPtr->partyId];
+    return gSpecialVar_0x8004 == PC_MON_CHOSEN;
+}
+
+static struct BoxPokemon *GetCurrentBoxMon(void)
+{
+    if (IsEditingBoxMon())
+        return GetBoxedMonPtr(gSpecialVar_MonBoxId, sStatEditorDataPtr->monIndex);
+    return &gParties[B_TRAINER_PLAYER][sStatEditorDataPtr->monIndex].box;
+}
+
+static bool32 CanCycleBoxOrParty(void)
+{
+    if (!P_STAT_EDITOR_CYCLE_MODE)
+        return FALSE;
+
+    if (IsEditingBoxMon())
+    {
+        struct BoxPokemon *boxMons = GetBoxedMonPtr(gSpecialVar_MonBoxId, 0);
+
+        return AdvanceStorageMonIndex(boxMons, sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, 2) != -1 
+            || AdvanceStorageMonIndex(boxMons, sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, 0) != -1;
+    }
+    else
+    {
+        u32 count = gPartiesCount[B_TRAINER_PLAYER];
+        u32 validMons = 0;
+
+        for (u32 i = 0; i < count; i++)
+        {
+            if (!GetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_IS_EGG))
+                validMons++;
+        }
+
+        return validMons > 1;
+    }
 }
 
 // Mon sprite data fields (copied from swsh_party_menu)
@@ -1150,16 +1199,16 @@ static void SpriteCB_StatEditorMonPokemon(struct Sprite *sprite)
         sprite->sDontFlip = TRUE;
 
         if (!sStatEditorDataPtr->monAnimPlayed)
-            PlayMonCry(GetCurrentPartyMon());
+            PlayMonCry();
 
         PokemonSummaryDoMonAnimation(sprite, sprite->sSpecies, sprite->sIsEgg, sprite->sIsShadow);
         sStatEditorDataPtr->monAnimPlayed = TRUE;
     }
 }
 
-static u8 CreateStatEditorMonSprite(struct Pokemon *mon, bool32 isShadow)
+static u8 CreateStatEditorMonSprite(struct BoxPokemon *boxMon, bool32 isShadow)
 {
-    u16 species = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
+    enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES_OR_EGG);
     u8 shadowPalette = 0;
     u8 spriteId = CreateSprite(&gMultiuseSpriteTemplate, MON_ICON_X, MON_ICON_Y, 5);
 
@@ -1169,7 +1218,7 @@ static u8 CreateStatEditorMonSprite(struct Pokemon *mon, bool32 isShadow)
         gSprites[spriteId].sSpecies = species;
         gSprites[spriteId].sDelayAnim = 0;
         gSprites[spriteId].sIsShadow = isShadow;
-        gSprites[spriteId].sIsEgg = GetMonData(mon, MON_DATA_IS_EGG);
+        gSprites[spriteId].sIsEgg = GetBoxMonData(boxMon, MON_DATA_IS_EGG);
         gSprites[spriteId].oam.priority = 0;
         if (isShadow)
         {
@@ -1194,11 +1243,35 @@ static u8 CreateStatEditorMonSprite(struct Pokemon *mon, bool32 isShadow)
     return spriteId;
 }
 
-static bool32 HasAnyRelearnableMoves(void)
+static bool32 HasAnyRelearnableMoves(enum MoveRelearnerStates state)
 {
-    gMoveRelearnerState = MOVE_RELEARNER_TEACHABLE_MOVES;
-    struct BoxPokemon *boxMon = &GetCurrentPartyMon()->box;
-    return CanBoxMonRelearnMoves(boxMon, gMoveRelearnerState);
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    return CanBoxMonRelearnMoves(boxMon, state);
+}
+
+static void UpdateMoveRelearnerState(void)
+{
+    enum MoveRelearnerStates state;
+
+    const enum MoveRelearnerStates sStatEditorRelearnStates[] =
+    {
+        MOVE_RELEARNER_TEACHABLE_MOVES,
+        MOVE_RELEARNER_EVENT_MOVES
+    };
+
+    u32 count = ARRAY_COUNT(sStatEditorRelearnStates);
+
+    sStatEditorDataPtr->hasRelearnableMoves = FALSE;
+    for (u32 i = 0; i < count; i++)
+    {
+        state = sStatEditorRelearnStates[i];
+        if (HasAnyRelearnableMoves(state))
+        {
+            sStatEditorDataPtr->hasRelearnableMoves = TRUE;
+            gMoveRelearnerState = state;
+            break;
+        }
+    }
 }
 
 static inline bool32 ShouldShowMoveRelearner(void)
@@ -1209,30 +1282,34 @@ static inline bool32 ShouldShowMoveRelearner(void)
          && !InSlateportBattleTent());
 }
 
-static void PlayMonCry(struct Pokemon *mon)
+static void PlayMonCry(void)
 {
-    bool32 isEgg = GetMonData(mon, MON_DATA_SANITY_IS_BAD_EGG) ? TRUE : GetMonData(mon, MON_DATA_IS_EGG);
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+
+    bool32 isEgg = GetBoxMonData(boxMon, MON_DATA_SANITY_IS_BAD_EGG) ? TRUE : GetBoxMonData(boxMon, MON_DATA_IS_EGG);
 
     if (!isEgg)
     {
-        enum Species species = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
+        struct Pokemon mon;
+        BoxMonToMon(boxMon, &mon);
+        enum Species species = GetMonData(&mon, MON_DATA_SPECIES_OR_EGG);
 
-        if (ShouldPlayNormalMonCry(mon) == TRUE)
+        if (ShouldPlayNormalMonCry(&mon) == TRUE)
             PlayCry_ByMode(species, 0, CRY_MODE_NORMAL);
         else
             PlayCry_ByMode(species, 0, CRY_MODE_WEAK);
     }
 }
 
-#define HP_TYPE_BITS(mon) \
-    (((GetMonData(mon, MON_DATA_HP_IV)    & 1) << 0) \
-   | ((GetMonData(mon, MON_DATA_ATK_IV)   & 1) << 1) \
-   | ((GetMonData(mon, MON_DATA_DEF_IV)   & 1) << 2) \
-   | ((GetMonData(mon, MON_DATA_SPEED_IV) & 1) << 3) \
-   | ((GetMonData(mon, MON_DATA_SPATK_IV) & 1) << 4) \
-   | ((GetMonData(mon, MON_DATA_SPDEF_IV) & 1) << 5))
+#define HP_TYPE_BITS(boxMon) \
+    (((GetBoxMonData(boxMon, MON_DATA_HP_IV)    & 1) << 0) \
+   | ((GetBoxMonData(boxMon, MON_DATA_ATK_IV)   & 1) << 1) \
+   | ((GetBoxMonData(boxMon, MON_DATA_DEF_IV)   & 1) << 2) \
+   | ((GetBoxMonData(boxMon, MON_DATA_SPEED_IV) & 1) << 3) \
+   | ((GetBoxMonData(boxMon, MON_DATA_SPATK_IV) & 1) << 4) \
+   | ((GetBoxMonData(boxMon, MON_DATA_SPDEF_IV) & 1) << 5))
 
-static enum Type GetHiddenPowerTypeFromBits(u32 bits)
+static enum Type GetBoxMonHiddenPowerTypeFromBits(u32 bits)
 {
     enum Type hpTypes[NUMBER_OF_MON_TYPES];
     u32 hpTypeCount = 0;
@@ -1247,12 +1324,10 @@ static enum Type GetHiddenPowerTypeFromBits(u32 bits)
     return hpTypes[moveType];
 }
 
-static enum Type GetHiddenPowerType(void)
+static enum Type GetBoxMonHiddenPowerType(struct BoxPokemon *boxMon)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
-    u32 curBits = HP_TYPE_BITS(mon);
-
-    return GetHiddenPowerTypeFromBits(curBits);
+    u32 curBits = HP_TYPE_BITS(boxMon);
+    return GetBoxMonHiddenPowerTypeFromBits(curBits);
 }
 
 static u32 GetBitDifferenceCount(u32 a, u32 b)
@@ -1276,7 +1351,7 @@ static u32 GetClosestHiddenPowerBits(u32 curBits, enum Type targetType)
 
     for (u32 bits = 0; bits <= 63; bits++)
     {
-        if (GetHiddenPowerTypeFromBits(bits) != targetType)
+        if (GetBoxMonHiddenPowerTypeFromBits(bits) != targetType)
             continue;
 
         u32 cost = GetBitDifferenceCount(curBits, bits);
@@ -1291,14 +1366,14 @@ static u32 GetClosestHiddenPowerBits(u32 curBits, enum Type targetType)
     return bestBits;
 }
 
-static void ApplyHiddenPowerBits(struct Pokemon *mon, u32 curBits, u32 bestBits)
+static void ApplyHiddenPowerBits(struct BoxPokemon *boxMon, u32 curBits, u32 bestBits)
 {
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
     {
         if (!((curBits ^ bestBits) & (1u << i)))
             continue;
 
-        u32 iv = GetMonData(mon, sIVStatsMap[i]);
+        u32 iv = GetBoxMonData(boxMon, sIVStatsMap[i]);
 
         if (iv == 0)
             iv = 1;
@@ -1309,15 +1384,14 @@ static void ApplyHiddenPowerBits(struct Pokemon *mon, u32 curBits, u32 bestBits)
         else
             iv++;
 
-        SetMonData(mon, sIVStatsMap[i], &iv);
+        SetBoxMonData(boxMon, sIVStatsMap[i], &iv);
     }
 }
 
-static void SetHiddenPowerType(bool32 forward)
+static void SetBoxMonHiddenPowerType(struct BoxPokemon *boxMon, bool32 forward)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
-    u32 curBits = HP_TYPE_BITS(mon);
-    enum Type targetType = GetHiddenPowerTypeFromBits(curBits);
+    u32 curBits = HP_TYPE_BITS(boxMon);
+    enum Type targetType = GetBoxMonHiddenPowerTypeFromBits(curBits);
 
     do
     {
@@ -1332,14 +1406,15 @@ static void SetHiddenPowerType(bool32 forward)
 
     u32 bestBits = GetClosestHiddenPowerBits(curBits, targetType);
 
-    ApplyHiddenPowerBits(mon, curBits, bestBits);
+    ApplyHiddenPowerBits(boxMon, curBits, bestBits);
 }
 
 static void UpdateHiddenPowerTypeIcon(void)
 {
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    enum Type type = GetBoxMonHiddenPowerType(boxMon);
     u8 spriteId = sStatEditorDataPtr->typeSpriteId;
     struct Sprite *sprite = &gSprites[spriteId];
-    enum Type type = GetHiddenPowerType();
 
     StartSpriteAnim(sprite, type);
     sprite->oam.paletteNum = gTypesInfo[type].palette;
@@ -1349,10 +1424,9 @@ static void UpdateHiddenPowerTypeIcon(void)
     sprite->subpriority = 1;
 }
 
-static void SetTeraTypeSE(bool32 forward)
+static void SetBoxMonTeraType(struct BoxPokemon *boxMon, bool32 forward)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
-    enum Type targetType = GetMonData(mon, MON_DATA_TERA_TYPE);
+    enum Type targetType = GetBoxMonData(boxMon, MON_DATA_TERA_TYPE);
 
     do
     {
@@ -1365,14 +1439,14 @@ static void SetTeraTypeSE(bool32 forward)
 
     } while (targetType == TYPE_MYSTERY);
 
-    SetMonData(mon, MON_DATA_TERA_TYPE, &targetType);
+    SetBoxMonData(boxMon, MON_DATA_TERA_TYPE, &targetType);
 }
 
 static void UpdateTeraTypeIcon(void)
 {
     u8 spriteId = sStatEditorDataPtr->typeSpriteId;
     struct Sprite *sprite = &gSprites[spriteId];
-    enum Type type = GetMonData(GetCurrentPartyMon(), MON_DATA_TERA_TYPE);
+    enum Type type = GetBoxMonData(GetCurrentBoxMon(), MON_DATA_TERA_TYPE);
 
     StartSpriteAnim(sprite, type);
     sprite->oam.paletteNum = gTypesInfo[type].palette;
@@ -1382,25 +1456,25 @@ static void UpdateTeraTypeIcon(void)
     sprite->subpriority = 1;
 }
 
-static void CreateMonSprite(u32 dexNum)
+static void CreateMonSprite(enum Species species)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
-    u32 pid = GetMonData(mon, MON_DATA_PERSONALITY);
-    bool8 isShiny = GetMonData(mon, MON_DATA_IS_SHINY);
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    u32 pid = GetBoxMonData(boxMon, MON_DATA_PERSONALITY);
+    bool8 isShiny = GetBoxMonData(boxMon, MON_DATA_IS_SHINY);
 
     if (gMonSpritesGfxPtr == NULL)
         CreateMonSpritesGfxManager(MON_SPR_GFX_MANAGER_A, MON_SPR_GFX_MODE_NORMAL);
 
     HandleLoadSpecialPokePic(TRUE,
                               MonSpritesGfxManager_GetSpritePtr(MON_SPR_GFX_MANAGER_A, B_POSITION_OPPONENT_LEFT),
-                              dexNum,
+                              species,
                               pid);
-    LoadSpritePaletteWithTag(GetMonSpritePalFromSpeciesAndPersonality(dexNum, isShiny, pid), dexNum);
-    SetMultiuseSpriteTemplateToPokemon(dexNum, B_POSITION_OPPONENT_LEFT);
+    LoadSpritePaletteWithTag(GetMonSpritePalFromSpeciesAndPersonality(species, isShiny, pid), species);
+    SetMultiuseSpriteTemplateToPokemon(species, B_POSITION_OPPONENT_LEFT);
 
-    sStatEditorDataPtr->monSpriteId = CreateStatEditorMonSprite(mon, FALSE);
+    sStatEditorDataPtr->monSpriteId = CreateStatEditorMonSprite(boxMon, FALSE);
     if (P_STAT_EDITOR_MON_SHADOWS)
-        sStatEditorDataPtr->monShadowSpriteId = CreateStatEditorMonSprite(mon, TRUE);
+        sStatEditorDataPtr->monShadowSpriteId = CreateStatEditorMonSprite(boxMon, TRUE);
     else
         sStatEditorDataPtr->monShadowSpriteId = MAX_SPRITES;
     
@@ -1410,15 +1484,15 @@ static void CreateMonSprite(u32 dexNum)
 
 static void DestroyMonSprite(void)
 {
-    if (sStatEditorDataPtr->monSpriteId != 0 && sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
+    if (sStatEditorDataPtr->monSpriteId != MAX_SPRITES)
     {
         StopPokemonAnimationDelayTask();
         DestroySpriteAndFreeResources(&gSprites[sStatEditorDataPtr->monSpriteId]);
         sStatEditorDataPtr->monSpriteId = MAX_SPRITES;
     }
-    if (sStatEditorDataPtr->monShadowSpriteId != 0 && sStatEditorDataPtr->monShadowSpriteId != MAX_SPRITES)
+    if (sStatEditorDataPtr->monShadowSpriteId != MAX_SPRITES)
     {
-        StopShadowAnimDelayTask();
+        StopPokemonAnimationDelayTask();
         DestroySpriteAndFreeResources(&gSprites[sStatEditorDataPtr->monShadowSpriteId]);
         sStatEditorDataPtr->monShadowSpriteId = MAX_SPRITES;
     }
@@ -1442,7 +1516,7 @@ static void RunMonAnimTimer(void)
 
     if (sStatEditorDataPtr->monAnimTimer > P_STAT_EDITOR_MON_IDLE_ANIMS_FRAMES && monSpriteId != SPRITE_NONE) // time to re-run the anim
     {
-        struct Pokemon *mon = GetCurrentPartyMon();
+        struct BoxPokemon *boxMon = GetCurrentBoxMon();
 
         // Clear animation data for both sprites
         for (i = 1; i < 8; i++)
@@ -1453,15 +1527,15 @@ static void RunMonAnimTimer(void)
         }
 
         // Restore species and shadow flags for both sprites
-        gSprites[monSpriteId].sSpecies = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
+        gSprites[monSpriteId].sSpecies = GetBoxMonData(boxMon, MON_DATA_SPECIES_OR_EGG);
         gSprites[monSpriteId].sIsShadow = FALSE;
-        gSprites[monSpriteId].sIsEgg = GetMonData(mon, MON_DATA_IS_EGG);
+        gSprites[monSpriteId].sIsEgg = GetBoxMonData(boxMon, MON_DATA_IS_EGG);
 
         if (shadowSpriteId != SPRITE_NONE && shadowSpriteId != MAX_SPRITES)
         {
-            gSprites[shadowSpriteId].sSpecies = GetMonData(mon, MON_DATA_SPECIES_OR_EGG);
+            gSprites[shadowSpriteId].sSpecies = GetBoxMonData(boxMon, MON_DATA_SPECIES_OR_EGG);
             gSprites[shadowSpriteId].sIsShadow = TRUE;
-            gSprites[shadowSpriteId].sIsEgg = GetMonData(mon, MON_DATA_IS_EGG);
+            gSprites[shadowSpriteId].sIsEgg = GetBoxMonData(boxMon, MON_DATA_IS_EGG);
         }
 
         // Restart animation for both sprites
@@ -1526,10 +1600,13 @@ static void PrintTitleToWindowMainState(void)
 {
     FillWindowPixelBuffer(WINDOW_MAIN_HEADER, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
-    if (gPartiesCount[B_TRAINER_PLAYER] > 1)
+    if (CanCycleBoxOrParty())
     {
         BlitBitmapToWindow(WINDOW_MAIN_HEADER, sLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
-        PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
+        if (IsEditingBoxMon())
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonBox, 19, 0, 0, FONT_WHITE, FONT_NARROW);
+        else
+            PrintTextOnWindowWithFont(WINDOW_MAIN_HEADER, sText_MenuLRButtonParty, 19, 0, 0, FONT_WHITE, FONT_NARROW);
     }
 
     if (ShouldShowMoveRelearner())
@@ -1554,7 +1631,7 @@ void GetDPadText(void)
     }
     else if (sStatEditorDataPtr->panel == PANEL_RIGHT)
     {
-        if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+        if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
         {
             BlitBitmapToWindow(WINDOW_MAIN_HEADER, sDPadLR_ButtonGfx, 0, BUTTON_Y, 16, 8);
             if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
@@ -1583,7 +1660,7 @@ static void PrintTitleToWindowEditState(void)
 
 static void UpdateNatureArrowSprites(void)
 {
-    u32 nature = GetMonData(GetCurrentPartyMon(), MON_DATA_HIDDEN_NATURE);
+    u32 nature = GetBoxMonData(GetCurrentBoxMon(), MON_DATA_HIDDEN_NATURE);
     u32 natureUpStat = gNaturesInfo[nature].statUp;
     u32 natureDownStat = gNaturesInfo[nature].statDown;
     struct Sprite *upSprite = &gSprites[sStatEditorDataPtr->natureUpSpriteId];
@@ -1608,11 +1685,21 @@ static void UpdateNatureArrowSprites(void)
     downSprite->invisible = FALSE;
 }
 
+static enum Ability GetBoxMonAbility(struct BoxPokemon *boxMon)
+{
+    enum Species species = GetBoxMonData(boxMon, MON_DATA_SPECIES_OR_EGG);
+    u32 abilityNum = GetBoxMonData(boxMon, MON_DATA_ABILITY_NUM);
+    return GetSpeciesAbility(species, abilityNum);
+}
+
 static void PrintMonStats(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
-    u32 nature = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
-    enum Ability ability = GetMonAbility(mon);
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    struct Pokemon mon;
+    BoxMonToMon(boxMon, &mon);
+
+    u32 nature = GetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE);
+    enum Ability ability = GetBoxMonAbility(boxMon);
     u32 currentStat, digits;
     s32 xPos;
 
@@ -1623,40 +1710,40 @@ static void PrintMonStats(void)
     FillWindowPixelBuffer(WINDOW_NATURES, PIXEL_FILL(TEXT_COLOR_TRANSPARENT));
 
     sStatEditorDataPtr->evTotal = 0;
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuStat, 3,  0, 0, FONT_WHITE, FONT_NARROW);
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuEV,   40, 0, 0, FONT_WHITE, FONT_NARROW);
-    PrintTextOnWindowWithFont(WINDOW_STATS_HEADER, sText_MenuIV,   76, 0, 0, FONT_WHITE, FONT_NARROW);
+    PrintTextOnWindow(WINDOW_STATS_HEADER, sText_MenuStat, 3,  0, 0, FONT_WHITE_BLACK);
+    PrintTextOnWindow(WINDOW_STATS_HEADER, sText_MenuEV,   40, 0, 0, FONT_WHITE_BLACK);
+    PrintTextOnWindow(WINDOW_STATS_HEADER, sText_MenuIV,   76, 0, 0, FONT_WHITE_BLACK);
 
     UpdateNatureArrowSprites();
 
     // Print Mon Stats
     for (u32 i = STAT_HP; i < NUM_STATS; i++)
     {
-        currentStat = GetMonData(mon, sActualStatsMap[i]);
+        currentStat = GetMonData(&mon, sActualStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sActualStatsMap[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sActualStatsMap[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sActualStatsMap[i]].y, 0, FONT_BLACK, FONT_NORMAL);
 
         // EVs
-        currentStat = GetMonData(mon, sEVStatsMap[i]);
+        currentStat = GetBoxMonData(boxMon, sEVStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         sStatEditorDataPtr->evTotal += currentStat;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sEVStatsMap[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sEVStatsMap[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sEVStatsMap[i]].y, 0, FONT_BLACK, FONT_NORMAL);
 
         // IVs
-        currentStat = GetMonData(mon, sIVStatsMap[i]);
+        currentStat = GetBoxMonData(boxMon, sIVStatsMap[i]);
         digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
         ConvertIntToDecimalStringN(gStringVar2, currentStat, STR_CONV_MODE_RIGHT_ALIGN, digits);
         xPos = GetStringCenterAlignXOffset(FONT_NORMAL, gStringVar2, 18) + sStatPrintData[sIVStatsMap[i]].x;
-        PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sIVStatsMap[i]].y, 0, FONT_BLACK);
+        PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, xPos, sStatPrintData[sIVStatsMap[i]].y, 0, FONT_BLACK, FONT_NORMAL);
     }
 
     digits = P_STAT_EDITOR_CENTER_ALIGN_STATS ? (currentStat == 0 ? 1 : CountDigits(currentStat)) : 3;
     ConvertIntToDecimalStringN(gStringVar2, sStatEditorDataPtr->evTotal, STR_CONV_MODE_RIGHT_ALIGN, digits);
-    PrintTextOnWindow(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK);
+    PrintTextOnWindowWithFont(WINDOW_STATS_PANEL, gStringVar2, STARTING_X + SECOND_COLUMN + 2, STARTING_Y + (STAT_ROW_HEIGHT * 6), 0, FONT_BLACK, FONT_NORMAL);
 
     if (P_STAT_EDITOR_HP_OR_TERA == P_STAT_EDITOR_HIDDEN_POWER)
         UpdateHiddenPowerTypeIcon();
@@ -1664,20 +1751,20 @@ static void PrintMonStats(void)
         UpdateTeraTypeIcon();
 
     // Print ability / nature / name
-    GetMonNickname(mon, gStringVar2);
+    GetBoxMonNickname(boxMon, gStringVar2);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NICKNAME)) + 1 : 12;
-    PrintTextOnWindowWithFont(WINDOW_NICKNAME, gStringVar2, xPos, 4, 0, FONT_WHITE, FONT_SHORT_NARROW);
+    PrintTextOnWindow(WINDOW_NICKNAME, gStringVar2, xPos, 4, 0, FONT_WHITE);
 
     StringCopy(gStringVar2, gAbilitiesInfo[ability].name);
-    PrintTextOnWindowWithFont(WINDOW_ABILITIES, sText_MenuDPadChangeAbility, 3, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
-    u32 fontId = GetFontIdToFit(gStringVar2, FONT_SMALL_NARROW, 0, WindowWidthPx(WINDOW_ABILITIES) - 48);
+    PrintTextOnWindowWithFont(WINDOW_ABILITIES, sText_MenuAbility, 3, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    u32 fontId = GetFontIdToFit(gStringVar2, FONT_SHORT_NARROW, 0, WindowWidthPx(WINDOW_ABILITIES) - 48);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(fontId, gStringVar2, WindowWidthPx(WINDOW_ABILITIES) + 28) : 32;
     PrintTextOnWindowWithFont(WINDOW_ABILITIES, gStringVar2, xPos, 2, 0, FONT_BLACK, fontId);
 
     StringCopy(gStringVar2, gNaturesInfo[nature].name);
-    PrintTextOnWindowWithFont(WINDOW_NATURES, sText_MenuDPadChangeNature, 2, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
+    PrintTextOnWindowWithFont(WINDOW_NATURES, sText_MenuNature, 2, 2, 0, FONT_BLACK, FONT_SMALL_NARROWER);
     xPos = P_STAT_EDITOR_CENTER_ALIGN_TEXT ? GetStringCenterAlignXOffset(FONT_SHORT_NARROW, gStringVar2, WindowWidthPx(WINDOW_NATURES) + 28) : 32;
-    PrintTextOnWindowWithFont(WINDOW_NATURES, gStringVar2, xPos, 2, 0, FONT_BLACK, FONT_SMALL_NARROW);
+    PrintTextOnWindow(WINDOW_NATURES, gStringVar2, xPos, 2, 0, FONT_BLACK);
 
     PutWindowTilemap(WINDOW_STATS_HEADER);
     CopyWindowToVram(WINDOW_STATS_HEADER, COPYWIN_FULL);
@@ -1706,7 +1793,9 @@ static void SelectorCallback(struct Sprite *sprite)
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 3)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 4)}},
         {{SELECTOR_RIGHT_EV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}, {SELECTOR_RIGHT_IV_LEFT_EDGE_X, SELECTOR_RIGHT_BASE_Y + (STAT_ROW_HEIGHT * 5)}},
+#if P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE
         {{SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X, SELECTOR_RIGHT_HP_TYPE_Y},                 {SELECTOR_RIGHT_HP_TYPE_LEFT_EDGE_X, SELECTOR_RIGHT_HP_TYPE_Y}},
+#endif // P_STAT_EDITOR_HP_OR_TERA
     };
 
     static const u8 sLeftPanelY[LEFT_ROW_COUNT] = {
@@ -1745,7 +1834,7 @@ static void SelectorCallback(struct Sprite *sprite)
         u32 leftEdgeX = sRightPanelCoords[sStatEditorDataPtr->rightPanelRow][sStatEditorDataPtr->rightPanelColumn].x;
         u32 rightEdgeX;
 
-        if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+        if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             rightEdgeX = leftEdgeX + RIGHT_PANEL_HP_TYPE_SELECTOR_WIDTH;
         else
             rightEdgeX = leftEdgeX + RIGHT_PANEL_SELECTOR_WIDTH;
@@ -1828,9 +1917,9 @@ static void ReloadNewPokemon(u8 taskId)
         gSprites[sStatEditorDataPtr->monShadowSpriteId].invisible = TRUE;
 
     DestroyMonSprite();
-    sStatEditorDataPtr->speciesID = GetMonData(GetCurrentPartyMon(), MON_DATA_SPECIES_OR_EGG);
-    gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
-    sStatEditorDataPtr->hasRelearnableMoves = HasAnyRelearnableMoves();
+    sStatEditorDataPtr->speciesID = GetBoxMonData(GetCurrentBoxMon(), MON_DATA_SPECIES_OR_EGG);
+    SetMonPosVars();
+    UpdateMoveRelearnerState();
     PrintTitleToWindowMainState();
     gTasks[taskId].func = Task_DelayedSpriteLoad;
     gTasks[taskId].data[11] = 0;
@@ -1868,7 +1957,8 @@ static void CB2_ReturnToSummaryScreenFromNamingScreen(void)
 
 static void CB2_ReturnToStatEditorFromNamingScreen(void)
 {
-    SetMonData(&gParties[B_TRAINER_PLAYER][gSpecialVar_0x8004], MON_DATA_NICKNAME, gStringVar2); // partyId gets overwritten to 0.
+    SetBoxMonData(GetSelectedBoxMonFromPcOrParty(), MON_DATA_NICKNAME, gStringVar2);
+
     if (P_PARTY_MENU_STAT_EDITOR)
         StatEditor_Init(CB2_ReturnToPartyMenuFromSummaryScreen);
     else if (P_SUMMARY_SCREEN_STAT_EDITOR)
@@ -1880,55 +1970,22 @@ static void CB2_StatEditorChangePokemonNickname(void)
     ChangePokemonNicknameWithCallback(CB2_ReturnToStatEditorFromNamingScreen);
 }
 
-static void HandleLeftPanelNextValue(void)
+static void SetMonPosVars(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
-    u32 val;
-
-    switch (sStatEditorDataPtr->leftRow)
+    if (IsEditingBoxMon())
     {
-    case LEFT_ROW_NICKNAME:
-        break;
-
-    case LEFT_ROW_ABILITY:
-    {
-        u8 slots[NUM_ABILITY_SLOTS];
-        u32 count = GetValidAbilitySlots(sStatEditorDataPtr->speciesID, slots);
-
-        if (count <= 1)
-            return;
-
-        u32 current = GetMonData(mon, MON_DATA_ABILITY_NUM);
-        u32 pos = 0;
-
-        for (u32 i = 0; i < count; i++)
-        {
-            if (slots[i] == current)
-            {
-                pos = i;
-                break;
-            }
-        }
-
-        val = slots[(pos + 1) % count];
-        SetMonData(mon, MON_DATA_ABILITY_NUM, &val);
-        PrintMonStats();
-        break;
+        gSpecialVar_MonBoxPos = sStatEditorDataPtr->monIndex;
+        gSpecialVar_MonBoxId = StorageGetCurrentBox();
     }
-
-    case LEFT_ROW_NATURE:
-        val = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
-        val = (val + 1) % NUM_NATURES;
-        SetMonData(mon, MON_DATA_HIDDEN_NATURE, &val);
-        CalculateMonStats(mon);
-        PrintMonStats();
-        break;
+    else
+    {
+        gSpecialVar_0x8004 = sStatEditorDataPtr->monIndex;
     }
 }
 
-static void HandleLeftPanelPreviousValue(void)
+static void HandleLeftPanelValue(bool32 forward)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
     u32 val;
 
     switch (sStatEditorDataPtr->leftRow)
@@ -1944,7 +2001,7 @@ static void HandleLeftPanelPreviousValue(void)
         if (count <= 1)
             return;
 
-        u32 current = GetMonData(mon, MON_DATA_ABILITY_NUM);
+        u32 current = GetBoxMonData(boxMon, MON_DATA_ABILITY_NUM);
         u32 pos = 0;
 
         for (u32 i = 0; i < count; i++)
@@ -1956,17 +2013,21 @@ static void HandleLeftPanelPreviousValue(void)
             }
         }
 
-        val = slots[(pos == 0) ? (count - 1) : (pos - 1)];
-        SetMonData(mon, MON_DATA_ABILITY_NUM, &val);
+        pos = forward ? ((pos + 1) % count) : (pos == 0 ? count - 1 : pos - 1);
+
+        val = slots[pos];
+        SetBoxMonData(boxMon, MON_DATA_ABILITY_NUM, &val);
         PrintMonStats();
         break;
     }
 
     case LEFT_ROW_NATURE:
-        val = GetMonData(mon, MON_DATA_HIDDEN_NATURE);
-        val = (val == 0) ? (NUM_NATURES - 1) : (val - 1);
-        SetMonData(mon, MON_DATA_HIDDEN_NATURE, &val);
-        CalculateMonStats(mon);
+        val = GetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE);
+
+        val = forward ? ((val + 1) % NUM_NATURES) : ((val == 0 ? NUM_NATURES - 1 : val - 1));
+
+        SetBoxMonData(boxMon, MON_DATA_HIDDEN_NATURE, &val);
+        CalculateBoxMonStats(boxMon);
         PrintMonStats();
         break;
     }
@@ -1989,7 +2050,7 @@ static void Task_LeftPanelEditMode(u8 taskId)
     case LEFT_ROW_NICKNAME:
         PlaySE(SE_SELECT);
         sStatEditorDataPtr->savedCallback = CB2_StatEditorChangePokemonNickname;
-        gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
+        SetMonPosVars();
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         break;
@@ -2000,13 +2061,13 @@ static void Task_LeftPanelEditMode(u8 taskId)
         {
             sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
             PlaySE(SE_SELECT);
-            HandleLeftPanelNextValue();
+            HandleLeftPanelValue(TRUE);
         }
         else if (JOY_REPEAT(DPAD_LEFT))
         {
             sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
             PlaySE(SE_SELECT);
-            HandleLeftPanelPreviousValue();
+            HandleLeftPanelValue(FALSE);
         }
         else
         {
@@ -2028,24 +2089,24 @@ static void Task_HPTypeEditMode(u8 taskId)
         return;
     }
 
-    struct Pokemon *mon = GetCurrentPartyMon();
-    u32 oldMaxHP  = GetMonData(mon, MON_DATA_MAX_HP);
-    u32 currentHP = GetMonData(mon, MON_DATA_HP);
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
+    u32 oldMaxHP  = GetBoxMonData(boxMon, MON_DATA_MAX_HP);
+    u32 currentHP = GetBoxMonData(boxMon, MON_DATA_HP);
     s32 hpLost    = oldMaxHP - currentHP;
 
     if (JOY_REPEAT(DPAD_RIGHT))
     {
         sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
         PlaySE(SE_SELECT);
-        SetHiddenPowerType(TRUE);
-        CalculateMonStats(mon);
+        SetBoxMonHiddenPowerType(boxMon, TRUE);
+        CalculateBoxMonStats(boxMon);
     }
     else if (JOY_REPEAT(DPAD_LEFT))
     {
         sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
         PlaySE(SE_SELECT);
-        SetHiddenPowerType(FALSE);
-        CalculateMonStats(mon);
+        SetBoxMonHiddenPowerType(boxMon, FALSE);
+        CalculateBoxMonStats(boxMon);
     }
     else
     {
@@ -2055,12 +2116,12 @@ static void Task_HPTypeEditMode(u8 taskId)
 
     if (hpLost > 0 && currentHP != 0)
     {
-        s32 diff = GetMonData(mon, MON_DATA_MAX_HP) - hpLost;
+        s32 diff = GetBoxMonData(boxMon, MON_DATA_MAX_HP) - hpLost;
 
         if (diff < 0)
             diff = 0;
 
-        SetMonData(mon, MON_DATA_HP, &diff);
+        SetBoxMonData(boxMon, MON_DATA_HP, &diff);
     }
 
     PrintMonStats();
@@ -2078,21 +2139,21 @@ static void Task_TeraTypeEditMode(u8 taskId)
         return;
     }
 
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
 
     if (JOY_REPEAT(DPAD_RIGHT))
     {
         sStatEditorDataPtr->pressingArrow = PRESSING_RIGHT;
         PlaySE(SE_SELECT);
-        SetTeraTypeSE(TRUE);
-        CalculateMonStats(mon);
+        SetBoxMonTeraType(boxMon, TRUE);
+        CalculateBoxMonStats(boxMon);
     }
     else if (JOY_REPEAT(DPAD_LEFT))
     {
         sStatEditorDataPtr->pressingArrow = PRESSING_LEFT;
         PlaySE(SE_SELECT);
-        SetTeraTypeSE(FALSE);
-        CalculateMonStats(mon);
+        SetBoxMonTeraType(boxMon, FALSE);
+        CalculateBoxMonStats(boxMon);
     }
     else
     {
@@ -2114,29 +2175,29 @@ static const u16 sSelectedStatToStatEnum[] = {
 
 static void ApplyRightPanelStatChange(void)
 {
-    struct Pokemon *mon = GetCurrentPartyMon();
+    struct BoxPokemon *boxMon = GetCurrentBoxMon();
     u32 currentStatEnum = sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat];
     s32 amountHPLost = 0;
     u32 currentHP    = 0;
 
     if (currentStatEnum == MON_DATA_HP_EV || currentStatEnum == MON_DATA_HP_IV)
     {
-        u32 oldMaxHP = GetMonData(mon, MON_DATA_MAX_HP);
-        currentHP    = GetMonData(mon, MON_DATA_HP);
+        u32 oldMaxHP = GetBoxMonData(boxMon, MON_DATA_MAX_HP);
+        currentHP    = GetBoxMonData(boxMon, MON_DATA_HP);
         amountHPLost = oldMaxHP - currentHP;
     }
 
-    SetMonData(mon, currentStatEnum, &(sStatEditorDataPtr->statEditingValue));
-    CalculateMonStats(mon);
+    SetBoxMonData(boxMon, currentStatEnum, &(sStatEditorDataPtr->statEditingValue));
+    CalculateBoxMonStats(boxMon);
 
     if ((amountHPLost > 0) && (currentHP != 0))
     {
-        s32 diff = GetMonData(mon, MON_DATA_MAX_HP) - amountHPLost;
+        s32 diff = GetBoxMonData(boxMon, MON_DATA_MAX_HP) - amountHPLost;
 
         if (diff < 0)
             diff = 0;
 
-        SetMonData(mon, MON_DATA_HP, &diff);
+        SetBoxMonData(boxMon, MON_DATA_HP, &diff);
     }
 
     PrintMonStats();
@@ -2253,33 +2314,82 @@ static void Task_RightPanelEditMode(u8 taskId)
     }
 }
 
+static void Task_ChangeStatEditorPokemon(u8 taskId, s32 delta)
+{
+    if (IsEditingBoxMon())
+    {
+        u8 mode = (delta == 1) ? 0 : 2;
+        s16 newPos = AdvanceStorageMonIndex(GetBoxedMonPtr(gSpecialVar_MonBoxId, 0), sStatEditorDataPtr->monIndex, IN_BOX_COUNT - 1, mode);
+        if (newPos != -1)
+        {
+            sStatEditorDataPtr->monIndex = newPos;
+            PlaySE(SE_SELECT);
+            ReloadNewPokemon(taskId);
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+        }
+    }
+    else
+    {
+        u32 count = gPartiesCount[B_TRAINER_PLAYER];
+        s16 newPos = -1;
+        if (count > 1)
+        {
+            u32 validMons = 0;
+            for (u32 i = 0; i < count; i++)
+            {
+                if (!GetMonData(&gParties[B_TRAINER_PLAYER][i], MON_DATA_IS_EGG))
+                    validMons++;
+            }
+            if (validMons > 1)
+            {
+                newPos = sStatEditorDataPtr->monIndex;
+
+                do
+                {
+                    newPos = (newPos + delta + count) % count;
+                } while (GetMonData(&gParties[B_TRAINER_PLAYER][newPos], MON_DATA_IS_EGG));
+            }
+        }
+        if (newPos != -1)
+        {
+            sStatEditorDataPtr->monIndex = newPos;
+            PlaySE(SE_SELECT);
+            ReloadNewPokemon(taskId);
+        }
+        else
+        {
+            PlaySE(SE_FAILURE);
+        }
+    }
+}
+
 static void Task_StatEditorMain(u8 taskId)
 {
     if (JOY_NEW(B_BUTTON))
     {
         PlaySE(SE_PC_OFF);
-        gLastViewedMonIndex = sStatEditorDataPtr->partyId;
+        gLastViewedMonIndex = sStatEditorDataPtr->monIndex;
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         return;
     }
 
-    if (JOY_NEW(L_BUTTON))
+    if (CanCycleBoxOrParty())
     {
-        u32 partyId = sStatEditorDataPtr->partyId;
-        sStatEditorDataPtr->partyId = (partyId == 0) ? (gPartiesCount[B_TRAINER_PLAYER] - 1) : (partyId - 1);
-        PlaySE(SE_SELECT);
-        ReloadNewPokemon(taskId);
-        return;
-    }
+        if (JOY_NEW(L_BUTTON))
+        {
+            Task_ChangeStatEditorPokemon(taskId, -1);
+            return;
+        }
 
-    if (JOY_NEW(R_BUTTON))
-    {
-        u32 partyId = sStatEditorDataPtr->partyId;
-        sStatEditorDataPtr->partyId = (partyId == gPartiesCount[B_TRAINER_PLAYER] - 1) ? 0 : (partyId + 1);
-        PlaySE(SE_SELECT);
-        ReloadNewPokemon(taskId);
-        return;
+        if (JOY_NEW(R_BUTTON))
+        {
+            Task_ChangeStatEditorPokemon(taskId, 1);
+            return;
+        }
     }
 
     if (JOY_NEW(START_BUTTON) && ShouldShowMoveRelearner())
@@ -2287,7 +2397,7 @@ static void Task_StatEditorMain(u8 taskId)
         PlaySE(SE_SELECT);
         gRelearnMode = RELEARN_MODE_STAT_EDITOR;
         sStatEditorDataPtr->savedCallback = CB2_InitLearnMove;
-        gSpecialVar_0x8004 = sStatEditorDataPtr->partyId;
+        SetMonPosVars();
         BeginNormalPaletteFade(PALETTES_ALL, 0, 0, 16, RGB_BLACK);
         gTasks[taskId].func = Task_StatEditorTurnOff;
         return;
@@ -2355,7 +2465,7 @@ static void Task_StatEditorMain(u8 taskId)
     {
         if (JOY_NEW(A_BUTTON))
         {
-            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             {
                 PlaySE(SE_SELECT);
                 sStatEditorDataPtr->panelInputMode = PANEL_INPUT_EDIT;
@@ -2368,7 +2478,7 @@ static void Task_StatEditorMain(u8 taskId)
             }
 
             sStatEditorDataPtr->rightPanelSelectedStat = sStatEditorDataPtr->rightPanelColumn + (sStatEditorDataPtr->rightPanelRow * 2);
-            sStatEditorDataPtr->statEditingValue = GetMonData(GetCurrentPartyMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat]);
+            sStatEditorDataPtr->statEditingValue = GetBoxMonData(GetCurrentBoxMon(), sSelectedStatToStatEnum[sStatEditorDataPtr->rightPanelSelectedStat]);
 
             if (sStatEditorDataPtr->rightPanelColumn == RIGHT_PANEL_EVS
              && sStatEditorDataPtr->statEditingValue == MIN_STAT
@@ -2424,7 +2534,7 @@ static void Task_StatEditorMain(u8 taskId)
         if (JOY_NEW(DPAD_RIGHT))
         {
             PlaySE(SE_SELECT);
-            if (sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
+            if (P_STAT_EDITOR_HP_OR_TERA != P_STAT_EDITOR_NONE && sStatEditorDataPtr->rightPanelRow == RIGHT_PANEL_ROW_HP_TYPE)
             {
                 sStatEditorDataPtr->panel = PANEL_LEFT;
                 sStatEditorDataPtr->leftRow = LEFT_ROW_NICKNAME;

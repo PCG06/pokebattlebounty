@@ -52,9 +52,8 @@ BattleScript_UseItemMessage:
 	return
 
 BattleScript_ItemRestoreHPRet:
-	clearmoveresultflags MOVE_RESULT_NO_EFFECT
-	healthbarupdate BS_SCRIPTING, PASSIVE_HP_UPDATE
-	datahpupdate BS_SCRIPTING, PASSIVE_HP_UPDATE
+	healthbarupdate BS_SCRIPTING
+	datahpupdate BS_SCRIPTING, ASSURANCE_DOUBLE
 	printstring STRINGID_ITEMRESTOREDSPECIESHEALTH
 	waitmessage B_WAIT_TIME_LONG
 	return
@@ -72,7 +71,6 @@ BattleScript_ItemRestoreHPEnd:
 
 BattleScript_ItemRestoreHP_Party::
 	jumpifbyte CMP_EQUAL, gBattleCommunication, TRUE, BattleScript_ItemRestoreHP_SendOutRevivedBattler
-	clearmoveresultflags MOVE_RESULT_NO_EFFECT
 	printstring STRINGID_ITEMRESTOREDSPECIESHEALTH
 	waitmessage B_WAIT_TIME_LONG
 	return
@@ -151,8 +149,7 @@ BattleScript_ItemSetMist::
 BattleScript_ItemSetFocusEnergy::
 	call BattleScript_UseItemMessage
 	itemincreasestat
-	jumpifvolatile BS_ATTACKER, VOLATILE_DRAGON_CHEER, BattleScript_ButItFailed
-	jumpifvolatile BS_ATTACKER, VOLATILE_FOCUS_ENERGY, BattleScript_ButItFailed
+	jumpifvolatile BS_ATTACKER, VOLATILE_CRITICAL_HIT_BOOST, BattleScript_ButItFailed
 	setfocusenergy BS_ATTACKER
 	playmoveanimation MOVE_FOCUS_ENERGY
 	waitanimation
@@ -174,7 +171,7 @@ BattleScript_BallThrow::
 	handleballthrow
 
 BattleScript_BallThrowByWally::
-	printstring STRINGID_WALLYUSEDITEM
+	printstring STRINGID_TRAINER1USEDITEM
 	handleballthrow
 
 BattleScript_SafariBallThrow::
@@ -315,6 +312,15 @@ BattleScript_TrainerPartnerSlideMsgRet::
 BattleScript_TrainerPartnerSlideMsgEnd::
 	call BattleScript_TrainerPartnerSlideMsgRet
 	end
+
+BattleScript_TrainerSlideMsg::
+	trainerslidein BS_SCRIPTING
+	handletrainerslidemsg BS_SCRIPTING, PRINT_SLIDE_MESSAGE
+	waitstate
+	trainerslideout BS_SCRIPTING
+	waitstate
+	handletrainerslidemsg BS_SCRIPTING, RESTORE_BATTLER_SLIDE_CONTROL
+	end3
 
 BattleScript_GhostBallDodge::
 	waitmessage B_WAIT_TIME_LONG

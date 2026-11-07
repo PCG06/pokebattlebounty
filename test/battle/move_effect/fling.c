@@ -219,8 +219,8 @@ SINGLE_BATTLE_TEST("Fling doesn't consume the item if the user is asleep/frozen/
             TURN { MOVE(player, MOVE_FLING, WITH_RNG(RNG_FROZEN, FALSE)); }
             TURN { MOVE(player, MOVE_FLING, WITH_RNG(RNG_FROZEN, TRUE)); }
         } else if (status == STATUS1_PARALYSIS) {
-            TURN { MOVE(player, MOVE_FLING, WITH_RNG(RNG_PARALYSIS, FALSE)); }
             TURN { MOVE(player, MOVE_FLING, WITH_RNG(RNG_PARALYSIS, TRUE)); }
+            TURN { MOVE(player, MOVE_FLING, WITH_RNG(RNG_PARALYSIS, FALSE)); }
         } else {
             TURN { MOVE(player, MOVE_FLING); }
             TURN { MOVE(player, MOVE_FLING); }
@@ -506,23 +506,15 @@ SINGLE_BATTLE_TEST("Fling - thrown berry's effect activates for the target even 
         else if (statId != 0) {
             ANIMATION(ANIM_TYPE_GENERAL, B_ANIM_STATS_CHANGE, opponent);
             if (statId == STAT_ATK) {
-                MESSAGE("The Liechi Berry boosted the opposing Wobbuffet's Attack!");
+                MESSAGE("The opposing Wobbuffet's Attack rose!");
             } else if (statId == STAT_DEF) {
-                if (item == ITEM_GANLON_BERRY) {
-                    MESSAGE("The Ganlon Berry boosted the opposing Wobbuffet's Defense!");
-                } else {
-                    MESSAGE("The Kee Berry boosted the opposing Wobbuffet's Defense!");
-                }
+                MESSAGE("The opposing Wobbuffet's Defense rose!");
             } else if (statId == STAT_SPDEF) {
-                if (item == ITEM_APICOT_BERRY) {
-                    MESSAGE("The Apicot Berry boosted the opposing Wobbuffet's Sp. Def!");
-                } else {
-                    MESSAGE("The Maranga Berry boosted the opposing Wobbuffet's Sp. Def!");
-                }
+                MESSAGE("The opposing Wobbuffet's Sp. Def rose!");
             } else if (statId == STAT_SPEED) {
-                MESSAGE("The Salac Berry boosted the opposing Wobbuffet's Speed!");
+                MESSAGE("The opposing Wobbuffet's Speed rose!");
             } else if (statId == STAT_SPATK) {
-                MESSAGE("The Petaya Berry boosted the opposing Wobbuffet's Sp. Atk!");
+                MESSAGE("The opposing Wobbuffet's Sp. Atk rose!");
             }
         }
     } THEN {

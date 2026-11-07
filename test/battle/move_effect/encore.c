@@ -74,6 +74,25 @@ SINGLE_BATTLE_TEST("Encore has no effect if no previous move")
     }
 }
 
+SINGLE_BATTLE_TEST("Encore fails if the target's last move has no PP")
+{
+    GIVEN {
+        PLAYER(SPECIES_WOBBUFFET) { Speed(1); MovesWithPP({MOVE_SCRATCH, 1}, {MOVE_CELEBRATE, 10}); }
+        OPPONENT(SPECIES_WOBBUFFET) { Speed(2); }
+    } WHEN {
+        TURN { MOVE(player, MOVE_SCRATCH); }
+        TURN { MOVE(opponent, MOVE_ENCORE); MOVE(player, MOVE_CELEBRATE); }
+    } SCENE {
+        ANIMATION(ANIM_TYPE_MOVE, MOVE_SCRATCH, player);
+        MESSAGE("The opposing Wobbuffet used Encore!");
+        NOT ANIMATION(ANIM_TYPE_MOVE, MOVE_ENCORE, opponent);
+        MESSAGE("But it failed!");
+        ANIMATION(ANIM_TYPE_MOVE, MOVE_CELEBRATE, player);
+    } THEN {
+        EXPECT_EQ((u32)player->volatiles.encoredMove, MOVE_NONE);
+    }
+}
+
 SINGLE_BATTLE_TEST("Encore overrides the chosen move if it occurs first")
 {
     GIVEN {
@@ -335,18 +354,23 @@ DOUBLE_BATTLE_TEST("Encore allows choosing an opponent target (Gen 5+)")
     }
 }
 
-SINGLE_BATTLE_TEST("Encore into Fake Out results in Struggle (Champions)")
+SINGLE_BATTLE_TEST("Encore into Fake Out/First Impression results in Struggle (Champions)")
 {
+    u32 move;
+
+    PARAMETRIZE { move = MOVE_FAKE_OUT; }
+    PARAMETRIZE { move = MOVE_FIRST_IMPRESSION; }
+
     GIVEN {
         WITH_CONFIG(B_FIRST_TURN_MOVE, GEN_CHAMPIONS);
-        ASSUME(gMovesInfo[MOVE_FAKE_OUT].effect == EFFECT_FIRST_TURN_ONLY);
+        ASSUME(gMovesInfo[move].effect == EFFECT_FIRST_TURN_ONLY);
         PLAYER(SPECIES_WOBBUFFET);
         OPPONENT(SPECIES_WOBBUFFET) { Item(ITEM_COVERT_CLOAK); }
     } WHEN {
-        TURN { MOVE(player, MOVE_FAKE_OUT); MOVE(opponent, MOVE_ENCORE); }
+        TURN { MOVE(player, move); MOVE(opponent, MOVE_ENCORE); }
         TURN { FORCED_MOVE(player); };
     } SCENE {
-        ANIMATION(ANIM_TYPE_MOVE, MOVE_FAKE_OUT, player);
+        ANIMATION(ANIM_TYPE_MOVE, move, player);
         ANIMATION(ANIM_TYPE_MOVE, MOVE_STRUGGLE, player);
     }
 }

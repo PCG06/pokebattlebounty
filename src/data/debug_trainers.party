@@ -22,35 +22,12 @@ Charizard (M) @ Charizardite Y
 Ability: Solar Power
 Modest Nature
 Level: 100
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
+IVs: 31 HP / 0 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
 EVs: 252 SpA / 252 Spe / 4 SpD
 - Heat Wave
 - Weather Ball
 - Solar Beam
 - Protect
-
-Incineroar (M) @ Incinium Z
-Ability: Intimidate
-Impish Nature
-Level: 100
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 4 HP / 252 Def / 252 SpD
-- Flare Blitz
-- Knock Off
-- Parting Shot
-- Will-O-Wisp
-
-Cinderace (M) @ Heavy-Duty Boots
-Ability: Libero
-Jolly Nature
-Gigantamax: Yes
-Level: 100
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 Atk / 252 Spe / 4 Def
-- Pyro Ball
-- High Jump Kick
-- Sucker Punch
-- Court Change
 
 === DEBUG_TRAINER_AI ===
 Name: Debugger
@@ -61,22 +38,13 @@ Pic: Hiker
 Gender: Male
 Music: Male
 
-Metang @ Leftovers
-Brave Nature
+Charizard (M) @ Charizardite X
+Ability: Blaze
+Jolly Nature
 Level: 100
 IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 Atk / 252 Def / 6 SpA
-- Knock Off
-- None
-- None
-- None
-
-Skarmory @ Rocky Helmet
-Impish Nature
-Level: 100
-IVs: 31 HP / 31 Atk / 31 Def / 31 SpA / 31 SpD / 31 Spe
-EVs: 252 HP / 6 SpA / 252 SpD
-- Knock Off
-- None
-- None
-- None
+EVs: 252 Atk / 252 Spe / 4 SpD
+- Flare Blitz
+- Dragon Claw
+- Dragon Dance
+- Roost

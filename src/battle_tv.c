@@ -8,6 +8,7 @@
 #include "constants/battle_anim.h"
 #include "constants/moves.h"
 #include "battle_message.h"
+#include "battle_anim_scripts.h"
 #include "tv.h"
 #include "constants/battle_move_effects.h"
 
@@ -16,7 +17,7 @@ static bool8 IsNotSpecialBattleString(enum StringID stringId);
 static void AddMovePoints(u8 caseId, u16 arg1, u8 arg2, u8 arg3);
 static void TrySetBattleSeminarShow(void);
 static void AddPointsOnFainting(void);
-static void AddPointsBasedOnWeather(u16 weatherFlags, enum Move move, u8 moveSlot);
+static void AddPointsBasedOnWeather(u16 weatherFlags, enum Move move, enum MoveSlot moveSlot);
 static bool8 ShouldCalculateDamage(enum Move move, s32 *dmg, u16 *powerOverride);
 static u32 GetTvPartyIndex(u32 battler);
 
@@ -638,24 +639,23 @@ void BattleTv_SetDataBasedOnAnimation(u8 animationId)
 
     tvPtr = &gBattleStruct->tv;
     atkSide = GetBattlerSide(gBattlerAttacker);
-    switch (animationId)
+    if (GetMoveAnimationScript(gCurrentMove) == gBattleAnimMove_FutureSight)
     {
-    case B_ANIM_FUTURE_SIGHT_HIT:
-        if (tvPtr->side[atkSide].futureSightMonId != 0)
+        if (tvPtr->side[atkSide].futureSightMonId != 0 && gBattleScripting.animTurn > 0)
         {
             AddMovePoints(PTS_SET_UP, 0, atkSide,
                         (tvPtr->side[atkSide].futureSightMonId - 1) * 4 + tvPtr->side[atkSide].futureSightMoveSlot);
             tvPtr->side[atkSide].faintCause = FNT_FUTURE_SIGHT;
         }
-        break;
-    case B_ANIM_DOOM_DESIRE_HIT:
-        if (tvPtr->side[atkSide].doomDesireMonId != 0)
+    }
+    else if (GetMoveAnimationScript(gCurrentMove) == gBattleAnimMove_DoomDesire)
+    {
+        if (tvPtr->side[atkSide].doomDesireMonId != 0 && gBattleScripting.animTurn > 0)
         {
             AddMovePoints(PTS_SET_UP, 1, atkSide,
                         (tvPtr->side[atkSide].doomDesireMonId - 1) * 4 + tvPtr->side[atkSide].doomDesireMoveSlot);
             tvPtr->side[atkSide].faintCause = FNT_DOOM_DESIRE;
         }
-        break;
     }
 }
 
@@ -862,6 +862,9 @@ static void AddMovePoints(u8 caseId, u16 arg1, u8 arg2, u8 arg3)
             const struct AdditionalEffect *additionalEffect = GetMoveAdditionalEffectById(move, i);
             switch (additionalEffect->moveEffect)
             {
+            case MOVE_EFFECT_ABSORB:
+                baseFromEffect += 4;
+                break;
             case MOVE_EFFECT_BREAK_SCREEN:
                 baseFromEffect += 1;
                 break;
@@ -1304,13 +1307,15 @@ static void TrySetBattleSeminarShow(void)
             struct DamageContext ctx = {0};
             ctx.battlerAtk = gBattlerAttacker;
             ctx.battlerDef = gBattlerTarget;
-            ctx.move = ctx.chosenMove = gCurrentMove;
+            ctx.move = ctx.chosenMove = ctx.baseMove = gCurrentMove;
             ctx.moveType = GetMoveType(gCurrentMove);
             ctx.isCrit = FALSE;
             ctx.randomFactor = FALSE;
             ctx.updateFlags = FALSE;
             ctx.isSelfInflicted = FALSE;
             ctx.fixedBasePower = powerOverride;
+            ctx.weather = GetWeather();
+            ctx.terrain = gFieldTimers.terrain;
             ctx.abilities[gBattlerAttacker] = GetBattlerAbility(gBattlerAttacker);
             ctx.abilities[gBattlerTarget] = GetBattlerAbility(gBattlerTarget);
             ctx.holdEffects[gBattlerAttacker] = GetBattlerHoldEffect(gBattlerAttacker);
@@ -1431,7 +1436,7 @@ u8 GetBattlerMoveSlotId(enum BattlerId battler, enum Move move)
     return i;
 }
 
-static void AddPointsBasedOnWeather(u16 weatherFlags, enum Move move, u8 moveSlot)
+static void AddPointsBasedOnWeather(u16 weatherFlags, enum Move move, enum MoveSlot moveSlot)
 {
     if (weatherFlags & B_WEATHER_RAIN)
         AddMovePoints(PTS_RAIN, move, moveSlot, 0);
@@ -1445,7 +1450,7 @@ static void AddPointsBasedOnWeather(u16 weatherFlags, enum Move move, u8 moveSlo
 
 static u32 GetTvPartyIndex(u32 battler)
 {
-    u32 index = gBattlerPartyIndexes[battler];
+    u32 index = (u32)gBattlerPartyIndexes[battler];
     if ((gBattleTypeFlags & BATTLE_TYPE_MULTI) && (GetBattlerPosition(battler) & BIT_FLANK))
         index += MULTI_PARTY_SIZE;
     return index;

@@ -40,6 +40,7 @@ enum EndTurnResolutionOrder
     ENDTURN_ROOST,
     ENDTURN_SEND_OUT_REPLACEMENTS_3, // For Emergency Exit/Wimp Out activations
     ENDTURN_SECOND_EVENT_BLOCK,
+    ENDTURN_ELECTRO_BOOST, // New Custom Status Field
     ENDTURN_TRICK_ROOM,
     ENDTURN_GRAVITY,
     ENDTURN_WATER_SPORT,
@@ -48,6 +49,8 @@ enum EndTurnResolutionOrder
     ENDTURN_MAGIC_ROOM,
     ENDTURN_TERRAIN,
     ENDTURN_THIRD_EVENT_BLOCK,
+    ENDTURN_OPPORTUNIST,
+    ENDTURN_MIRROR_HERB,
     ENDTURN_SEND_OUT_REPLACEMENTS_4, // For Emergency Exit/Wimp Out activations
     ENDTURN_FORM_CHANGE,
     ENDTURN_EJECT_PACK,
@@ -67,6 +70,7 @@ enum FirstEventBlock
     FIRST_EVENT_BLOCK_GMAX_MOVE_RESIDUAL, // Needs to be split
     FIRST_EVENT_BLOCK_SEA_OF_FIRE_DAMAGE,
     FIRST_EVENT_BLOCK_THRASH, // Thrash isn't handled here in vanilla but for now it is that best place for it.
+    FIRST_EVENT_BLOCK_ELECTRO_BOOST_CHARGE,
     FIRST_EVENT_BLOCK_GRASSY_TERRAIN_HEAL,
     FIRST_EVENT_BLOCK_ABILITIES,
     FIRST_EVENT_BLOCK_HEAL_ITEMS,

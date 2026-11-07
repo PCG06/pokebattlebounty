@@ -624,6 +624,7 @@ static void RemoveMenu(void);
 static void InitMonIconFields(void);
 static void SpriteCB_BoxMonIconScrollOut(struct Sprite *);
 static void GetIncomingBoxMonData(u8);
+static void CreatePartyMonSprite(u8, bool8);
 static void CreatePartyMonsSprites(bool8);
 static void CompactPartySprites(void);
 static u8 GetNumPartySpritesCompacting(void);
@@ -2097,17 +2098,14 @@ static void ResetForPokeStorage(void)
 static void InitStartingPosData(void)
 {
     ClearSavedCursorPos();
-    sInPartyMenu = (sStorage->boxOption == OPTION_DEPOSIT);
+    sInPartyMenu = (sStorage->boxOption == OPTION_DEPOSIT || sStorage->boxOption == OPTION_SELECT_MON);
     sDepositBoxId = 0;
 }
 
 static void SetMonIconTransparency(void)
 {
-    if (sStorage->boxOption == OPTION_MOVE_ITEMS)
-    {
-        SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_ALL);
-        SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(7, 11));
-    }
+    SetGpuReg(REG_OFFSET_BLDCNT, BLDCNT_TGT2_ALL);
+    SetGpuReg(REG_OFFSET_BLDALPHA, BLDALPHA_BLEND(7, 11));
     SetGpuReg(REG_OFFSET_DISPCNT, DISPCNT_OBJ_ON | DISPCNT_BG_ALL_ON | DISPCNT_OBJ_1D_MAP);
 }
 
@@ -2968,7 +2966,7 @@ static void Task_ReleaseMon(u8 taskId)
         PrintMessage(MSG_RELEASE_POKE);
         ShowYesNoWindow(1);
         sStorage->state++;
-        // fallthrough
+        [[fallthrough]];
     case 1:
         switch (Menu_ProcessInputNoWrapClearOnChoose())
         {
@@ -3440,6 +3438,7 @@ static void Task_HandleBoxOptions(u8 taskId)
         if (IsMenuLoading())
             return;
         sStorage->state++;
+        [[fallthrough]];
     case 2:
         switch (HandleMenuInput())
         {
@@ -3715,7 +3714,7 @@ static void Task_OnCloseBoxPressed(u8 taskId)
             gPartiesCount[B_TRAINER_PLAYER] = CalculatePlayerPartyCount();
             if (sStorage->boxOption == OPTION_SELECT_MON)
             {
-                gSpecialVar_0x8004 = PARTY_NOTHING_CHOSEN;
+                gSpecialVar_0x8004 = PARTY_MON_CANCEL;
                 gSpecialVar_Result = FALSE;
             }
             sStorage->screenChangeType = SCREEN_CHANGE_EXIT_BOX;
@@ -3793,7 +3792,7 @@ static void Task_OnBPressed(u8 taskId)
             gPartiesCount[B_TRAINER_PLAYER] = CalculatePlayerPartyCount();
             if (sStorage->boxOption == OPTION_SELECT_MON)
             {
-                gSpecialVar_0x8004  = PARTY_NOTHING_CHOSEN;
+                gSpecialVar_0x8004  = PARTY_MON_CANCEL;
                 gSpecialVar_Result  = FALSE;
             }
             sStorage->screenChangeType = SCREEN_CHANGE_EXIT_BOX;
@@ -4031,7 +4030,7 @@ static void CreateDisplayMonSprite(void)
         if (palSlot == 0xFF)
             break;
 
-        spriteId = CreateSprite(&template, 40, 48, 0);
+        spriteId = CreateSpriteUnchecked(&template, 40, 48, 0);
         if (spriteId == MAX_SPRITES)
             break;
 
@@ -4794,6 +4793,40 @@ static void SetBoxMonIconObjMode(u8 boxPosition, u8 objMode)
         sStorage->boxMonsSprites[boxPosition]->oam.objMode = objMode;
 }
 
+static void  CreatePartyMonSprite(u8 partyPosition, bool8 visible)
+{
+    struct Pokemon *partyPokemon = &gParties[B_TRAINER_PLAYER][partyPosition];
+
+    enum Species species = GetMonData(partyPokemon, MON_DATA_SPECIES);
+    bool32 isEgg = GetMonData(partyPokemon, MON_DATA_IS_EGG);
+    u32 personality = GetMonData(partyPokemon, MON_DATA_PERSONALITY);
+
+    if (partyPosition == 0)
+        sStorage->partySprites[0] = CreateMonIconSprite(species, personality, 104, 64, 1, 12, isEgg);
+    else
+        sStorage->partySprites[partyPosition] = CreateMonIconSprite(species, personality, 152,  8 * (3 * (partyPosition - 1)) + 16, 1, 12, isEgg);
+
+    struct Sprite *partySprite = sStorage->partySprites[partyPosition];
+
+    if (!visible)
+    {
+        partySprite->y -= DISPLAY_HEIGHT;
+        partySprite->invisible = TRUE;
+    }
+
+    if (sStorage->boxOption == OPTION_MOVE_ITEMS)
+    {
+        if (partySprite != NULL && GetMonData(partyPokemon, MON_DATA_HELD_ITEM) == ITEM_NONE)
+            partySprite->oam.objMode = ST_OAM_OBJ_BLEND;
+    }
+
+    if (sStorage->boxOption == OPTION_SELECT_MON)
+    {
+        if (partySprite != NULL && IsBoxMonExcluded(&(partyPokemon->box)))
+            partySprite->oam.objMode = ST_OAM_OBJ_BLEND;
+    }
+}
+
 static void CreatePartyMonsSprites(bool8 visible)
 {
     u16 i, count;
@@ -5196,7 +5229,7 @@ static u16 TryLoadMonIconTiles(enum Species species, enum SpeciesIconType iconTy
     sStorage->numIconsPerSpecies[i]++;
     offset = 16 * i;
     species &= SPECIES_MASK;
-    CpuCopy32(GetMonIconTilesByIconType(species, iconType), (void *)(OBJ_VRAM0) + offset * TILE_SIZE_4BPP, 0x200);
+    RlFastUncomp(GetMonIconTilesByIconType(species, iconType), (void *)(OBJ_VRAM0) + offset * TILE_SIZE_4BPP, 0, 0x200);
 
     return offset;
 }
@@ -5253,7 +5286,7 @@ static struct Sprite *CreateMonIconSprite(enum Species species, u32 personality,
     if (tileNum == 0xFFFF)
         return NULL;
 
-    spriteId = CreateSprite(&template, x, y, subpriority);
+    spriteId = CreateSpriteUnchecked(&template, x, y, subpriority);
     if (spriteId == MAX_SPRITES)
     {
         RemoveSpeciesFromIconList(species, iconType);
@@ -5364,6 +5397,7 @@ static bool8 ScrollToBox(void)
     case 0:
         LoadWallpaperGfx(sStorage->scrollToBoxId, sStorage->scrollDirection);
         sStorage->scrollState++;
+        [[fallthrough]];
     case 1:
         if (!WaitForWallpaperGfxLoad())
             return TRUE;
@@ -5738,7 +5772,7 @@ static void CreateBoxScrollArrows(void)
     LoadSpriteSheet(&sSpriteSheet_Arrow);
     for (i = 0; i < 2; i++)
     {
-        u8 spriteId = CreateSprite(&sSpriteTemplate_Arrow, 92 + i * 136, 28, 22);
+        u8 spriteId = CreateSpriteUnchecked(&sSpriteTemplate_Arrow, 92 + i * 136, 28, 22);
         if (spriteId != MAX_SPRITES)
         {
             struct Sprite *sprite = &gSprites[spriteId];
@@ -5862,7 +5896,7 @@ static void SpriteCB_Arrow(struct Sprite *sprite)
 // Arrows for Deposit/Jump Box selection
 static struct Sprite *CreateChooseBoxArrows(u16 x, u16 y, u8 animId, u8 priority, u8 subpriority)
 {
-    u8 spriteId = CreateSprite(&sSpriteTemplate_Arrow, x, y, subpriority);
+    u8 spriteId = CreateSpriteUnchecked(&sSpriteTemplate_Arrow, x, y, subpriority);
     if (spriteId == MAX_SPRITES)
         return NULL;
 
@@ -5884,10 +5918,10 @@ static struct Sprite *CreateChooseBoxArrows(u16 x, u16 y, u8 animId, u8 priority
 
 static void InitCursor(void)
 {
-    if (sStorage->boxOption != OPTION_DEPOSIT)
-        sCursorArea = CURSOR_AREA_IN_BOX;
-    else
+    if (sStorage->boxOption == OPTION_DEPOSIT || sStorage->boxOption == OPTION_SELECT_MON)
         sCursorArea = CURSOR_AREA_IN_PARTY;
+    else
+        sCursorArea = CURSOR_AREA_IN_BOX;
 
     sCursorPosition = 0;
     sIsMonBeingMoved = FALSE;
@@ -6969,7 +7003,7 @@ static void TryRefreshDisplayMon(void)
                 SetDisplayMonData(&gParties[B_TRAINER_PLAYER][sCursorPosition], MODE_PARTY);
                 break;
             }
-            // fallthrough
+            [[fallthrough]];
         case CURSOR_AREA_BUTTONS:
         case CURSOR_AREA_BOX_TITLE:
             SetDisplayMonData(NULL, MODE_MOVE);
@@ -7992,7 +8026,7 @@ static void CreateCursorSprites(void)
     sStorage->cursorPalNums[1] = IndexOfSpritePaletteTag(PALTAG_MISC_1); // Yellow hand, when auto-action is on
 
     GetCursorCoordsByPos(sCursorArea, sCursorPosition, &x, &y);
-    spriteId = CreateSprite(&sSpriteTemplate_Cursor, x, y, 6);
+    spriteId = CreateSpriteUnchecked(&sSpriteTemplate_Cursor, x, y, 6);
     if (spriteId != MAX_SPRITES)
     {
         sStorage->cursorSprite = &gSprites[spriteId];
@@ -8017,7 +8051,7 @@ static void CreateCursorSprites(void)
         priority = 2;
     }
 
-    spriteId = CreateSprite(&sSpriteTemplate_CursorShadow, 0, 0, subpriority);
+    spriteId = CreateSpriteUnchecked(&sSpriteTemplate_CursorShadow, 0, 0, subpriority);
     if (spriteId != MAX_SPRITES)
     {
         sStorage->cursorShadowSprite = &gSprites[spriteId];
@@ -8611,8 +8645,10 @@ static void MultiMove_SetIconToBg(u8 x, u8 y)
         const u8 *iconGfx = GetMonIconPtrIsEgg(species, personality, isEgg);
         u8 index = GetValidMonIconPalIndex(species) + 8;
 
+        RlFastUncomp(iconGfx, sStorage->itemIconBuffer, 0, 0x200);
+
         BlitBitmapRectToWindow4BitTo8Bit(sStorage->multiMoveWindowId,
-                                         iconGfx,
+                                         sStorage->itemIconBuffer,
                                          0,
                                          0,
                                          32,
@@ -9439,6 +9475,7 @@ static void SpriteCB_ItemIcon_ToHand(struct Sprite *sprite)
         sprite->data[4] = 21;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] -= sprite->data[3];
         sprite->data[2] -= sprite->data[4];
@@ -9468,6 +9505,7 @@ static void SpriteCB_ItemIcon_ToMon(struct Sprite *sprite)
         sprite->data[4] = 21;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] += sprite->data[3];
         sprite->data[2] += sprite->data[4];
@@ -9493,6 +9531,7 @@ static void SpriteCB_ItemIcon_SwapToHand(struct Sprite *sprite)
         sprite->data[4] = 21;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] -= sprite->data[3];
         sprite->data[2] -= sprite->data[4];
@@ -9520,6 +9559,7 @@ static void SpriteCB_ItemIcon_SwapToMon(struct Sprite *sprite)
         sprite->data[4] = 21;
         sprite->data[5] = 0;
         sprite->sState++;
+        [[fallthrough]];
     case 1:
         sprite->data[1] += sprite->data[3];
         sprite->data[2] += sprite->data[4];
@@ -10106,8 +10146,8 @@ void UpdateSpeciesSpritePSS(struct BoxPokemon *boxMon)
         // Recreate icon sprite
         if (sInPartyMenu)
         {
-            DestroyAllPartyMonIcons();
-            CreatePartyMonsSprites(TRUE);
+            DestroyPartyMonIcon(sCursorPosition);
+            CreatePartyMonSprite(sCursorPosition, TRUE);
         }
         else
         {

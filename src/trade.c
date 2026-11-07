@@ -43,6 +43,7 @@
 #include "union_room.h"
 #include "util.h"
 #include "window.h"
+#include "bw_battle_ui.h" // bwBattleUI
 #include "constants/contest.h"
 #include "constants/items.h"
 #include "constants/moves.h"
@@ -663,7 +664,7 @@ static void CB2_CreateTradeMenu(void)
         ComputePartyTradeableFlags(TRADE_PARTNER);
         PrintPartyNicknames(TRADE_PARTNER);
         gMain.state++;
-        // fallthrough
+        [[fallthrough]];
     case 16:
         LoadTradeBgGfx(0);
         gMain.state++;
@@ -2949,9 +2950,11 @@ static void TradeAnimInit_LoadGfx(void)
     SetBgTilemapBuffer(3, Alloc(BG_SCREEN_SIZE));
     DeactivateAllTextPrinters();
     // Doing the graphics load.
-    DecompressAndLoadBgGfxUsingHeap(0, gBattleTextboxTiles, 0, 0, 0);
-    DecompressAndCopyToBgTilemapBuffer(0, gBattleTextboxTilemap, BG_SCREEN_SIZE, 0);
-    LoadPalette(gBattleTextboxPalette, BG_PLTT_ID(0), PLTT_SIZE_4BPP);
+    // start bwBattleUI
+    DecompressAndLoadBgGfxUsingHeap(0, BattleUI_GetTextboxTiles(), 0, 0, 0);
+    DecompressAndCopyToBgTilemapBuffer(0, BattleUI_GetTextboxTilemap(), BG_SCREEN_SIZE, 0);
+    LoadPalette(BattleUI_GetTextboxPalette(), BG_PLTT_ID(0), PLTT_SIZE_4BPP);
+    // end bwBattleUI
     InitWindows(sTradeSequenceWindowTemplates);
 }
 
@@ -3135,7 +3138,7 @@ static void HandleLinkDataSend(void)
             SendBlock(BitmaskAllOtherLinkPlayers(), sTradeAnim->linkData, sizeof(sTradeAnim->linkData));
             sTradeAnim->scheduleLinkTransfer++;
         }
-        // fallthrough
+        [[fallthrough]];
     case 2:
         sTradeAnim->scheduleLinkTransfer = 0;
         break;

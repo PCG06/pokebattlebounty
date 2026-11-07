@@ -3,9 +3,6 @@
 
 #include "config/swsh_party_menu.h"
 
-#define PC_MON_CHOSEN 0xFE
-#define PARTY_NOTHING_CHOSEN 0xFF
-
 #define AILMENT_NONE  0
 #define AILMENT_PSN   1
 #define AILMENT_PRZ   2

@@ -51,15 +51,17 @@ struct PartyMenu
     u16 bagItem;
     s16 data1;           // used variously as a move, counter, moveSlotId, cursorPos, or indicator that the menu is opened from the field
     s16 learnMoveState;  // data2, used only as a learn move state
+    u8 levelBefore;      // (swsh_party_menu) level before rare/exp candy use
+    u8 levelAfter;       // (swsh_party_menu) level after it
 };
 
 #define DATA1_PARTY_MENU_FROM_FIELD -1
 
 extern struct PartyMenu gPartyMenu;
 extern bool8 gPartyMenuUseExitCallback;
-extern u8 gSelectedMonPartyId;
+extern enum PartyMon gSelectedMonPartyId;
 extern MainCallback gPostMenuFieldCallback;
-extern u8 gSelectedOrderFromParty[MAX_FRONTIER_PARTY_SIZE];
+extern u8 gSelectedOrderFromParty[PARTY_SIZE];
 extern u8 gBattlePartyCurrentOrder[PARTY_SIZE / 2];
 
 extern const struct SpriteSheet gSpriteSheet_HeldItem;
@@ -83,7 +85,7 @@ void DisplayPartyMenuStdMessage(u32 stringId);
 bool8 FieldCallback_PrepareFadeInFromMenu(void);
 bool8 FieldCallback_PrepareFadeInForTeleport(void);
 void CB2_ReturnToPartyMenuFromFlyMap(void);
-#if SWSH_PARTY_MENU_PC_ACCESS
+#if SWSH_PARTY_PC_ACCESS
 void CB2_ReopenPartyMenuFromPC(void);
 #endif
 void LoadHeldItemIcons(void);
@@ -127,9 +129,9 @@ void OpenPartyMenuInBattle(u8 partyAction);
 void ChooseMonForInBattleItem(void);
 void BufferBattlePartyCurrentOrder(void);
 void BufferBattlePartyCurrentOrderBySide(enum BattlerId battler, u8 flankId);
-void SwitchPartyOrderLinkMulti(enum BattlerId battler, u8 slot, u8 slot2);
-void SwitchPartyMonSlots(u8 slot, u8 slot2);
-u8 GetPartyIdFromBattlePartyId(u8 battlePartyId);
+void SwitchPartyOrderLinkMulti(enum BattlerId battler, enum PartyMon partyId, enum PartyBattleSlot slot);
+void SwitchPartyMonSlots(enum PartyBattleSlot slot, enum PartyBattleSlot slot2);
+enum PartyBattleSlot GetBattleSlotFromBattlePartyId(enum PartyMon battlePartyId);
 void ShowPartyMenuToShowcaseMultiBattleParty(void);
 void ChooseMonForDaycare(void);
 bool8 CB2_FadeFromPartyMenu(void);

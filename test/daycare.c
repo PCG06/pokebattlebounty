@@ -346,7 +346,7 @@ TEST("(Daycare) Pokémon can't learn through egg move transfer a move they alrea
     gSpecialVar_0x8003 = knownMove3;
     RUN_OVERWORLD_SCRIPT(
         givemon SPECIES_BULBASAUR, 100, move1=VAR_0x8001, move2=VAR_0x8002, move3=VAR_0x8003, move4=MOVE_NONE, item=ITEM_MIRROR_HERB;
-        givemon SPECIES_VENUSAUR, 100, move1=MOVE_CURSE, move2=MOVE_INGRAIN, move3=MOVE_NATURE_POWER, move4=MOVE_TACKLE;
+        givemon SPECIES_VENUSAUR, 100, move1=MOVE_CURSE, move2=MOVE_INGRAIN, move3=MOVE_NATURE_POWER, move4=MOVE_NONE;
     );
     gSpecialVar_0x8004 = 0;
     StoreSelectedPokemonInDaycare();
