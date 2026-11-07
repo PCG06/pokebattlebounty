@@ -371,6 +371,9 @@ s32 ListMenu_ProcessInput(u8 listTaskId)
 {
     struct ListMenu *list = (void *) gTasks[listTaskId].data;
 
+    s32 currentPosition = list->scrollOffset + list->selectedRow;
+    u8 lastPositon = list->template.totalItems - 1;
+
     if (JOY_NEW(A_BUTTON))
     {
         if (list->template.isDynamic)
@@ -381,6 +384,24 @@ s32 ListMenu_ProcessInput(u8 listTaskId)
     else if (JOY_NEW(B_BUTTON))
     {
         return LIST_CANCEL;
+    }
+    else if (JOY_NEW(DPAD_UP))
+    {
+        if (currentPosition == 0)
+            ListMenuChangeSelection(list, TRUE, lastPositon,TRUE);
+        else
+            ListMenuChangeSelection(list, TRUE, 1, FALSE);
+
+        return LIST_NOTHING_CHOSEN;
+    }
+    else if (JOY_NEW(DPAD_DOWN))
+    {
+        if (currentPosition == lastPositon)
+            ListMenuChangeSelection(list, TRUE, lastPositon, FALSE);
+        else
+            ListMenuChangeSelection(list, TRUE, 1, TRUE);
+
+        return LIST_NOTHING_CHOSEN;
     }
     else if (JOY_REPEAT(DPAD_UP))
     {
