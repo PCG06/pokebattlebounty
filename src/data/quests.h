@@ -358,7 +358,7 @@ const struct SubQuest gSubQuests1[QUEST_1_SUB_COUNT] =
         .name = COMPOUND_STRING("Quest 1 Part 1"),
         .desc = COMPOUND_STRING("Description Sub 1"),
         .map = COMPOUND_STRING("Map 1"),
-        .sprite = OBJ_EVENT_GFX_WALLY,
+        .sprite = ITEM_POKE_BALL,
         .spritetype = OBJECT,
         .type = sText_Found
     },

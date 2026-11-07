@@ -1,40 +1,25 @@
 #include "global.h"
-#include "strings.h"
 #include "bg.h"
-#include "data.h"
 #include "decompress.h"
+#include "event_object_movement.h"
 #include "gpu_regs.h"
-#include "graphics.h"
-#include "item.h"
 #include "item_icon.h"
-#include "item_menu.h"
-#include "item_menu_icons.h"
 #include "list_menu.h"
-#include "item_use.h"
 #include "main.h"
 #include "malloc.h"
 #include "menu.h"
 #include "menu_helpers.h"
+#include "overworld.h"
 #include "palette.h"
-#include "party_menu.h"
+#include "pokemon_icon.h"
+#include "quests.h"
 #include "scanline_effect.h"
 #include "sound.h"
 #include "string_util.h"
-#include "strings.h"
 #include "task.h"
-#include "text_window.h"
-#include "quests.h"
-#include "overworld.h"
-#include "event_data.h"
 #include "constants/items.h"
-#include "constants/field_weather.h"
 #include "constants/songs.h"
 #include "constants/rgb.h"
-#include "constants/event_objects.h"
-#include "event_object_movement.h"
-#include "pokemon_icon.h"
-#include "random.h"
-
 #include "data/quests.h"
 
 #define tPageItems      data[4]
@@ -872,7 +857,7 @@ static u32 CountNumberListRows()
     case SORT_DONE:
         return CountCompletedQuests() + 1;
     }
-    
+
     return 1;
 }
 
