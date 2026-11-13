@@ -9,6 +9,46 @@ Common_Movement_ExclamationMark:
 	emote_exclamation_mark
 	step_end
 
+Common_Movement_Heart:
+	emote_heart
+	step_end
+
+Common_Movement_Music:
+	emote_music
+	step_end
+
+Common_Movement_Happy:
+	emote_happy
+	step_end
+
+Common_Movement_Neutral:
+	emote_neutral
+	step_end
+
+Common_Movement_Sad:
+	emote_sad
+	step_end
+
+Common_Movement_Upset:
+	emote_upset
+	step_end
+
+Common_Movement_Angry:
+	emote_angry
+	step_end
+
+Common_Movement_Pensive:
+	emote_pensive
+	step_end
+
+Common_Movement_Poisoned:
+	emote_poisoned
+	step_end
+
+Common_Movement_Asleep:
+	emote_asleep
+	step_end
+
 Common_Movement_Delay48:
 	delay_16
 	delay_16
@@ -74,7 +114,7 @@ Common_Movement_WalkInPlaceRight:
 @ End of follower-safe movements
 Common_Movement_FollowerSafeEnd::
 	step_end
-	
+
 Common_Movement_WalkUp5::
 	walk_up
 	walk_up

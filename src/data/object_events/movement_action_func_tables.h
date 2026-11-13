@@ -163,6 +163,15 @@ u8 MovementAction_SetVisible_Step0(struct ObjectEvent *, struct Sprite *);
 u8 MovementAction_EmoteExclamationMark_Step0(struct ObjectEvent *, struct Sprite *);
 u8 MovementAction_EmoteQuestionMark_Step0(struct ObjectEvent *, struct Sprite *);
 u8 MovementAction_EmoteHeart_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteMusic_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteHappy_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteNeutral_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteSad_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteUpset_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteAngry_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmotePensive_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmotePoisoned_Step0(struct ObjectEvent *, struct Sprite *);
+u8 MovementAction_EmoteAsleep_Step0(struct ObjectEvent *, struct Sprite *);
 u8 MovementAction_RevealTrainer_Step0(struct ObjectEvent *, struct Sprite *);
 u8 MovementAction_RevealTrainer_Step1(struct ObjectEvent *, struct Sprite *);
 u8 MovementAction_RockSmashBreak_Step0(struct ObjectEvent *, struct Sprite *);
@@ -394,6 +403,15 @@ u8 (*const gMovementActionFuncs_SetVisible[])(struct ObjectEvent *, struct Sprit
 u8 (*const gMovementActionFuncs_EmoteExclamationMark[])(struct ObjectEvent *, struct Sprite *);
 u8 (*const gMovementActionFuncs_EmoteQuestionMark[])(struct ObjectEvent *, struct Sprite *);
 u8 (*const gMovementActionFuncs_EmoteHeart[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteMusic[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteHappy[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteNeutral[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteSad[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteUpset[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteAngry[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmotePensive[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmotePoisoned[])(struct ObjectEvent *, struct Sprite *);
+u8 (*const gMovementActionFuncs_EmoteAsleep[])(struct ObjectEvent *, struct Sprite *);
 u8 (*const gMovementActionFuncs_RevealTrainer[])(struct ObjectEvent *, struct Sprite *);
 u8 (*const gMovementActionFuncs_RockSmashBreak[])(struct ObjectEvent *, struct Sprite *);
 u8 (*const gMovementActionFuncs_CutTree[])(struct ObjectEvent *, struct Sprite *);
@@ -578,6 +596,15 @@ u8 (*const *const gMovementActionFuncs[])(struct ObjectEvent *, struct Sprite *)
     [MOVEMENT_ACTION_EMOTE_EXCLAMATION_MARK] = gMovementActionFuncs_EmoteExclamationMark,
     [MOVEMENT_ACTION_EMOTE_QUESTION_MARK] = gMovementActionFuncs_EmoteQuestionMark,
     [MOVEMENT_ACTION_EMOTE_HEART] = gMovementActionFuncs_EmoteHeart,
+    [MOVEMENT_ACTION_EMOTE_HAPPY] = gMovementActionFuncs_EmoteHappy,
+    [MOVEMENT_ACTION_EMOTE_NEUTRAL] = gMovementActionFuncs_EmoteNeutral,
+    [MOVEMENT_ACTION_EMOTE_MUSIC] = gMovementActionFuncs_EmoteMusic,
+    [MOVEMENT_ACTION_EMOTE_SAD] = gMovementActionFuncs_EmoteSad,
+    [MOVEMENT_ACTION_EMOTE_UPSET] = gMovementActionFuncs_EmoteUpset,
+    [MOVEMENT_ACTION_EMOTE_ANGRY] = gMovementActionFuncs_EmoteAngry,
+    [MOVEMENT_ACTION_EMOTE_PENSIVE] = gMovementActionFuncs_EmotePensive,
+    [MOVEMENT_ACTION_EMOTE_POISONED] = gMovementActionFuncs_EmotePoisoned,
+    [MOVEMENT_ACTION_EMOTE_ASLEEP] = gMovementActionFuncs_EmoteAsleep,
     [MOVEMENT_ACTION_REVEAL_TRAINER] = gMovementActionFuncs_RevealTrainer,
     [MOVEMENT_ACTION_ROCK_SMASH_BREAK] = gMovementActionFuncs_RockSmashBreak,
     [MOVEMENT_ACTION_CUT_TREE] = gMovementActionFuncs_CutTree,
@@ -1266,6 +1293,51 @@ u8 (*const gMovementActionFuncs_EmoteQuestionMark[])(struct ObjectEvent *, struc
 
 u8 (*const gMovementActionFuncs_EmoteHeart[])(struct ObjectEvent *, struct Sprite *) = {
     MovementAction_EmoteHeart_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteMusic[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteMusic_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteHappy[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteHappy_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteNeutral[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteNeutral_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteSad[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteSad_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteUpset[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteUpset_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteAngry[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteAngry_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmotePensive[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmotePensive_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmotePoisoned[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmotePoisoned_Step0,
+    MovementAction_Finish,
+};
+
+u8 (*const gMovementActionFuncs_EmoteAsleep[])(struct ObjectEvent *, struct Sprite *) = {
+    MovementAction_EmoteAsleep_Step0,
     MovementAction_Finish,
 };
 

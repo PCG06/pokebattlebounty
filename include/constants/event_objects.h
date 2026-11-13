@@ -666,6 +666,20 @@ enum
 #define OBJ_EVENT_PAL_TAG_WHITE                   (OBJ_EVENT_PAL_TAG_NONE - 1)
 #define OBJ_EVENT_PAL_TAG_NONE                    0x11FF
 
+// Emotes
+#define EMOTE_EXCLAM    0
+#define EMOTE_QUESTION  1
+#define EMOTE_HEART     2
+#define EMOTE_HAPPY     3
+#define EMOTE_NEUTRAL   4
+#define EMOTE_MUSIC     5
+#define EMOTE_SAD       6
+#define EMOTE_UPSET     7
+#define EMOTE_ANGRY     8
+#define EMOTE_PENSIVE   9
+#define EMOTE_POISONED 10
+#define EMOTE_ASLEEP   11
+
 // This + localId is used as the tileTag
 // for compressed graphicsInfos
 // '(C)ompressed (E)vent'

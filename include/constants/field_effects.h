@@ -84,6 +84,16 @@
 #define FLDEFF_HALL_OF_FAME_RECORD_FRLG  79
 #define FLDEFF_PHOTO_FLASH               80
 #define FLDEFF_OW_ENCOUNTER_SPAWN_ANIM   81
+#define FLDEFF_MUSIC_ICON                82
+#define FLDEFF_HAPPY_ICON                83
+#define FLDEFF_NEUTRAL_ICON              84
+#define FLDEFF_SAD_ICON                  85
+#define FLDEFF_UPSET_ICON                86
+#define FLDEFF_ANGRY_ICON                87
+#define FLDEFF_PENSIVE_ICON              88
+#define FLDEFF_POISONED_ICON             89
+#define FLDEFF_ASLEEP_ICON               90
+#define FLDEFF_TRAINER_EXCLAMATION       91
 
 #define FLDEFFOBJ_SHADOW_S              0
 #define FLDEFFOBJ_SHADOW_M              1

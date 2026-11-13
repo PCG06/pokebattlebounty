@@ -305,6 +305,15 @@ static bool32 IsStateMovement(u32 state)
     case MOVEMENT_ACTION_EMOTE_EXCLAMATION_MARK:
     case MOVEMENT_ACTION_EMOTE_QUESTION_MARK:
     case MOVEMENT_ACTION_EMOTE_HEART:
+    case MOVEMENT_ACTION_EMOTE_HAPPY:
+    case MOVEMENT_ACTION_EMOTE_NEUTRAL:
+    case MOVEMENT_ACTION_EMOTE_MUSIC:
+    case MOVEMENT_ACTION_EMOTE_SAD:
+    case MOVEMENT_ACTION_EMOTE_UPSET:
+    case MOVEMENT_ACTION_EMOTE_ANGRY:
+    case MOVEMENT_ACTION_EMOTE_PENSIVE:
+    case MOVEMENT_ACTION_EMOTE_POISONED:
+    case MOVEMENT_ACTION_EMOTE_ASLEEP:
     case MOVEMENT_ACTION_WALK_IN_PLACE_SLOW_DOWN:
     case MOVEMENT_ACTION_WALK_IN_PLACE_SLOW_UP:
     case MOVEMENT_ACTION_WALK_IN_PLACE_SLOW_LEFT:
@@ -1381,7 +1390,7 @@ enum Direction DetermineFollowerNPCDirection(struct ObjectEvent *player, struct 
     if (player->currentCoords.x == follower->currentCoords.x
      && player->currentCoords.y == follower->currentCoords.y)
         return DIR_NONE;
-        
+
     return DetermineObjectEventDirectionFromObject(player, follower);
 }
 

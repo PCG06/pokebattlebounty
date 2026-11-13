@@ -3251,3 +3251,30 @@
     subquestmenu QUEST_MENU_CHECK_COMPLETE \parent \child
     call_if_eq VAR_RESULT, FALSE, \dest
     .endm
+
+	.set EmoteMovement_0,  Common_Movement_ExclamationMark  @ EMOTE_EXCLAM
+	.set EmoteMovement_1,  Common_Movement_QuestionMark     @ EMOTE_QUESTION
+	.set EmoteMovement_2,  Common_Movement_Heart            @ EMOTE_HEART
+	.set EmoteMovement_3,  Common_Movement_Happy            @ EMOTE_HAPPY
+	.set EmoteMovement_4,  Common_Movement_Neutral          @ EMOTE_NEUTRAL
+	.set EmoteMovement_5,  Common_Movement_Music            @ EMOTE_MUSIC
+	.set EmoteMovement_6,  Common_Movement_Sad              @ EMOTE_SAD
+	.set EmoteMovement_7,  Common_Movement_Upset            @ EMOTE_UPSET
+	.set EmoteMovement_8,  Common_Movement_Angry            @ EMOTE_ANGRY
+	.set EmoteMovement_9,  Common_Movement_Pensive          @ EMOTE_PENSIVE
+	.set EmoteMovement_10, Common_Movement_Poisoned         @ EMOTE_POISONED
+	.set EmoteMovement_11, Common_Movement_Asleep           @ EMOTE_ASLEEP
+
+	@ Shorthand movement macro to use emotes
+	@ Defaults to EMOTE_EXCLAM
+	.macro emote localid:req, emoteArg=0
+	playse SE_PIN
+	applymovement \localid, EmoteMovement_\emoteArg
+	waitmovement 0
+	applymovement \localid, Common_Movement_Delay48
+	waitmovement 0
+	.endm
+
+	.macro emoteplayer emoteArg=0
+	emote LOCALID_PLAYER, \emoteArg
+	.endm

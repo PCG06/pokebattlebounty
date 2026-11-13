@@ -204,7 +204,68 @@ Debug_EventScript_Text_OffensiveIVs:
 Debug_EventScript_Text_DefensiveIVs:
 	.string "HP IVs: {STR_VAR_1}, DEF IVs: {STR_VAR_2}, SPDEF IVs: {STR_VAR_3}$"
 
+Text_EmoteExclam:
+	.string "Emote: Exclam$"
+Text_EmoteQuestion:
+	.string "Emote: Question$"
+Text_EmoteHeart:
+	.string "Emote: Heart$"
+Text_EmoteHappy:
+	.string "Emote: Happy$"
+Text_EmoteNeutral:
+	.string "Emote: Neutral$"
+Text_EmoteMusic:
+	.string "Emote: Music$"
+Text_EmoteSad:
+	.string "Emote: Sad$"
+Text_EmoteUpset:
+	.string "Emote: Upset$"
+Text_EmoteAngry:
+	.string "Emote: Angry$"
+Text_EmotePensive:
+	.string "Emote: Pensive$"
+Text_EmotePoisoned:
+	.string "Emote: Poison$"
+Text_EmoteAsleep:
+	.string "Emote: Asleep$"
+
 Debug_EventScript_Script_1::
+	msgbox Text_EmoteExclam, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_EXCLAM
+	delay 48
+	msgbox Text_EmoteQuestion, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_QUESTION
+	delay 48
+	msgbox Text_EmoteHeart, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_HEART
+	delay 48
+	msgbox Text_EmoteHappy, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_HAPPY
+	delay 48
+	msgbox Text_EmoteNeutral, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_NEUTRAL
+	delay 48
+	msgbox Text_EmoteMusic, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_MUSIC
+	delay 48
+	msgbox Text_EmoteSad, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_SAD
+	delay 48
+	msgbox Text_EmoteUpset, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_UPSET
+	delay 48
+	msgbox Text_EmoteAngry, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_ANGRY
+	delay 48
+	msgbox Text_EmotePensive, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_PENSIVE
+	delay 48
+	msgbox Text_EmotePoisoned, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_POISONED
+	delay 48
+	msgbox Text_EmoteAsleep, MSGBOX_AUTOCLOSE
+	emoteplayer EMOTE_ASLEEP
+	delay 48
 	release
 	end
 

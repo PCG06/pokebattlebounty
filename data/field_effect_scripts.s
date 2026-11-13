@@ -88,6 +88,16 @@ gFieldEffectScriptPointers::
 	.4byte gFieldEffectScript_HallOfFameRecordFrlg      @ FLDEFF_HALL_OF_FAME_RECORD_FRLG
 	.4byte gFldEffScript_PhotoFlash      		        @ FLDEFF_PHOTO_FLASH
 	.4byte gFieldEffectScript_OWE_SpawnAnim				@ FLDEFF_OW_ENCOUNTER_SPAWN_ANIM
+	.4byte gFieldEffectScript_MusicIcon             	@ FLDEFF_MUSIC_ICON
+	.4byte gFieldEffectScript_HappyIcon               	@ FLDEFF_HAPPY_ICON
+	.4byte gFieldEffectScript_NeutralIcon             	@ FLDEFF_NEUTRAL_ICON
+	.4byte gFieldEffectScript_SadIcon               	@ FLDEFF_SAD_ICON
+	.4byte gFieldEffectScript_UpsetIcon             	@ FLDEFF_UPSET_ICON
+	.4byte gFieldEffectScript_AngryIcon             	@ FLDEFF_ANGRY_ICON
+	.4byte gFieldEffectScript_PensiveIcon           	@ FLDEFF_PENSIVE_ICON
+	.4byte gFieldEffectScript_PoisonedIcon          	@ FLDEFF_POISONED_ICON
+	.4byte gFieldEffectScript_AsleepIcon             	@ FLDEFF_ASLEEP_ICON
+	.4byte gFieldEffectScript_TrainerExclamation       	@ FLDEFF_TRAINER_EXCLAMATION
 
 gFieldEffectScript_ExclamationMarkIcon1::
 	field_eff_callnative FldEff_ExclamationMarkIcon
@@ -419,4 +429,44 @@ gFldEffScript_PhotoFlash::
 
 gFieldEffectScript_OWE_SpawnAnim::
 	field_eff_callnative FldEff_OWE_SpawnAnim
+	field_eff_end
+
+gFieldEffectScript_MusicIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_MusicIcon
+	field_eff_end
+
+gFieldEffectScript_HappyIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_HappyIcon
+	field_eff_end
+
+gFieldEffectScript_NeutralIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_NeutralIcon
+	field_eff_end
+
+gFieldEffectScript_SadIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_SadIcon
+	field_eff_end
+
+gFieldEffectScript_UpsetIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_UpsetIcon
+	field_eff_end
+
+gFieldEffectScript_AngryIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_AngryIcon
+	field_eff_end
+
+gFieldEffectScript_PensiveIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_PensiveIcon
+	field_eff_end
+
+gFieldEffectScript_PoisonedIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_PoisonedIcon
+	field_eff_end
+
+gFieldEffectScript_AsleepIcon::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_AsleepIcon
+	field_eff_end
+
+gFieldEffectScript_TrainerExclamation::
+	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_TrainerExclamation
 	field_eff_end

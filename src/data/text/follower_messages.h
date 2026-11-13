@@ -299,3 +299,9 @@ static const u8 sPoisonedMsg00[] = _("{STR_VAR_1} is shivering with the\neffects
 const struct FollowerMsgInfo gFollowerPoisonedMessages[] = {
     {sPoisonedMsg00, EventScript_FollowerIsShivering},
 };
+
+static const u8 sAsleepMsg00[] = _("{STR_VAR_1} looks like it's going\nto fall asleep any second…");
+
+const struct FollowerMsgInfo gFollowerAsleepMessages[] = {
+    {sAsleepMsg00, EventScript_FollowerIsShivering},
+};

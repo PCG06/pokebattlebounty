@@ -238,6 +238,7 @@ extern const struct FollowerMsgInfo gFollowerSurpriseMessages[];
 extern const struct FollowerMsgInfo gFollowerCuriousMessages[];
 extern const struct FollowerMsgInfo gFollowerMusicMessages[];
 extern const struct FollowerMsgInfo gFollowerPoisonedMessages[];
+extern const struct FollowerMsgInfo gFollowerAsleepMessages[];
 
 static inline bool8 IsPartnerTrainerId(u16 trainerId)
 {
