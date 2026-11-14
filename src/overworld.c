@@ -50,6 +50,7 @@
 #include "oras_dowse.h"
 #include "palette.h"
 #include "play_time.h"
+#include "quests.h"
 #include "quickstart.h"
 #include "random.h"
 #include "roamer.h"
@@ -1236,7 +1237,7 @@ u16 GetLocationMusic(struct WarpData *warp)
     const struct MapHeader *mapHeader = Overworld_GetMapHeaderByGroupAndId(warp->mapGroup, warp->mapNum);
     if (mapHeader->nightMusic != MUS_NONE && GetTimeOfDay() == TIME_NIGHT)
         return mapHeader->nightMusic;
-    
+
     return mapHeader->music;
 }
 
@@ -1429,7 +1430,7 @@ static void PlayAmbientCry(void)
 {
     if (!ShouldPlayVanillaAmbientCry())
         return;
-    
+
     s16 x, y;
     s8 pan;
     s8 volume;
@@ -2047,6 +2048,7 @@ void CB2_ReturnToField(void)
     }
     else
     {
+        RefreshQuestIcons();
         FieldClearVBlankHBlankCallbacks();
         SetMainCallback2(CB2_ReturnToFieldLocal);
     }
@@ -2088,6 +2090,7 @@ void CB2_ReturnToFieldWithOpenMenu(void)
 {
     FieldClearVBlankHBlankCallbacks();
     gFieldCallback2 = FieldCB_ReturnToFieldOpenStartMenu;
+    RefreshQuestIcons();
     CB2_ReturnToField();
 }
 
@@ -2095,6 +2098,7 @@ void CB2_ReturnToFieldContinueScript(void)
 {
     FieldClearVBlankHBlankCallbacks();
     gFieldCallback = FieldCB_ContinueScript;
+    RefreshQuestIcons();
     CB2_ReturnToField();
 }
 
@@ -2102,6 +2106,7 @@ void CB2_ReturnToFieldContinueScriptPlayMapMusic(void)
 {
     FieldClearVBlankHBlankCallbacks();
     gFieldCallback = FieldCB_ContinueScriptHandleMusic;
+    RefreshQuestIcons();
     CB2_ReturnToField();
 }
 
@@ -2636,6 +2641,7 @@ static void InitObjectEventsLocal(void)
     FollowerNPC_HandleSprite();
     UpdateFollowingPokemon();
     TryRunOnWarpIntoMapScript();
+    RefreshQuestIcons();
 }
 
 static void InitObjectEventsReturnToField(void)
@@ -2643,6 +2649,7 @@ static void InitObjectEventsReturnToField(void)
     SpawnObjectEventsOnReturnToField(0, 0);
     RotatingGate_InitPuzzleAndGraphics();
     RunOnReturnToFieldMapScript();
+    RefreshQuestIcons();
 }
 
 static void SetCameraToTrackPlayer(void)

@@ -159,7 +159,7 @@ struct __attribute__((packed, aligned(4))) ObjectEventTemplate
     };
     /*0x10*/ const u8 *script;
     /*0x14*/ u16 flagId;
-    /*0x16*/ u16 filler;
+    /*0x16*/ u16 questId;
 }; // size = 0x18
 
 struct WarpEvent
@@ -280,7 +280,7 @@ struct ObjectEvent
              u32 hideReflection:1;
              u32 shiny:1; // OW mon shininess
              u32 jumpDone:1;
-             u32 padding:2;
+             u32 questIcon:2; // none/offer/active/reward
     /*0x04*/ u16 graphicsId; // 12 bits for species; high 4 bits for form
     /*0x06*/ u8 movementType;
     /*0x07*/ u8 trainerType;

@@ -30,6 +30,7 @@
 #include "party_menu.h"
 #include "pokemon.h"
 #include "pokeball.h"
+#include "quests.h"
 #include "random.h"
 #include "region_map.h"
 #include "rtc.h"
@@ -1929,6 +1930,8 @@ u8 TrySpawnObjectEventTemplate(const struct ObjectEventTemplate *objectEventTemp
         SetSubspriteTables(&gSprites[gObjectEvents[objectEventId].spriteId], subspriteTables);
 
     OnOverworldWildEncounterSpawn(&gObjectEvents[objectEventId]);
+    HandleQuestIconForSingleObjectEvent(&gObjectEvents[objectEventId]);
+
     return objectEventId;
 }
 
@@ -3076,6 +3079,7 @@ static void SpawnObjectEventOnReturnToField(u8 objectEventId, s16 x, s16 y)
         SetObjectSubpriorityByElevation(objectEvent->previousElevation, sprite, 1);
         RestoreSavedOWEBehaviorState(objectEvent, sprite);
     }
+    HandleQuestIconForSingleObjectEvent(objectEvent);
 }
 
 static void ResetObjectEventFldEffData(struct ObjectEvent *objectEvent)
@@ -3088,6 +3092,7 @@ static void ResetObjectEventFldEffData(struct ObjectEvent *objectEvent)
     objectEvent->inShallowFlowingWater = FALSE;
     objectEvent->inSandPile = FALSE;
     objectEvent->inHotSprings = FALSE;
+    objectEvent->questIcon = 0;
     ObjectEventClearHeldMovement(objectEvent);
 }
 

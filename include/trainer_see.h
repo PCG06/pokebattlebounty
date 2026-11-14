@@ -43,5 +43,9 @@ u8 GetChosenApproachingTrainerObjectEventId(u8 arrayId);
 void PlayerFaceTrainerAfterBattle(void);
 u8 FldEff_DoubleExclMarkIcon(void);
 u8 FldEff_XIcon(void);
+u8 FldEff_QuestOfferIcon(void);
+u8 FldEff_QuestActiveIcon(void);
+u8 FldEff_QuestRewardIcon(void);
+void SpawnQuestIcon(struct ObjectEvent *objectEvent, u8 icon);
 
 #endif // GUARD_TRAINER_SEE_H

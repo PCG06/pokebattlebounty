@@ -98,6 +98,9 @@ gFieldEffectScriptPointers::
 	.4byte gFieldEffectScript_PoisonedIcon          	@ FLDEFF_POISONED_ICON
 	.4byte gFieldEffectScript_AsleepIcon             	@ FLDEFF_ASLEEP_ICON
 	.4byte gFieldEffectScript_TrainerExclamation       	@ FLDEFF_TRAINER_EXCLAMATION
+	.4byte gFieldEffectScript_QuestOfferIcon			@ FLDEFF_QUEST_OFFER_ICON
+	.4byte gFieldEffectScript_QuestActiveIcon			@ FLDEFF_QUEST_ACTIVE_ICON
+    .4byte gFieldEffectScript_QuestRewardIcon			@ FLDEFF_QUEST_REWARD_ICON
 
 gFieldEffectScript_ExclamationMarkIcon1::
 	field_eff_callnative FldEff_ExclamationMarkIcon
@@ -469,4 +472,16 @@ gFieldEffectScript_AsleepIcon::
 
 gFieldEffectScript_TrainerExclamation::
 	field_eff_loadfadedpal_callnative gSpritePalette_GeneralFieldEffect0, FldEff_TrainerExclamation
+	field_eff_end
+
+gFieldEffectScript_QuestOfferIcon::
+	field_eff_callnative FldEff_QuestOfferIcon
+	field_eff_end
+
+gFieldEffectScript_QuestActiveIcon::
+	field_eff_callnative FldEff_QuestActiveIcon
+	field_eff_end
+
+gFieldEffectScript_QuestRewardIcon::
+	field_eff_callnative FldEff_QuestRewardIcon
 	field_eff_end

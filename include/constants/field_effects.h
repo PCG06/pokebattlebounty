@@ -94,6 +94,9 @@
 #define FLDEFF_POISONED_ICON             89
 #define FLDEFF_ASLEEP_ICON               90
 #define FLDEFF_TRAINER_EXCLAMATION       91
+#define FLDEFF_QUEST_OFFER_ICON          92
+#define FLDEFF_QUEST_ACTIVE_ICON         93
+#define FLDEFF_QUEST_REWARD_ICON         94
 
 #define FLDEFFOBJ_SHADOW_S              0
 #define FLDEFFOBJ_SHADOW_M              1
