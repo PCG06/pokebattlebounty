@@ -2110,12 +2110,12 @@ u32 GetQuestIconForObjectEvent(struct ObjectEvent *objectEvent)
     const struct ObjectEventTemplate *obj = GetObjectEventTemplateByLocalIdAndMap(objectEvent->localId, objectEvent->mapNum, objectEvent->mapGroup);
 
     if (obj->trainerType != TRAINER_TYPE_QUEST_GIVER)
-        return 0;
+        return QUEST_NO_ICON;
 
     u32 questId = obj->questId;
 
     if (questId >= QUEST_COUNT)
-        return 0;
+        return QUEST_NO_ICON;
 
     u8 icon = QUEST_OFFER_ICON;
 
@@ -2135,7 +2135,7 @@ void HandleQuestIconForSingleObjectEvent(struct ObjectEvent *objectEvent)
         return;
 
     u32 icon = GetQuestIconForObjectEvent(objectEvent);
-    if (icon != 0)
+    if (icon != QUEST_NO_ICON)
         SpawnQuestIcon(objectEvent, icon);
 }
 

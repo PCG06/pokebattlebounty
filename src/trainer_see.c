@@ -1355,15 +1355,14 @@ u8 FldEff_QuestRewardIcon(void)
 
 static bool8 QuestIconExistsForObject(struct ObjectEvent *objectEvent)
 {
-    u32 i;
-    for (i = 0; i < MAX_SPRITES; i++)
+    for (u32 i = 0; i < MAX_SPRITES; i++)
     {
-        struct Sprite *s = &gSprites[i];
-        if (s->inUse
-         && s->callback == SpriteCB_QuestIcons
-         && s->sLocalId == objectEvent->localId
-         && s->sMapNum == objectEvent->mapNum
-         && s->sMapGroup == objectEvent->mapGroup)
+        struct Sprite *sprite = &gSprites[i];
+        if (sprite->inUse
+         && sprite->callback == SpriteCB_QuestIcons
+         && sprite->sLocalId == objectEvent->localId
+         && sprite->sMapNum == objectEvent->mapNum
+         && sprite->sMapGroup == objectEvent->mapGroup)
             return TRUE;
     }
     return FALSE;
