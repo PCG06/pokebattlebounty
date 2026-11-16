@@ -505,25 +505,22 @@ static const struct SpriteFrameImage sSpriteImageTable_Quests[] =
 
 static const union AnimCmd sSpriteAnim_QuestOffer[] =
 {
-    ANIMCMD_FRAME(0*2, 30),
+    ANIMCMD_FRAME(0*2, 25),
     ANIMCMD_FRAME(0*2+1, 25),
-    ANIMCMD_FRAME(0*2, 30),
     ANIMCMD_JUMP(0)
 };
 
 static const union AnimCmd sSpriteAnim_QuestActive[] =
 {
-    ANIMCMD_FRAME(1*2, 30),
+    ANIMCMD_FRAME(1*2, 25),
     ANIMCMD_FRAME(1*2+1, 25),
-    ANIMCMD_FRAME(1*2, 30),
     ANIMCMD_JUMP(0)
 };
 
 static const union AnimCmd sSpriteAnim_QuestReward[] =
 {
-    ANIMCMD_FRAME(2*2, 30),
+    ANIMCMD_FRAME(2*2, 25),
     ANIMCMD_FRAME(2*2+1, 25),
-    ANIMCMD_FRAME(2*2, 30),
     ANIMCMD_JUMP(0)
 };
 
