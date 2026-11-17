@@ -12,7 +12,7 @@ struct SubQuest
 	const u16 sprite;
     const u8 spritetype;
     const u8 *type;
-}; 
+};
 
 struct MainQuest
 {
@@ -38,5 +38,10 @@ void Task_QuestMenu_OpenFromStartMenu(u8);
 void QuestMenu_CopyQuestName(u8 *dst, u8 questId);
 void QuestMenu_CopySubquestName(u8 *dst, u8 parentId, u8 childId);
 void QuestMenu_ResetMenuSaveData(void);
+
+// quest icons
+u32 GetQuestIconForObjectEvent(struct ObjectEvent *);
+void HandleQuestIconForSingleObjectEvent(struct ObjectEvent*);
+void RefreshQuestIcons(void);
 
 #endif // GUARD_QUESTS_H

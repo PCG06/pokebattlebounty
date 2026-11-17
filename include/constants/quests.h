@@ -86,6 +86,13 @@ enum
 
 #define QUEST_ARRAY_COUNT max(NUM_SUB_QUESTS, NUM_MAIN_QUESTS)
 
+enum {
+    QUEST_NO_ICON,
+    QUEST_OFFER_ICON,
+    QUEST_ACTIVE_ICON,
+    QUEST_REWARD_ICON
+};
+
 enum QuestSort
 {
     SORT_DEFAULT,
@@ -106,7 +113,7 @@ enum QuestSort
 enum QuestModes
 {
     INCREMENT = 1,
-    ALPHA, 
+    ALPHA,
     SUB,
 };
 

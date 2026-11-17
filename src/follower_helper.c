@@ -407,4 +407,5 @@ const struct FollowerMessagePool gFollowerBasicMessages[FOLLOWER_EMOTION_LENGTH]
     [FOLLOWER_EMOTION_CURIOUS]  = {gFollowerCuriousMessages,  EventScript_FollowerGeneric, FOLLOWER_CURIOUS_MESSAGE_COUNT},
     [FOLLOWER_EMOTION_MUSIC]    = {gFollowerMusicMessages,    EventScript_FollowerGeneric, FOLLOWER_MUSIC_MESSAGE_COUNT},
     [FOLLOWER_EMOTION_POISONED] = {gFollowerPoisonedMessages, EventScript_FollowerGeneric, FOLLOWER_POISONED_MESSAGE_COUNT},
+    [FOLLOWER_EMOTION_ASLEEP]   = {gFollowerAsleepMessages,   EventScript_FollowerGeneric, FOLLOWER_ASLEEP_MESSAGE_COUNT},
 };

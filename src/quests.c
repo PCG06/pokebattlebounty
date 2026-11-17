@@ -17,8 +17,11 @@
 #include "sound.h"
 #include "string_util.h"
 #include "task.h"
+#include "trainer_see.h"
 #include "constants/items.h"
+#include "constants/quests.h"
 #include "constants/songs.h"
+#include "constants/trainer_types.h"
 #include "constants/rgb.h"
 #include "data/quests.h"
 
@@ -983,8 +986,7 @@ u8 QuestMenu_GetSetQuestState(u8 quest, u8 caseId)
 {
     u8 index = quest * 5 / 8;
     u8 bit = quest * 5 % 8;
-    u8 mask = 0, index2 = 0, bit2 = 0, index3 = 0, bit3 = 0, mask2 = 0,
-       mask3 = 0;
+    u8 mask = 0, index2 = 0, bit2 = 0, index3 = 0, bit3 = 0, mask2 = 0, mask3 = 0;
 
     /*
     * 0 : locked
@@ -2101,4 +2103,47 @@ void QuestMenu_ResetMenuSaveData(void)
 {
     memset(&gSaveBlock2Ptr->mainQuestData, 0, sizeof(gSaveBlock2Ptr->mainQuestData));
     memset(&gSaveBlock2Ptr->subQuestData, 0, sizeof(gSaveBlock2Ptr->subQuestData));
+}
+
+u32 GetQuestIconForObjectEvent(struct ObjectEvent *objectEvent)
+{
+    const struct ObjectEventTemplate *obj = GetObjectEventTemplateByLocalIdAndMap(objectEvent->localId, objectEvent->mapNum, objectEvent->mapGroup);
+
+    if (obj->trainerType != TRAINER_TYPE_QUEST_GIVER)
+        return QUEST_NO_ICON;
+
+    u32 questId = obj->questId;
+
+    if (questId >= QUEST_COUNT)
+        return QUEST_NO_ICON;
+
+    u8 icon = QUEST_OFFER_ICON;
+
+    if (QuestMenu_GetSetQuestState(questId, FLAG_GET_COMPLETED))
+        icon = QUEST_NO_ICON;
+    else if (QuestMenu_GetSetQuestState(questId, FLAG_GET_REWARD))
+        icon = QUEST_REWARD_ICON;
+    else if (QuestMenu_GetSetQuestState(questId, FLAG_GET_ACTIVE))
+        icon = QUEST_ACTIVE_ICON;
+
+    return icon;
+}
+
+void HandleQuestIconForSingleObjectEvent(struct ObjectEvent *objectEvent)
+{
+    if (objectEvent->movementType == MOVEMENT_TYPE_PLAYER)
+        return;
+
+    u32 icon = GetQuestIconForObjectEvent(objectEvent);
+    if (icon != QUEST_NO_ICON)
+        SpawnQuestIcon(objectEvent, icon);
+}
+
+void RefreshQuestIcons(void)
+{
+    for (u32 i = 0; i < OBJECT_EVENTS_COUNT; i++)
+    {
+        if (gObjectEvents[i].active)
+            HandleQuestIconForSingleObjectEvent(&gObjectEvents[i]);
+    }
 }
